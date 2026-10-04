@@ -1,6 +1,8 @@
 
 
 /* v1.5.6 — toast service pinned to globalThis; every consumer calls the same runtime object. */
+let lddVisionTitleRowsCache = null;
+
 globalThis.lddToast110 = function(msg,force=false,type="info"){
  try{
   const render=(o={toastNotifications:true})=>{
@@ -9,8 +11,13 @@ globalThis.lddToast110 = function(msg,force=false,type="info"){
    if(!wrap){wrap=document.createElement("div");wrap.id="ldd-toast-stack";(document.body||document.documentElement).appendChild(wrap);}
    const t=document.createElement("div");t.className=`ldd-toast-item ldd-toast-${type}`;
    const icon=type==="error"?"!":type==="success"?"✓":"◆";
-   t.innerHTML=`<span class="ldd-toast-icon">${icon}</span><span class="ldd-toast-copy"></span>`;
-   t.querySelector(".ldd-toast-copy").textContent=String(msg||"");wrap.appendChild(t);
+   const dragon=document.createElement("img");
+   dragon.className="ldd-toast-dragon"; dragon.alt="LDD";
+   try{dragon.src=chrome.runtime.getURL("assets/toast-dragon.png")}catch(_){dragon.hidden=true}
+   const body=document.createElement("span");body.className="ldd-toast-body";
+   const badge=document.createElement("span");badge.className="ldd-toast-icon";badge.textContent=icon;
+   const copy=document.createElement("span");copy.className="ldd-toast-copy";copy.textContent=String(msg||"");
+   body.append(badge,copy);t.append(dragon,body);wrap.appendChild(t);
    requestAnimationFrame(()=>t.classList.add("show"));
    setTimeout(()=>{t.classList.remove("show");setTimeout(()=>t.remove(),220)},2600);
   };
@@ -80,9 +87,12 @@ const LDD_DEFAULTS = {
   hotkeyHudEnabled:false,
   toastNotifications:true,
   hotkeyMap:{
-    upscale:"Ctrl+Alt+U", removeBg:"Ctrl+Alt+B", imageMockups:"Ctrl+Alt+I", videoMockups:"Ctrl+Alt+V",
-    canvas:"", visionAI:"", vectorize:""
+    upscale:"Alt+1", removeBg:"Alt+2", imageMockups:"Alt+3", videoMockups:"Alt+4",
+    canvas:"Alt+5", visionAI:"Alt+6", vectorize:"Alt+7", colorOverlay:"Alt+8", patternOverlay:"Alt+9", imageEffect:"Alt+0",
+    resizeImage:"Alt+Shift+1", edit:"Alt+Shift+2", duplicate:"Alt+Shift+3", swapFiles:"Alt+Shift+4", deleteFiles:"Alt+Shift+5",
+    bulkTags:"Alt+Shift+6", bulkSyncPublications:"Alt+Shift+7", checkTrademarks:"Alt+Shift+8", searchTrademarks:"Alt+Shift+9", translate:"Alt+Shift+0", deleteAction:"Ctrl+Alt+1"
   },
+  hotkeyHudVisible:{upscale:true,removeBg:true,imageMockups:true,videoMockups:true,canvas:true,visionAI:true,vectorize:true},
   warningSuppressed:{},
   customInstructionPresets:[],
   customInstructionClipboard:[],
@@ -153,6 +163,16 @@ const LDD_DEFAULTS = {
   perfHideSupportWidgets:false,
   perfDisableHoverPreview:false,
   perfTinyMD:false,
+  perfSelectedMode:"power",
+  perfUploadTurbo:true,
+  perfSpaPreload:true,
+  perfSpaPreloadLevel:"smart",
+  perfSmartCache:true,
+  perfAdaptiveGovernor:true,
+  perfScrollBoost:true,
+  perfAdaptiveThrottle:true,
+  perfDomBatching:true,
+  perfBackgroundSleep:true,
   perfFreezeOffscreenMedia:true,
   perfReduceObservers:true,
   perfStripDecorations:true,
@@ -772,31 +792,53 @@ function lddMountThemeUI(){
 }
 function lddUnmountThemeUI(){lddThemeFab?.remove();lddThemePanel?.remove();lddThemeFab=lddThemePanel=null;document.getElementById("ldd-theme-style")?.remove()}
 
+function lddDesignCardFromControl(cb){
+  if(!cb)return null;
+  const direct=cb.closest?.('[data-testid="design-card"]');
+  if(direct)return direct;
+  let n=cb;
+  for(let i=0;i<9 && n && n!==document.body;i++,n=n.parentElement){
+    const hasImage=!!n.querySelector?.('img');
+    const hasCardAction=!!n.querySelector?.('button[draggable="true"],button[aria-label*="more" i],button[title*="more" i]');
+    if(hasImage && hasCardAction)return n;
+  }
+  return null;
+}
+function lddAllDesignCards(){
+  const controls=[...document.querySelectorAll('[role="checkbox"][aria-checked],input[type="checkbox"]')];
+  const out=[],seen=new Set();
+  for(const cb of controls){
+    if(cb.getAttribute?.('data-testid')!=='designs-select-toggle' && !lddDesignCardFromControl(cb))continue;
+    const card=lddDesignCardFromControl(cb); if(!card||seen.has(card))continue;
+    seen.add(card);out.push(card);
+  }
+  return out;
+}
 function lddCardCheckbox(card){
   if(!card)return null;
-  const boxes=[...card.querySelectorAll('[role="checkbox"],input[type="checkbox"]')];
-  return boxes.find(cb=>{
-    const aria=cb.getAttribute?.("aria-checked");
-    return aria==="true" || cb.checked===true;
-  }) || boxes[0] || null;
+  return card.querySelector('[data-testid="designs-select-toggle"][role="checkbox"]') ||
+         card.querySelector('[role="checkbox"][aria-checked]') ||
+         card.querySelector('input[type="checkbox"]');
+}
+function lddCardIsChecked(card){
+  const cb=lddCardCheckbox(card); if(!cb)return false;
+  return cb.getAttribute?.('aria-checked')==='true' || cb.checked===true;
+}
+async function lddSetCardChecked(card,want=true){
+  let cb=lddCardCheckbox(card); if(!cb)return false;
+  if(lddCardIsChecked(card)===want)return true;
+  try{cb.click()}catch(_){cb.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}))}
+  for(let i=0;i<20;i++){
+    await lddSleep(50);
+    cb=lddCardCheckbox(card);
+    if(cb && lddCardIsChecked(card)===want)return true;
+  }
+  return false;
 }
 function lddCheckedCards(){
-  // Read MyDesigns' live checkbox state when OPEN is clicked. Building the
-  // list from checked controls avoids stale card state after Vue rerenders.
-  const checkedControls=[...document.querySelectorAll(
-    '[data-testid="design-card"] [role="checkbox"][aria-checked="true"],'+
-    '[data-testid="design-card"] input[type="checkbox"]:checked'
-  )];
-  const cards=[];
-  const seen=new Set();
-  for(const cb of checkedControls){
-    const card=cb.closest('[data-testid="design-card"]');
-    if(!card || seen.has(card))continue;
-    seen.add(card);cards.push(card);
-  }
-  // Preserve the visual left-to-right/top-to-bottom order MyDesigns shows.
+  const cards=lddAllDesignCards().filter(lddCardIsChecked);
   cards.sort((a,b)=>{
-    const A=a.getBoundingClientRect(), B=b.getBoundingClientRect();
+    const A=a.getBoundingClientRect(),B=b.getBoundingClientRect();
     if(Math.abs(A.top-B.top)>8)return A.top-B.top;
     return A.left-B.left;
   });
@@ -939,9 +981,11 @@ function lddCloseRenamer(){
   document.getElementById("ldd-workflow-backdrop")?.remove();
 }
 function lddOpenRenamer(auto=false){
-  lddRenameItems=auto ? (lddUploadBatchCards||[]).filter(c=>c&&c.isConnected) : lddCheckedCards();
+  lddRenameItems=auto
+    ? (lddUploadBatchCards||[]).filter(c=>c&&c.isConnected&&lddCardIsChecked(c))
+    : lddCheckedCards();
   if(!lddRenameItems.length){
-    if(!auto)alert("LDD Carousel Renamer: no checked designs found.");
+    if(!auto)alert("LDD Renamer: no checked designs found.");
     return;
   }
   lddRenameIndex=0;
@@ -951,7 +995,7 @@ function lddOpenRenamer(auto=false){
   lddRenamePanel?.remove();
   lddRenamePanel=document.createElement("section");lddRenamePanel.id="ldd-carousel-renamer";
   lddRenamePanel.innerHTML=`
-    <div class="ldd-r-head"><div><b>🐉 CAROUSEL RENAMER</b><small>Checked designs • left → right</small></div><button id="ldd-r-close">×</button></div>
+    <div class="ldd-r-head"><div><b>🐉 LDD RENAMER</b><small>Checked designs • left → right</small></div><button id="ldd-r-close">×</button></div>
     <div class="ldd-r-nav"><button id="ldd-r-prev">‹</button><b id="ldd-r-count">1 / 1</b><button id="ldd-r-next">›</button></div>
     <div class="ldd-r-image-wrap"><img id="ldd-r-img"><div id="ldd-r-original"></div></div>
     <div class="ldd-r-fields">
@@ -989,7 +1033,7 @@ function lddOpenRenamer(auto=false){
 }
 function lddMountRenameFab(){
   if(document.getElementById("ldd-rename-fab"))return;
-  lddRenameFab=document.createElement("button");lddRenameFab.id="ldd-rename-fab";lddRenameFab.className="ldd-tool-fab";lddRenameFab.textContent="✎";lddRenameFab.title="Carousel Renamer";
+  lddRenameFab=document.createElement("button");lddRenameFab.id="ldd-rename-fab";lddRenameFab.className="ldd-tool-fab";lddRenameFab.textContent="✎";lddRenameFab.title="LDD Renamer";
   document.body.appendChild(lddRenameFab);lddRenameFab.onclick=()=>lddOpenRenamer(false);
 }
 function lddUnmountRenameFab(){lddRenameFab?.remove();lddRenameFab=null;lddCloseRenamer()}
@@ -1032,7 +1076,7 @@ function lddMountLauncherRail(){
   rail.innerHTML=`
     <button id="ldd-launch-theme" title="Theme Tweaker">◈<span>Theme</span></button>
     <button id="ldd-launch-fonts" title="App Font">Aa<span>Fonts</span></button>
-    <button id="ldd-launch-rename" title="Carousel Renamer">✎<span>Rename</span></button>`;
+    <button id="ldd-launch-rename" title="LDD Renamer">✎<span>Rename</span></button>`;
   document.body.appendChild(rail);
 
   rail.querySelector("#ldd-launch-theme").onclick=()=>{
@@ -1167,9 +1211,10 @@ function lddRenderDashboard(o){
   </div>
   <div class="ldd-section ldd-dashboard-info">
     <div class="ldd-sidebar-expanded-banner"><div class="ldd-sidebar-expanded-banner-title">⚠ LDD TOOLS WORKS BEST WITH THE MYDESIGNS SIDEBAR EXPANDED</div><div class="ldd-sidebar-expanded-banner-body">For the cleanest layout, native sidebar spacing, and easiest access to LDD Tools, keep the MyDesigns sidebar expanded while using LDD Tools.</div></div>
+    <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2><span><b>Dashboard refresh:</b> Dashboard is now a clean information page instead of another control panel.</span><span><b>Listing Title Rows:</b> choose a roomier 1–5 row title editor from UI Tweaks, with 3 rows as the default.</span><span><b>Theme consistency:</b> LDD Settings follows the active LDD theme instead of using fixed neon-green accents.</span></div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, Carousel Renamer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1241,6 +1286,7 @@ function lddRenderFontsPage(o){
  const current=String(o.appFontFamily||"MyDesigns Default").replace(/</g,"&lt;");
  return `<div class="ldd-page-title ldd-font-page-title"><h2>Aa Fonts</h2><p>Choose the font used by the MyDesigns interface in this browser.</p></div>
  <div class="ldd-font-redesign">
+  <div class="ldd-font-warning"><b>Font note:</b> Some fonts are naturally wider than MyDesigns' default and may make text tighter when the sidebar is collapsed. Expand the sidebar or reset to MyDesigns if needed.<br><br><b>Font list not showing?</b> Toggle <b>App Font OFF</b>, then <b>ON</b> again to refresh the font list.</div>
   <div class="ldd-font-current-card">
    <div><div class="ldd-font-kicker">CURRENT FONT</div><strong id="ldd-font-current-page">${current}</strong><span>Applies to the MyDesigns interface only — never to text inside your artwork.</span></div>
    <div class="ldd-page-inline"><button id="ldd-reset-font" class="ldd-page-secondary">Reset to MyDesigns</button></div>
@@ -1250,19 +1296,11 @@ function lddRenderFontsPage(o){
    <div class="ldd-font-library-head"><div><h2>Font Library</h2><span>20 hand-picked fonts. ★ favorites stay first.</span></div><input id="ldd-font-search20" type="search" placeholder="Search the 20 fonts…"></div>
    <div id="ldd-inline-font-browser" class="ldd-inline-font-browser"></div>
   </div>
-  <div class="ldd-font-warning"><b>Font note:</b> Some fonts are naturally wider than MyDesigns' default and may make text tighter when the sidebar is collapsed. Expand the sidebar or reset to MyDesigns if needed.</div>
  </div>`;
 }
 function lddRenderDesignPage(o){
  return `<div class="ldd-page-title"><h2>✦ Design Tools</h2><p>Small utilities that make everyday MD work faster.</p></div>
  <div class="ldd-section">
- ${lddToggleCard("hoverPreview","Preview Pro","Lightweight hover preview for design cards.",o.hoverPreview)}
- <div class="ldd-control-card ldd-preview-controls"><b>Preview Pro Controls</b><span>Smaller and faster by default. Esc always closes the preview.</span>
-  <div class="ldd-page-inline"><button type="button" data-preview-size="small" class="${(o.hoverPreviewSize||"small")==="small"?"active":""}">Small</button><button type="button" data-preview-size="medium" class="${o.hoverPreviewSize==="medium"?"active":""}">Medium</button><button type="button" data-preview-size="large" class="${o.hoverPreviewSize==="large"?"active":""}">Large</button></div>
-  <label>Hover delay <input id="ldd-preview-delay" type="range" min="50" max="600" step="50" value="${Number(o.hoverPreviewDelay)||180}"><b id="ldd-preview-delay-val">${Number(o.hoverPreviewDelay)||180}ms</b></label>
-  ${lddToggleCard("hoverPreviewSwatches","Color Strip","Show background color swatches under the preview.",o.hoverPreviewSwatches!==false)}
-  ${lddToggleCard("hoverPreviewCloseMouseout","Close on Mouse-Out","Close quickly when leaving the design card.",o.hoverPreviewCloseMouseout!==false)}
- </div>
  <div class="ldd-control-card"><b>Custom Instructions</b><span>Save reusable MyDesigns instruction presets and paste them into the native Custom instructions field.</span><textarea id="ldd-ci-editor" rows="6" maxlength="100000" placeholder="e.g. Include emojis in description"></textarea><input id="ldd-ci-name" maxlength="80" placeholder="Preset name"><div class="ldd-page-inline"><button type="button" id="ldd-ci-save">Save Preset</button><button type="button" id="ldd-ci-apply">Apply to MyDesigns</button><button type="button" id="ldd-ci-copy">Copy</button></div><div id="ldd-ci-presets" class="ldd-ci-presets">${(o.customInstructionPresets||[]).map((x,i)=>`<button type="button" data-ci-preset="${i}">${String(x.name||`Preset ${i+1}`).replace(/</g,"&lt;")}</button>`).join("")}</div></div>
   ${lddToggleCard("showCompositionGallery","Composition Gallery","Show or hide the MyDesigns composition/template thumbnail gallery.",o.showCompositionGallery)}
   ${lddToggleCard("showDesignsSearch","Designs Search Bar","Show or hide the Designs search box.",o.showDesignsSearch)}
@@ -1274,9 +1312,11 @@ function lddRenderDesignPage(o){
 function lddRenderWorkflowPage(o){
  return `<div class="ldd-page-title"><h2>⇧ Upload & Rename</h2><p>Explorer → MyDesigns → rename the checked upload batch.</p></div>
  <div class="ldd-section">
+  <div class="ldd-feature-info"><h3>Preview Pro</h3><p><b>What it does:</b> Shows a fast enlarged preview when you hover over MyDesigns design cards. TinyMD may temporarily suspend Preview Pro for maximum performance without changing your saved preference.</p></div>
+  <div class="ldd-enable-disable" data-two-button-setting="hoverPreview"><button type="button" data-setting-value="true" class="${o.hoverPreview!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.hoverPreview===false?'active':''}">DISABLE</button></div>
   <div class="ldd-feature-info"><h3>Drag & Drop Upload</h3><p><b>What it does:</b> Drag image files straight from Windows Explorer onto the MyDesigns Designs page. LDD hands them to MyDesigns' native upload flow so you can skip opening the upload picker first.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="dragUpload"><button type="button" data-setting-value="true" class="${o.dragUpload!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.dragUpload===false?'active':''}">DISABLE</button></div>
-  <div class="ldd-feature-info"><h3>Carousel Renamer</h3><p><b>What it does:</b> Opens the LDD renaming workflow for the designs you intentionally choose. Enable and Disable only control availability; only Open launches the renamer.</p></div>
+  <div class="ldd-feature-info"><h3>LDD Renamer</h3><p><b>What it does:</b> Opens the LDD renaming workflow for the designs you intentionally choose. Enable and Disable only control availability; only Open launches the renamer.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="carouselRenamer"><button type="button" data-setting-value="true" class="${o.carouselRenamer!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.carouselRenamer===false?'active':''}">DISABLE</button><button type="button" id="ldd-page-open-renamer" class="ldd-page-secondary" ${o.carouselRenamer===false?'disabled':''}>OPEN</button></div>
   <div class="ldd-feature-info"><h3>Scout AI Style Creator &amp; Autofiller</h3><p><b>What it does:</b> Adds the reusable Scout AI style library, Auto Fill, Create Style With AI, import/export, categories, and Dragon Pong.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="scoutAIEnabled"><button type="button" data-setting-value="true" class="${o.scoutAIEnabled!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.scoutAIEnabled===false?'active':''}">DISABLE</button><button type="button" id="ldd-page-open-scout" class="ldd-page-secondary" ${o.scoutAIEnabled===false?'disabled':''}>OPEN</button></div>
@@ -1299,6 +1339,14 @@ perfNoSmoothScroll:"Disables animated scrolling so jumps happen immediately.",
 perfDisableHoverPreview:"Turns off LDD hover previews to reduce image/event work.",
 perfHideSupportWidgets:"Hides support/chat widgets. Re-enable before using them.",
 perfTinyMD:"Broad LDD debloat preset affecting visuals and background work.",
+perfUploadTurbo:"Temporarily reduces LDD background work while a MyDesigns upload is active.",
+perfSpaPreload:"Warms safe same-app MyDesigns routes while idle so navigation can feel faster.",
+perfSmartCache:"Keeps small session-only LDD lookup caches to avoid repeated work.",
+perfAdaptiveGovernor:"Lets LDD yield more aggressively when MyDesigns is busy and resume when idle.",
+perfScrollBoost:"Pauses nonessential LDD work during fast scrolling, then resumes after scrolling settles.",
+perfAdaptiveThrottle:"Automatically increases LDD debounce time during heavy page activity.",
+perfDomBatching:"Batches repeated LDD DOM refresh work into fewer browser frames.",
+perfBackgroundSleep:"Puts nonessential LDD work to sleep while the tab is hidden.",
 perfDeepDebloat:"Aggressive cleanup for slower systems. May simplify nonessential UI.",
 perfHideAnnouncements:"Hides detected promotional and announcement UI.",
 perfReduceMotionMedia:"Reduces animation-heavy media where possible.",
@@ -1319,14 +1367,15 @@ function lddCompactToggle(key,label,on){
 }
 function lddRenderPerformancePage(o){
  return `<div class="ldd-performance-page">
- <div class="ldd-perf-head"><div><h2>⚡ Performance</h2><p>Hover any setting for a plain-English explanation.</p></div>${lddCompactToggle("perfEnabled","MASTER",o.perfEnabled)}</div>
+ <div class="ldd-perf-head"><div><h2>⚡ Performance</h2><p>Hover any setting for a plain-English explanation.</p></div><div class="ldd-perf-selected">${o.perfEnabled===false?'Performance: <b>OFF</b>':o.perfTinyMD===true?'Active: <b>TINYMD</b>':`Active Mode: <b>${({safe:"SAFE",medium:"MEDIUM",extreme:"EXTREME",power:"POWER USER"})[o.perfSelectedMode]||"CUSTOM"}</b>`}</div></div>
  <div class="ldd-perf-presets">
- <button class="ldd-perf-preset safe ldd-perf-help" data-perf-preset="safe" data-tip="Safe — light optimizations with minimal changes to normal MyDesigns behavior.">🟢 Safe</button>
- <button class="ldd-perf-preset medium ldd-perf-help" data-perf-preset="medium" data-tip="Medium — stronger optimizations while keeping the normal workflow.">🟡 Medium</button>
- <button class="ldd-perf-preset extreme ldd-perf-help" data-perf-preset="extreme" data-tip="Extreme — aggressive debloat, rendering and media reductions.">🟠 Extreme</button>
- <button class="ldd-perf-preset power ldd-perf-help" data-perf-preset="power" data-tip="Power User — maximum performance settings and the largest behavior changes.">🔴 Power User</button>
+ <button class="ldd-perf-preset safe ldd-perf-help ${o.perfTinyMD!==true&&o.perfSelectedMode==="safe"?"active":""}" data-perf-preset="safe" data-tip="Safe — light optimizations with minimal changes to normal MyDesigns behavior.">🟢 Safe</button>
+ <button class="ldd-perf-preset medium ldd-perf-help ${o.perfTinyMD!==true&&o.perfSelectedMode==="medium"?"active":""}" data-perf-preset="medium" data-tip="Medium — stronger optimizations while keeping the normal workflow.">🟡 Medium</button>
+ <button class="ldd-perf-preset extreme ldd-perf-help ${o.perfTinyMD!==true&&o.perfSelectedMode==="extreme"?"active":""}" data-perf-preset="extreme" data-tip="Extreme — aggressive debloat, rendering and media reductions.">🟠 Extreme</button>
+ <button class="ldd-perf-preset power ldd-perf-help ${o.perfTinyMD!==true&&o.perfSelectedMode==="power"?"active":""}" data-perf-preset="power" data-tip="Power User — maximum performance settings and the largest behavior changes.">🔴 Power User</button>
  </div>
  <button type="button" class="ldd-tinymd-entry ldd-tinymd-top-launcher" data-tab="tinymd"><span><b>⚠ TinyMD</b><small>Maximum-speed, intentionally aggressive MyDesigns debloat</small></span><strong>OPEN →</strong></button>
+ <div class="ldd-perf-master-row"><div><b>Performance Master</b><span>Turns performance tweaks on/off without changing your selected mode.</span></div>${lddCompactToggle("perfEnabled","MASTER",o.perfEnabled)}</div>
  <div class="ldd-perf-grid">
  ${lddCompactToggle("perfAnimations","Reduce animations",o.perfAnimations)}
  ${lddCompactToggle("perfBlur","Disable blur",o.perfBlur)}
@@ -1352,6 +1401,17 @@ function lddRenderPerformancePage(o){
  ${lddCompactToggle("perfStripDecorations","Strip decorations",o.perfStripDecorations)}
  ${lddCompactToggle("perfCompactModals","Compact MD modals",o.perfCompactModals)}
  ${lddCompactToggle("perfHideTips","Hide tips/onboarding",o.perfHideTips)}
+ </div>
+ <div class="ldd-control-card"><h3>🚀 Performance 2.0</h3><span>Adaptive speed controls. TinyMD forces the most aggressive runtime behavior without changing your saved preset.</span></div>
+ <div class="ldd-perf-grid ldd-perf2-grid">
+ ${lddCompactToggle("perfUploadTurbo","Upload Turbo",o.perfUploadTurbo)}
+ ${lddCompactToggle("perfSpaPreload",`SPA Preload · ${(o.perfSpaPreloadLevel||"smart").toUpperCase()}`,o.perfSpaPreload)}
+ ${lddCompactToggle("perfSmartCache","Smart Cache",o.perfSmartCache)}
+ ${lddCompactToggle("perfAdaptiveGovernor","Adaptive Governor",o.perfAdaptiveGovernor)}
+ ${lddCompactToggle("perfScrollBoost","Scroll Boost",o.perfScrollBoost)}
+ ${lddCompactToggle("perfAdaptiveThrottle","Adaptive Throttling",o.perfAdaptiveThrottle)}
+ ${lddCompactToggle("perfDomBatching","DOM Batching",o.perfDomBatching)}
+ ${lddCompactToggle("perfBackgroundSleep","Background Sleep",o.perfBackgroundSleep)}
  </div><div class="ldd-perf-foot">Core uploads, Designs, Products, Stores, Vue and API calls are not intentionally disabled.</div></div>`;
 }
 function lddRenderTinyMDPage(o){
@@ -1366,6 +1426,7 @@ function lddRenderTinyMDPage(o){
    <p><b>USE AT YOUR OWN RISK.</b> Lavender Dragon Design / LDD Tools is not liable for unexpected behavior, interrupted workflows, lost unsaved work, MyDesigns changes, or other issues resulting from TinyMD. Save important work before enabling it.</p>
   </div>
   <div class="ldd-feature-info"><h3>What TinyMD does</h3><p>Uses the strongest LDD performance reductions: minimal motion and effects, off-screen rendering/media reductions, compact UI, reduced background watchers, disabled hover preview, support/promotional cleanup, and deep visual debloat.</p></div>
+  <div class="ldd-control-card"><h3>🚀 TinyMD Performance 2.0</h3><span><b>Upload Turbo:</b> ON · <b>SPA Preload:</b> AGGRESSIVE · <b>Smart Cache:</b> ON · <b>Adaptive Governor:</b> ON</span><span><b>Scroll Boost:</b> ON · <b>Adaptive Throttling:</b> ON · <b>DOM Batching:</b> ON · <b>Background Sleep:</b> ON</span></div>
   <div class="ldd-tinymd-status ${on?'on':'off'}">TinyMD is <b>${on?'ENABLED':'DISABLED'}</b></div>
   <div class="ldd-enable-disable ldd-tinymd-actions"><button type="button" id="ldd-enable-tinymd" class="${on?'active':''}">ENABLE TINYMD</button><button type="button" id="ldd-disable-tinymd" class="${!on?'active':''}">DISABLE TINYMD</button></div>
  </div>`;
@@ -1374,7 +1435,7 @@ function lddTinyMDConfirm(){
  return new Promise(resolve=>{
   document.getElementById('ldd-tinymd-confirm')?.remove();
   const ov=document.createElement('div'); ov.id='ldd-tinymd-confirm';
-  ov.innerHTML=`<div class="ldd-tinymd-confirm-card"><h2>⚠ ENABLE TINYMD?</h2><p>TinyMD may intentionally break or reduce parts of the MyDesigns UI to maximize speed. It is not intended to delete your MyDesigns data, but unsaved work can still be affected by unexpected app behavior.</p><label><input type="checkbox" id="ldd-tinymd-understand"> <b>I UNDERSTAND</b> TinyMD may break or reduce parts of the MyDesigns interface and I am choosing to enable it at my own risk.</label><div><button type="button" data-cancel>Cancel</button><button type="button" data-enable disabled>ENABLE TINYMD</button></div></div>`;
+  ov.innerHTML=`<div class="ldd-tinymd-confirm-card"><h2>⚡ ENABLE TINYMD?</h2><p><b>TinyMD is LDD Tools' maximum-performance mode.</b></p><p>It reduces animations, previews, background activity, visual effects, and other nonessential interface work to help MyDesigns run as smoothly as possible.</p><p><b>TinyMD does NOT delete or modify your designs, products, listings, uploads, stores, or MyDesigns account data.</b> It only changes local performance and interface behavior while enabled. Some visual effects or nonessential interface features may be reduced or temporarily disabled.</p><label><input type="checkbox" id="ldd-tinymd-understand"> <b>I understand TinyMD changes performance and interface behavior only.</b></label><div><button type="button" data-cancel>Cancel</button><button type="button" data-enable disabled>⚡ ENABLE TINYMD</button></div></div>`;
   document.body.appendChild(ov);
   const check=ov.querySelector('#ldd-tinymd-understand'), enable=ov.querySelector('[data-enable]');
   check.onchange=()=>enable.disabled=!check.checked;
@@ -1382,7 +1443,7 @@ function lddTinyMDConfirm(){
   enable.onclick=()=>{ov.remove();resolve(true)};
  });
 }
-const LDD_TINYMD_SETTINGS={perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:true,perfTinyMD:true,perfDeepDebloat:true,perfHideAnnouncements:true,perfReduceMotionMedia:true,perfSuspendHiddenVideos:true,perfTrimCardEffects:true,perfDenseMenus:true,perfDisableTooltips:true,perfHideToasts:true,perfFreezeOffscreenMedia:true,perfReduceObservers:true,perfStripDecorations:true,perfCompactModals:true,perfHideTips:true};
+const LDD_TINYMD_SETTINGS={perfEnabled:true,perfUploadTurbo:true,perfSpaPreload:true,perfSpaPreloadLevel:"aggressive",perfSmartCache:true,perfAdaptiveGovernor:true,perfScrollBoost:true,perfAdaptiveThrottle:true,perfDomBatching:true,perfBackgroundSleep:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:true,perfTinyMD:true,perfDeepDebloat:true,perfHideAnnouncements:true,perfReduceMotionMedia:true,perfSuspendHiddenVideos:true,perfTrimCardEffects:true,perfDenseMenus:true,perfDisableTooltips:true,perfHideToasts:true,perfFreezeOffscreenMedia:true,perfReduceObservers:true,perfStripDecorations:true,perfCompactModals:true,perfHideTips:true};
 
 function lddRenderSettingsPage(o){
  return `<div class="ldd-page-title"><h2>⚙ Settings</h2><p>Choose exactly which parts of MyDesigns stay visible.</p></div>
@@ -1469,22 +1530,14 @@ function lddRenderSettingsPage(o){
    </div>
  </div>
  <div class="ldd-section ldd-settings-pane-152" data-settings-pane-body="extension">
-   <div class="ldd-control-card"><b>Master LDD Tools</b><span>Turn all LDD Tools enhancements on or off. Your individual settings stay saved.</span>
-    <div class="ldd-enable-disable" data-two-button-setting="lddMasterEnabled"><button type="button" data-setting-value="true" class="${o.lddMasterEnabled!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.lddMasterEnabled===false?'active':''}">DISABLE</button></div>
-   </div>
-   <div class="ldd-control-card"><b>LDD Mode</b><span>Switch anytime. The MyDesigns sidebar always stays <b>LDD Tools</b>.</span>
-    <div class="ldd-mode-switch">
-      <button type="button" data-ldd-mode="lite" class="${o.lddSetupMode==="lite"?"active":""}">Lite</button>
-      <button type="button" data-ldd-mode="power" class="${o.lddSetupMode!=="lite"?"active":""}">Power User</button>
-    </div>
-   </div>
+   <div class="ldd-control-card ldd-master-note"><b>LDD Tools Master Control</b><span>To completely enable or disable LDD Tools, use the <b>LDD Tools toolbar popup</b> in Chrome. Your individual feature settings are preserved.</span></div>
    <div class="ldd-control-card"><b>Toast Notifications</b><span>Show LDD feedback for settings, tools, themes, modes, imports, saves, and errors.</span>
     <div class="ldd-enable-disable" data-two-button-setting="toastNotifications"><button type="button" data-setting-value="true" class="${o.toastNotifications!==false?'active':''}">ON</button><button type="button" data-setting-value="false" class="${o.toastNotifications===false?'active':''}">OFF</button></div>
     <button type="button" id="ldd-test-toast" class="ldd-page-secondary">TEST TOAST</button>
    </div>
-   <div class="ldd-control-card"><b>Extension</b><span>LDD Tools 1.8.9 • MyDesigns /app only</span></div>
+   <div class="ldd-control-card"><b>Extension</b><span>LDD Tools ${chrome.runtime.getManifest().version} • MyDesigns /app only</span></div>
    <button type="button" class="ldd-page-secondary" data-tab="about">About</button>
-   <button id="ldd-page-reset-settings" class="ldd-page-secondary">Reset LDD Settings</button>
+   <div class="ldd-reset-zone"><h2>Reset LDD Tools</h2><p>Restore all LDD Tools preferences to their defaults. This does not delete or modify anything in your MyDesigns account.</p><button id="ldd-page-reset-settings" class="ldd-reset-all-button">RESET ALL SETTINGS TO DEFAULTS</button></div>
  </div>`;
 }
 function lddRenderExtraFeaturesPage(o){
@@ -1515,17 +1568,18 @@ function lddRenderScoutPage(o){
 
 
 function lddRenderAboutPage(){
- return `<div class="ldd-page-title"><h1>About LDD Tools</h1><p>A year of ideas, rebuilds, workflow experiments, and tools made for creators.</p></div>
+ return `<div class="ldd-page-title"><h1>About LDD Tools</h1><p>Creator-built workflow tools for MyDesigns — currently in active beta development.</p></div>
  <div class="ldd-section ldd-about-page">
-  <div class="ldd-control-card ldd-about-story"><h2>Why I Built This</h2><span>I genuinely think <b>MyDesigns is an amazing platform</b>. It has become a huge part of my workflow and gives creators an incredible amount of power in one place.</span><span><b>LDD Tools started about a year ago.</b> It began as a handful of little tools and tweaks I built for myself—things that could save a few clicks, speed up repetitive jobs, or make the way I personally use MyDesigns a little smoother.</span><span>Since then, I've <b>rebuilt this thing more times than I care to admit.</b> 😂 Features have been added, removed, completely rewritten, broken, fixed, rebuilt again, and occasionally turned into something totally different from what I originally planned.</span><span>But the idea behind it has stayed the same: <b>make creating easier and save time.</b></span><span>Eventually I realized these tools could help other MyDesigns users too—especially creators working with hundreds or thousands of designs, products, uploads, and repetitive tasks.</span><span>LDD Tools isn't meant to replace MyDesigns or change what makes it great. It's a collection of <b>optional power-user tools built on top of a platform I already love</b>.</span><span>If LDD Tools saves another creator a bunch of clicks, makes a huge upload session less painful, or simply gives them more time to actually create, then all those rebuilds were worth it.</span></div>
-  <div class="ldd-control-card"><h2>Use at Your Own Risk</h2><span>LDD Tools changes and automates parts of the MyDesigns interface. MyDesigns can change without notice, so a feature may stop working, behave unexpectedly, or require an update. Save important work before using automation or aggressive performance features.</span></div>
-  <div class="ldd-control-card"><h2>Safety &amp; TinyMD</h2><span>LDD Tools is not designed to damage your computer or intentionally delete your designs, products, listings, files, or MyDesigns data. TinyMD and other aggressive performance options may intentionally reduce or disable nonessential interface behavior for speed.</span></div>
-  <div class="ldd-control-card"><h2>Disclaimer &amp; Liability</h2><span>LDD Tools is provided as-is without guarantees of compatibility or uninterrupted operation. Lavender Dragon Design and Andrea are not liable for lost work, interrupted workflows, data loss, account issues, site changes, or other damages arising from use of the extension. You remain responsible for reviewing actions before publishing or making permanent changes.</span></div>
-  <div class="ldd-control-card"><h2>Independent Tool</h2><span>LDD Tools is an independent utility and is not affiliated with, endorsed by, or sponsored by MyDesigns.</span></div>
-  <div class="ldd-control-card ldd-support-card"><h2>Support &amp; More Tools</h2><b>Made with ❤️ by Andrea</b><span><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">Etsy Shop</a> · <a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a> · <a href="https://lddtools.lol" target="_blank" rel="noopener noreferrer">More Tools — LDDTools.lol</a></span></div>
+  <div class="ldd-control-card ldd-about-story"><h2>Why I Built This</h2><span>I genuinely think <b>MyDesigns is an amazing platform</b>. It has become a huge part of my workflow and gives creators an incredible amount of power in one place.</span><span><b>LDD Tools started about a year ago</b> as a handful of little tools and tweaks I built for myself—things that could save a few clicks, speed up repetitive jobs, or make the way I personally use MyDesigns a little smoother.</span><span>Since then, I've <b>rebuilt this thing more times than I care to admit.</b> 😂 Features have been added, removed, rewritten, broken, fixed, rebuilt again, and occasionally turned into something completely different from what I originally planned.</span><span>The idea behind it has stayed the same: <b>make creating easier and save time.</b></span><span>Eventually I realized these tools could help other MyDesigns users too—especially creators working with hundreds or thousands of designs, products, uploads, and repetitive tasks.</span><span>LDD Tools isn't meant to replace MyDesigns or change what makes it great. It's a collection of <b>optional creator and power-user tools built on top of a platform I already love.</b></span><span>If it saves another creator a bunch of clicks, makes a huge upload session less painful, or simply gives them more time to actually create, then all those rebuilds were worth it.</span></div>
+  <div class="ldd-control-card"><h2>🧪 Beta Software</h2><span>LDD Tools is actively developed and is currently in beta. Bugs can happen. A feature may occasionally stop working, display incorrectly, or behave differently than expected—especially after MyDesigns changes its interface. That does not automatically mean anything is wrong with your MyDesigns account.</span><span>If something breaks, disable the affected LDD feature when possible and report the bug so it can be updated.</span></div>
+  <div class="ldd-control-card"><h2>Compatibility &amp; Updates</h2><span>LDD Tools enhances a live web application. MyDesigns can update its Vue components, menus, buttons, page structure, or other interface behavior at any time. Those changes can temporarily affect LDD selectors, hotkeys, previews, themes, automation, or workflow tools until LDD Tools is updated.</span><span>Keeping LDD Tools current is the best way to stay compatible with newer MyDesigns changes.</span></div>
+  <div class="ldd-control-card"><h2>Use at Your Own Risk</h2><span>LDD Tools changes, enhances, and automates parts of the MyDesigns interface. Save important work before running automation, bulk actions, or aggressive performance features, and review important actions before publishing or making permanent changes.</span></div>
+  <div class="ldd-control-card"><h2>Safety, Performance Modes &amp; TinyMD</h2><span>LDD Tools is designed to improve local workflow and interface behavior. It does <b>not intentionally delete or modify your designs, products, listings, uploads, stores, or MyDesigns account data.</b></span><span>Safe, Medium, Extreme, Power User, and TinyMD adjust LDD/local interface performance behavior. More aggressive modes may reduce animations, previews, effects, background activity, or other nonessential interface behavior while enabled.</span></div>
+  <div class="ldd-control-card"><h2>Disclaimer &amp; Liability</h2><span>LDD Tools is provided as-is without guarantees of compatibility, availability, or uninterrupted operation. Because both LDD Tools and MyDesigns can change, unexpected bugs or interrupted workflows are possible. Lavender Dragon Design and Andrea are not liable for lost work, interrupted workflows, data loss, account issues, site changes, or other damages arising from use of the extension. You remain responsible for reviewing actions before publishing or making permanent changes.</span></div>
+  <div class="ldd-control-card"><h2>Independent Tool</h2><span>LDD Tools is an independent utility created for MyDesigns users. It is not affiliated with, endorsed by, or sponsored by MyDesigns.</span></div>
+  <div class="ldd-control-card ldd-support-card"><h2>Support, Bugs &amp; More Tools</h2><b>Made with ❤️ by Andrea</b><span>If you find a bug, something stops working after a MyDesigns update, or you have an idea for LDD Tools, please report it instead of assuming your account is broken.</span><span><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">Etsy Shop</a> · <a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a> · <a href="https://lddtools.lol" target="_blank" rel="noopener noreferrer">More Tools — LDDTools.lol</a></span></div>
  </div>`;
 }
-
 
 function lddPageBody(tab,o){
  if(tab==="fonts")return lddRenderFontsPage(o);
@@ -1580,10 +1634,10 @@ function lddApplyMode(mode,done){
 
 function lddEnforceModeUI(o){
   if(!lddAppRoot)return;
-  const lite=o.lddSetupMode==="lite";
+  const lite=false;
   lddAppRoot.classList.toggle("ldd-lite-mode",lite);
-  lddAppRoot.setAttribute("data-ldd-mode-label",lite?"Lite":"Power User");
-  lddAppRoot.querySelectorAll("[data-ldd-mode-display]").forEach(el=>el.textContent=lite?"Lite":"Power User");
+  lddAppRoot.setAttribute("data-ldd-mode-label","Power User");
+  lddAppRoot.querySelectorAll("[data-ldd-mode-display]").forEach(el=>el.textContent="Power User");
 
   // Lite = Dashboard + Rename & Upload + Settings only.
   lddAppRoot.querySelectorAll("[data-tab]").forEach(el=>{
@@ -1686,9 +1740,10 @@ function lddBindAppPage(tab,o){
      document.addEventListener("keydown",capture,true);
    });
    lddAppRoot.querySelectorAll("[data-hotkey-clear]").forEach(btn=>btn.onclick=()=>lddSafeGet(LDD_DEFAULTS,x=>{const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,x.hotkeyMap||{});map[btn.dataset.hotkeyClear]="";saveMap(map);}));
+   lddAppRoot.querySelectorAll("[data-hotkey-hud-show]").forEach(cb=>cb.onchange=()=>lddSafeGet(LDD_DEFAULTS,x=>{const vis=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,x.hotkeyHudVisible||{});vis[cb.dataset.hotkeyHudShow]=cb.checked;lddSafeSet({hotkeyHudVisible:vis},()=>{document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();});}));
  }
  if(tab==="design"){
-   lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab("design")}));
+   lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab(tab==="workflow"?"workflow":"design")}));
    const delay=lddAppRoot.querySelector("#ldd-preview-delay"); if(delay)delay.oninput=()=>{const v=+delay.value;const out=lddAppRoot.querySelector("#ldd-preview-delay-val");if(out)out.textContent=v+"ms";lddSafeSet({hoverPreviewDelay:v})};
    const ed=lddAppRoot.querySelector("#ldd-ci-editor"), nm=lddAppRoot.querySelector("#ldd-ci-name");
    lddAppRoot.querySelectorAll("[data-ci-preset]").forEach(btn=>btn.onclick=()=>{const x=(o.customInstructionPresets||[])[+btn.dataset.ciPreset];if(x&&ed){ed.value=x.text||"";if(nm)nm.value=x.name||""}});
@@ -1698,7 +1753,7 @@ function lddBindAppPage(tab,o){
    const cp=lddAppRoot.querySelector("#ldd-ci-copy");if(cp)cp.onclick=async()=>{const text=ed?.value||"";try{await navigator.clipboard.writeText(text);const arr=[text,...(o.customInstructionClipboard||[]).filter(x=>x!==text)].slice(0,10);lddSafeSet({customInstructionClipboard:arr});globalThis.lddToast110("Instructions copied")}catch(_){globalThis.lddToast110("Clipboard unavailable")}};
  }
  if(tab==="settings"){
-   const liteMode=o.lddSetupMode==="lite";
+   const liteMode=false;
    lddAppRoot.classList.toggle("ldd-lite-mode",liteMode);
    lddAppRoot.querySelectorAll("[data-power-only], [data-settings-tab='panels'], [data-settings-tab='top'], [data-settings-tab='ui']").forEach(el=>{
      if(liteMode) el.setAttribute("data-ldd-hidden-power","1"); else el.removeAttribute("data-ldd-hidden-power");
@@ -1789,7 +1844,7 @@ function lddBindAppPage(tab,o){
      const key=group.dataset.twoButtonSetting;
      const value=btn.dataset.settingValue==="true";
      lddStorageSet(key,value);
-     const labels={lddMasterEnabled:"LDD Tools",scoutAIEnabled:"Scout AI Style Creator & Autofiller",dragUpload:"Drag & Drop Upload",carouselRenamer:"Carousel Renamer",toastNotifications:"Toast Notifications"};
+     const labels={lddMasterEnabled:"LDD Tools",scoutAIEnabled:"Scout AI Style Creator & Autofiller",dragUpload:"Drag & Drop Upload",carouselRenamer:"LDD Renamer",toastNotifications:"Toast Notifications"};
      if(key!=="toastNotifications" || value) globalThis.lddToast110(`${labels[key]||key} ${value?"Enabled":"Disabled"}`);
      if(key==="scoutAIEnabled"||key==="autoPromptQueueEnabled"||key==="dragUpload"||key==="carouselRenamer")setTimeout(()=>lddShowTab("workflow"),40);
      else if(key==="toastNotifications")setTimeout(()=>lddShowTab("settings"),40);
@@ -1797,10 +1852,12 @@ function lddBindAppPage(tab,o){
  });
  lddAppRoot.querySelectorAll("[data-title-row-picker] button[data-title-rows]").forEach(btn=>btn.onclick=()=>{
    const rows=Math.min(5,Math.max(1,Number(btn.dataset.titleRows)||3));
-   lddStorageSet("visionTitleRows",rows); cfg.visionTitleRows=rows;
-   lddAppRoot.querySelectorAll("[data-title-row-picker] button").forEach(b=>b.classList.toggle("active",b===btn));
-   document.querySelectorAll('textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]').forEach(ta=>lddApplyTitleRows(ta,rows));
-   globalThis.lddToast110(`Listing Title set to ${rows} row${rows===1?'':'s'}`);
+   lddVisionTitleRowsCache=rows;
+   lddSafeSet({visionTitleRows:rows},()=>{
+     lddAppRoot.querySelectorAll("[data-title-row-picker] button").forEach(b=>b.classList.toggle("active",Number(b.dataset.titleRows)===rows));
+     document.querySelectorAll('textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]').forEach(ta=>lddApplyTitleRows(ta,rows));
+     globalThis.lddToast110(`Listing Title set to ${rows} row${rows===1?'':'s'}`);
+   });
  });
  const lddVersionCompare=(a,b)=>{const A=String(a||'0').replace(/^v/i,'').split('.').map(n=>parseInt(n,10)||0),B=String(b||'0').replace(/^v/i,'').split('.').map(n=>parseInt(n,10)||0);for(let i=0;i<Math.max(A.length,B.length);i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}return 0};
  const lddCheckGithubUpdate=async(statusEl,downloadBtn,notesEl)=>{
@@ -1812,7 +1869,7 @@ function lddBindAppPage(tab,o){
    if(lddVersionCompare(latest,current)>0){if(statusEl)statusEl.textContent=`🔥 Update available: v${latest} (installed v${current})`;if(notesEl)notesEl.textContent=result.release?.name||'';if(downloadBtn){downloadBtn.hidden=false;downloadBtn.dataset.url=result.release?.assetUrl||'';downloadBtn.dataset.version=latest}globalThis.lddToast110(`LDD Tools v${latest} update found`,true,'success')}
    else {if(statusEl)statusEl.textContent=`✓ You're up to date — v${current}`;if(downloadBtn)downloadBtn.hidden=true}
    return result;
- }; if(settingsCheck)settingsCheck.onclick=()=>lddCheckGithubUpdate(lddAppRoot.querySelector('#ldd-settings-update-status'),null,null);
+ }; // Update checks are handled by the sidebar update gate; no Settings update button is mounted here.
  const testToast=lddAppRoot.querySelector("#ldd-test-toast"); if(testToast)testToast.onclick=()=>globalThis.lddToast110("LDD Toasts are working ✓",true,"success");
  const pqOpen=lddAppRoot.querySelector("#ldd-open-prompt-queue"); if(pqOpen)pqOpen.onclick=()=>window.open("https://chatgpt.com/","_blank","noopener");
  const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout"); if(scoutOpen)scoutOpen.onclick=()=>{
@@ -1833,27 +1890,30 @@ function lddBindAppPage(tab,o){
  if(tab==="tinymd"){
    const en=lddAppRoot.querySelector("#ldd-enable-tinymd");
    const dis=lddAppRoot.querySelector("#ldd-disable-tinymd");
-   if(en)en.onclick=async()=>{if(!(await lddTinyMDConfirm()))return;lddSafeSet(LDD_TINYMD_SETTINGS,()=>lddShowTab("tinymd"));};
-   if(dis)dis.onclick=()=>lddSafeSet({perfTinyMD:false},()=>lddShowTab("tinymd"));
+   if(en)en.onclick=async()=>{if(!(await lddTinyMDConfirm()))return;lddSafeSet(LDD_TINYMD_SETTINGS,()=>{globalThis.lddToast110('TinyMD enabled',true,'success');lddShowTab("tinymd");});};
+   if(dis)dis.onclick=()=>lddSafeGet(LDD_DEFAULTS,cur=>{const level=(cur.perfSelectedMode==='extreme'||cur.perfSelectedMode==='power')?'aggressive':'smart';lddSafeSet({perfTinyMD:false,perfSpaPreloadLevel:level},()=>{globalThis.lddToast110(`TinyMD disabled — restored ${String(cur.perfSelectedMode||'power').replace('power','Power User')} mode`,true,'info');lddShowTab("tinymd");});});
  }
  if(tab==="performance"){
    const presets={
-    safe:{perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:false,perfLightNeon:true,perfCompactFolders:false,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:false,perfDisableHoverPreview:false,perfHideSupportWidgets:false,perfTinyMD:false,perfDeepDebloat:false},
-    medium:{perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:false,perfTinyMD:false,perfDeepDebloat:false,perfTrimCardEffects:true,perfReduceMotionMedia:true},
-    extreme:{perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:true,perfTinyMD:true,perfDeepDebloat:true,perfHideAnnouncements:true,perfReduceMotionMedia:true,perfSuspendHiddenVideos:true,perfTrimCardEffects:true,perfDenseMenus:true,perfFreezeOffscreenMedia:true,perfReduceObservers:true,perfStripDecorations:true,perfCompactModals:true,perfHideTips:true,perfDisableTooltips:false,perfHideToasts:false},
-    power:{perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:true,perfTinyMD:true,perfDeepDebloat:true,perfHideAnnouncements:true,perfReduceMotionMedia:true,perfSuspendHiddenVideos:true,perfTrimCardEffects:true,perfDenseMenus:true,perfDisableTooltips:true,perfHideToasts:true,perfFreezeOffscreenMedia:true,perfReduceObservers:true,perfStripDecorations:true,perfCompactModals:true,perfHideTips:true}
+    safe:{perfEnabled:true,perfUploadTurbo:true,perfSpaPreload:true,perfSpaPreloadLevel:"smart",perfSmartCache:true,perfAdaptiveGovernor:true,perfScrollBoost:true,perfAdaptiveThrottle:true,perfDomBatching:true,perfBackgroundSleep:true,perfAnimations:true,perfBlur:true,perfShadows:false,perfLightNeon:true,perfCompactFolders:false,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:false,perfDisableHoverPreview:false,perfHideSupportWidgets:false,perfTinyMD:false,perfDeepDebloat:false},
+    medium:{perfEnabled:true,perfUploadTurbo:true,perfSpaPreload:true,perfSpaPreloadLevel:"smart",perfSmartCache:true,perfAdaptiveGovernor:true,perfScrollBoost:true,perfAdaptiveThrottle:true,perfDomBatching:true,perfBackgroundSleep:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:false,perfTinyMD:false,perfDeepDebloat:false,perfTrimCardEffects:true,perfReduceMotionMedia:true},
+    extreme:{perfEnabled:true,perfUploadTurbo:true,perfSpaPreload:true,perfSpaPreloadLevel:"aggressive",perfSmartCache:true,perfAdaptiveGovernor:true,perfScrollBoost:true,perfAdaptiveThrottle:true,perfDomBatching:true,perfBackgroundSleep:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:true,perfTinyMD:false,perfDeepDebloat:true,perfHideAnnouncements:true,perfReduceMotionMedia:true,perfSuspendHiddenVideos:true,perfTrimCardEffects:true,perfDenseMenus:true,perfFreezeOffscreenMedia:true,perfReduceObservers:true,perfStripDecorations:true,perfCompactModals:true,perfHideTips:true,perfDisableTooltips:false,perfHideToasts:false},
+    power:{perfEnabled:true,perfUploadTurbo:true,perfSpaPreload:true,perfSpaPreloadLevel:"aggressive",perfSmartCache:true,perfAdaptiveGovernor:true,perfScrollBoost:true,perfAdaptiveThrottle:true,perfDomBatching:true,perfBackgroundSleep:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLightNeon:true,perfCompactFolders:true,perfPauseHidden:true,perfContentVisibility:true,perfLazyImages:true,perfNoSmoothScroll:true,perfDisableHoverPreview:true,perfHideSupportWidgets:true,perfTinyMD:false,perfDeepDebloat:true,perfHideAnnouncements:true,perfReduceMotionMedia:true,perfSuspendHiddenVideos:true,perfTrimCardEffects:true,perfDenseMenus:true,perfDisableTooltips:true,perfHideToasts:true,perfFreezeOffscreenMedia:true,perfReduceObservers:true,perfStripDecorations:true,perfCompactModals:true,perfHideTips:true}
    };
    lddAppRoot.querySelectorAll("[data-perf-preset]").forEach(btn=>btn.onclick=()=>{
     const name=btn.dataset.perfPreset;
     if((name==="extreme"||name==="power")&&!confirm(`${name==="power"?"Power User":"Extreme"} uses aggressive performance settings. Apply it?`))return;
-    lddSafeSet(presets[name],()=>lddShowTab("performance"));
+    lddSafeSet({...presets[name],perfSelectedMode:name},()=>lddShowTab("performance"));
    });
    lddWirePerfTips();
  }
- const rn=lddAppRoot.querySelector("#ldd-page-open-renamer"); if(rn)rn.onclick=()=>{if(!lddContextAlive())return;lddOpenRenamer(false)};
+ const rn=lddAppRoot.querySelector("#ldd-page-open-renamer"); if(rn)rn.onclick=()=>lddOpenRenamer(false);
  const sbw=lddAppRoot.querySelector("#ldd-scrollbar-width");
  if(sbw){ sbw.oninput=()=>{ const v=Number(sbw.value); lddAppRoot.querySelector("#ldd-scrollbar-width-label").textContent=v+"px"; lddSafeSet({scrollbarWidth:v},()=>lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements)); }; }
- const rs=lddAppRoot.querySelector("#ldd-page-reset-settings"); if(rs)rs.onclick=()=>lddSafeSet(LDD_DEFAULTS,()=>lddShowTab("settings"));
+ const rs=lddAppRoot.querySelector("#ldd-page-reset-settings"); if(rs)rs.onclick=()=>{
+  if(!confirm("Reset ALL LDD Tools settings to defaults?\n\nThis only resets LDD Tools preferences. It does NOT delete or modify designs, products, listings, uploads, stores, files, or MyDesigns account data."))return;
+  lddSafeSet(LDD_DEFAULTS,()=>{globalThis.lddToast110("LDD Tools reset to defaults",true,"success");lddShowTab("settings");});
+ };
 }
 
 
@@ -1878,35 +1938,36 @@ function lddRenderThemePage110(o){
 }
 function lddRenderHotkeysPage110(o){
  const defs=[
-  ["upscale","Upscale Image","Upscale image","Ctrl+Alt+U"],
-  ["removeBg","Remove Background","Remove background","Ctrl+Alt+B"],
-  ["imageMockups","Image Mockups","Image mockups","Ctrl+Alt+I"],
-  ["videoMockups","Video Mockups","Video mockups","Ctrl+Alt+V"],
-  ["canvas","Canvas","Canvas",""],
-  ["visionAI","Vision AI","Vision AI",""],
-  ["vectorize","Vectorize Image","Vectorize image",""],
-  ["colorOverlay","Color Overlay","Color overlay",""],
-  ["patternOverlay","Pattern Overlay","Pattern overlay",""],
-  ["imageEffect","Image Effect","Image effect",""],
-  ["resizeImage","Resize Image","Resize image",""],
-  ["edit","Edit","Edit",""],
-  ["duplicate","Duplicate","Duplicate",""],
-  ["swapFiles","Swap Files","Swap files",""],
-  ["deleteFiles","Delete Files","Delete files",""],
-  ["bulkTags","Bulk Tags","Bulk tags",""],
-  ["bulkSyncPublications","Bulk Sync Publications","Bulk sync publications",""],
-  ["checkTrademarks","Check Trademarks","Check trademarks",""],
-  ["searchTrademarks","Search Trademarks","Search trademarks",""],
-  ["translate","Translate","Translate",""],
-  ["deleteAction","Delete","Delete",""]
+  ["upscale","Upscale Image","Upscale image","Alt+1"],
+  ["removeBg","Remove Background","Remove background","Alt+2"],
+  ["imageMockups","Image Mockups","Image mockups","Alt+3"],
+  ["videoMockups","Video Mockups","Video mockups","Alt+4"],
+  ["canvas","Canvas","Canvas","Alt+5"],
+  ["visionAI","Vision AI","Vision AI","Alt+6"],
+  ["vectorize","Vectorize Image","Vectorize image","Alt+7"],
+  ["colorOverlay","Color Overlay","Color overlay","Alt+8"],
+  ["patternOverlay","Pattern Overlay","Pattern overlay","Alt+9"],
+  ["imageEffect","Image Effect","Image effect","Alt+0"],
+  ["resizeImage","Resize Image","Resize image","Alt+Shift+1"],
+  ["edit","Edit","Edit","Alt+Shift+2"],
+  ["duplicate","Duplicate","Duplicate","Alt+Shift+3"],
+  ["swapFiles","Swap Files","Swap files","Alt+Shift+4"],
+  ["deleteFiles","Delete Files","Delete files","Alt+Shift+5"],
+  ["bulkTags","Bulk Tags","Bulk tags","Alt+Shift+6"],
+  ["bulkSyncPublications","Bulk Sync Publications","Bulk sync publications","Alt+Shift+7"],
+  ["checkTrademarks","Check Trademarks","Check trademarks","Alt+Shift+8"],
+  ["searchTrademarks","Search Trademarks","Search trademarks","Alt+Shift+9"],
+  ["translate","Translate","Translate","Alt+Shift+0"],
+  ["deleteAction","Delete","Delete","Ctrl+Alt+1"]
  ];
  const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{});
- const esc=x=>String(x||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
- return `<div class="ldd-page ldd-hotkeys-page-110"><div class="ldd-page-head"><div><h1>Hotkeys</h1><p>Compact native MyDesigns shortcuts. Click Change, then press the shortcut you want.</p></div></div>
+ const hud=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});
+ const esc=x=>String(x||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;"}[c]));
+ return `<div class="ldd-page ldd-hotkeys-page-110"><div class="ldd-page-head"><div><h1>Hotkeys</h1><p>Every supported action is mapped out of the box. Alt+1–0 first, then Alt+Shift combinations. Chrome Ctrl+1–9 tab switching is left untouched.</p></div></div>
  <label class="ldd-hotkeys-master-110"><span><b>Enable LDD Hotkeys</b><small>Ignored while typing in inputs, textareas, selects, and editors.</small></span><input type="checkbox" data-setting="hotkeysEnabled" ${o.hotkeysEnabled!==false?'checked':''}></label>
- <label class="ldd-hotkeys-master-110"><span><b>Hotkey Tips HUD</b><small>Show the draggable, collapsible shortcut cheat sheet on MyDesigns.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled!==false?'checked':''}></label>
- <div class="ldd-hotkey-list-110">${defs.map(([id,name,label,fallback])=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-row-110" data-hotkey-row="${id}" data-action-label="${esc(label)}"><div class="ldd-hotkey-name-110"><b>${name}</b><span>${label}</span></div><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}" title="Press a new keyboard shortcut for ${name}">Change</button><button type="button" class="ldd-hotkey-clear-110" data-hotkey-clear="${id}" title="Disable the shortcut for ${name}">×</button></div>`}).join('')}</div>
- <div class="ldd-hotkey-note-110">Actions are triggered through MyDesigns’ native <b>Actions</b> menu. Favorite order does not matter.</div></div>`;
+ <label class="ldd-hotkeys-master-110"><span><b>Hotkey Tips HUD</b><small>HUD is off by default. When enabled, only rows checked below are shown.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled===true?'checked':''}></label>
+ <div class="ldd-hotkey-list-110">${defs.map(([id,name,label,fallback],i)=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-row-110" data-hotkey-row="${id}" data-action-label="${esc(label)}"><div class="ldd-hotkey-name-110"><b>${String(i+1).padStart(2,'0')} · ${name}</b><span>${label}</span></div><label title="Show ${name} on Hotkey Tips HUD" style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px"><input type="checkbox" data-hotkey-hud-show="${id}" ${hud[id]===true?'checked':''}> HUD</label><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}" title="Press a new keyboard shortcut for ${name}">Change</button><button type="button" class="ldd-hotkey-clear-110" data-hotkey-clear="${id}" title="Disable the shortcut for ${name}">×</button></div>`}).join('')}</div>
+ <div class="ldd-hotkey-note-110"><b>HUD defaults:</b> only actions 01–07 are checked. All mapped actions still work whether or not they are shown on the HUD.</div></div>`;
 }
 
 function lddApplyTheme110(o){
@@ -1915,8 +1976,12 @@ function lddApplyTheme110(o){
  let st=document.getElementById('ldd-theme-style-110');
  if(!active){
    st?.remove();
-   root.classList.remove('ldd-theme-master-on');
+   root.classList.remove('ldd-theme-master-on','ldd-wide-scrollbars','ldd-scrollbar-contrast');
    root.classList.add('ldd-theme-master-off');
+   const scrollbarStyle=document.getElementById('ldd-scrollbar-dynamic-style');
+   if(scrollbarStyle) scrollbarStyle.textContent='';
+   root.style.removeProperty('--ldd-scrollbar-color');
+   root.style.removeProperty('--ldd-scrollbar-width');
    ['--ldd-bg','--ldd-panel','--ldd-text','--ldd-muted','--ldd-accent','--ldd-border','--ldd-hover','--ldd-selected','--ldd-radius','--ldd-ui-scale','--color-base-background','--color-base-bg','--color-base-subtle','--color-base-surface','--color-base-field','--color-base-raised','--color-base-elevated','--color-base-text','--color-base-text-muted','--color-base-border','--color-base-border-strong','--color-base-hover','--color-base-selected','--color-brand-primary','--color-brand-text','--color-brand-bg','--color-focus','--color-warning','--color-error'].forEach(v=>root.style.removeProperty(v));
    window.dispatchEvent(new CustomEvent('ldd-theme-chart',{detail:{active:false}}));
    return;
@@ -1968,6 +2033,8 @@ function lddApplyTheme110(o){
  html.ldd-theme-master-on button[class*="bg-brand-primary"],html.ldd-theme-master-on [role="button"][class*="bg-brand-primary"]{color:${accentText}!important}
  html.ldd-theme-master-on .bg-brand-bg,html.ldd-theme-master-on .hover\\:bg-brand-bg:hover{background-color:rgba(${rgb.r},${rgb.g},${rgb.b},.12)!important}
  html.ldd-theme-master-on .text-brand-primary,html.ldd-theme-master-on .text-brand-text{color:${accent}!important}
+ html.ldd-theme-master-on svg.fill-brand-text{color:${accent}!important;fill:${accent}!important}
+ html.ldd-theme-master-on svg.fill-brand-text path{fill:currentColor!important}
  html.ldd-theme-master-on .border-brand-primary{border-color:${accent}!important}
  html.ldd-theme-master-on a:not([class*="text-base-"]){color:${accent2}!important}
  html.ldd-theme-master-on .text-brand-text{color:${accent2}!important}
@@ -1975,8 +2042,6 @@ function lddApplyTheme110(o){
  html.ldd-theme-master-on [aria-selected="true"],html.ldd-theme-master-on [data-state="active"]{--ldd-local-accent:${accent3}}
  html.ldd-theme-master-on [role="tab"][aria-selected="true"]{color:${accent3}!important;border-color:${accent3}!important}
  html.ldd-theme-master-on ::selection{background:${accent4};color:${accent4Text}}
- html.ldd-theme-master-on *{scrollbar-color:${accent4} ${panel}}
- html.ldd-theme-master-on ::-webkit-scrollbar-thumb{background:${accent4}!important;border-radius:999px}
  html.ldd-theme-master-on progress,html.ldd-theme-master-on meter{accent-color:${accent5}}
  html.ldd-theme-master-on input[type="checkbox"],html.ldd-theme-master-on input[type="radio"],html.ldd-theme-master-on input[type="range"]{accent-color:${accent5}}
  html.ldd-theme-master-on input,html.ldd-theme-master-on textarea,html.ldd-theme-master-on select{color:${text};caret-color:${accent}}
@@ -2225,7 +2290,7 @@ function lddRenderAppPage(opts){
   lddAppRoot.id="ldd-app-page";
   lddAppRoot.innerHTML=`
  <aside class="ldd-app-nav">
-   <div class="ldd-app-brand"><span>${lddIconTag(28)}</span><div><b>LDD Tools</b><small>${(o.lddSetupMode||"standard").replace(/^./,c=>c.toUpperCase())} mode</small></div></div>
+   <div class="ldd-app-brand"><span>${lddIconTag(28)}</span><div><b>LDD Tools</b><small>${({safe:"Safe",medium:"Medium",extreme:"Extreme",power:"Power User"})[o.perfSelectedMode]||"Power User"} mode</small></div></div>
    <button data-tab="dashboard" class="active">⌂ Home</button>
    <button data-tab="workflow">${lddIconTag()} Tools</button>
    <button data-tab="fonts">Aa Fonts</button>
@@ -2283,6 +2348,10 @@ function lddApplyPerformance(o){
  lddPerfCfg={...lddPerfCfg,...o};
  const r=document.documentElement,on=o.perfEnabled===true;
  r.classList.toggle("ldd-perf-on",on);
+ r.classList.toggle("ldd-perf-upload-turbo",on&&o.perfUploadTurbo===true);
+ r.classList.toggle("ldd-perf-governor",on&&o.perfAdaptiveGovernor===true);
+ r.classList.toggle("ldd-perf-scroll-boost",on&&o.perfScrollBoost===true);
+ r.classList.toggle("ldd-perf-background-sleep",on&&o.perfBackgroundSleep===true);
  r.classList.toggle("ldd-perf-animations",on&&o.perfAnimations===true);
  r.classList.toggle("ldd-perf-blur",on&&o.perfBlur===true);
  r.classList.toggle("ldd-perf-shadows",on&&o.perfShadows===true);
@@ -2315,8 +2384,20 @@ function lddApplyPerformance(o){
 function lddSyncPerformance(){lddSafeGet(LDD_DEFAULTS,lddApplyPerformance)}
 lddSyncPerformance();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden){lddSyncPerformance();setTimeout(()=>{try{lddMountSidebarEntry();lddApplyHeaderNow();lddApplyNavAndFolders();lddProtectOwnGeometry()}catch(_){}},80)}});
-lddSafeOnChanged((c,a)=>{if(a==="local"&&["perfEnabled","perfAnimations","perfBlur","perfShadows","perfLightNeon","perfCompactFolders","perfPauseHidden","perfContentVisibility","perfLazyImages","perfNoSmoothScroll","perfHideSupportWidgets","perfDisableHoverPreview","perfTinyMD","perfFreezeOffscreenMedia","perfReduceObservers","perfStripDecorations","perfCompactModals","perfHideTips","perfDeepDebloat","perfHideToasts","perfHideAnnouncements","perfReduceMotionMedia","perfSuspendHiddenVideos","perfTrimCardEffects","perfDenseMenus","perfDisableTooltips"].some(k=>c[k]))lddSyncPerformance()});
+lddSafeOnChanged((c,a)=>{if(a==="local"&&["perfEnabled","perfUploadTurbo","perfSpaPreload","perfSpaPreloadLevel","perfSmartCache","perfAdaptiveGovernor","perfScrollBoost","perfAdaptiveThrottle","perfDomBatching","perfBackgroundSleep","perfAnimations","perfBlur","perfShadows","perfLightNeon","perfCompactFolders","perfPauseHidden","perfContentVisibility","perfLazyImages","perfNoSmoothScroll","perfHideSupportWidgets","perfDisableHoverPreview","perfTinyMD","perfFreezeOffscreenMedia","perfReduceObservers","perfStripDecorations","perfCompactModals","perfHideTips","perfDeepDebloat","perfHideToasts","perfHideAnnouncements","perfReduceMotionMedia","perfSuspendHiddenVideos","perfTrimCardEffects","perfDenseMenus","perfDisableTooltips"].some(k=>c[k]))lddSyncPerformance()});
 
+// Performance 2.0 runtime: safe same-origin route warming + activity governor.
+const lddPerf2={warmed:new Set(),scrolling:false,uploading:false,lastMutation:0};
+function lddPerf2Busy(){return lddPerf2.uploading||lddPerf2.scrolling||(lddPerfCfg.perfBackgroundSleep&&document.hidden)}
+function lddPerf2Warm(href){
+ try{if(!lddPerfCfg.perfEnabled||!lddPerfCfg.perfSpaPreload||lddPerf2Busy())return;const u=new URL(href,location.href);if(u.origin!==location.origin||!u.pathname.startsWith('/app')||lddPerf2.warmed.has(u.href))return;const lim=lddPerfCfg.perfSpaPreloadLevel==='aggressive'?12:4;if(lddPerf2.warmed.size>=lim)return;const l=document.createElement('link');l.rel='prefetch';l.href=u.href;l.as='document';document.head.appendChild(l);lddPerf2.warmed.add(u.href)}catch(_){}}
+function lddPerf2IdleWarm(){if(!lddPerfCfg.perfEnabled||!lddPerfCfg.perfSpaPreload||lddPerf2Busy())return;document.querySelectorAll('a[href^="/app"]').forEach(a=>lddPerf2Warm(a.href))}
+const lddPerf2Idle=()=>('requestIdleCallback'in window?requestIdleCallback(lddPerf2IdleWarm,{timeout:1800}):setTimeout(lddPerf2IdleWarm,800));
+document.addEventListener('pointerover',e=>{const a=e.target.closest?.('a[href^="/app"]');if(a&&lddPerfCfg.perfSpaPreload)setTimeout(()=>{if(a.matches(':hover'))lddPerf2Warm(a.href)},140)},{passive:true});
+document.addEventListener('scroll',()=>{if(!lddPerfCfg.perfScrollBoost)return;lddPerf2.scrolling=true;clearTimeout(lddPerf2.scrollTimer);lddPerf2.scrollTimer=setTimeout(()=>{lddPerf2.scrolling=false;lddPerf2Idle()},180)},{passive:true,capture:true});
+const lddPerf2UploadObserver=new MutationObserver(()=>{if(!lddPerfCfg.perfUploadTurbo)return;const d=[...document.querySelectorAll('[role="dialog"]')].find(x=>/upload/i.test(x.getAttribute('aria-label')||x.textContent||''));lddPerf2.uploading=!!(d&&(/uploading|start uploading|progress/i.test(d.textContent||'')));document.documentElement.classList.toggle('ldd-upload-turbo-active',lddPerf2.uploading)});
+lddPerf2UploadObserver.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+window.addEventListener('load',lddPerf2Idle,{once:true});
 const lddSidebarObserver=new MutationObserver(()=>{if(!lddPerfPaused())lddMountSidebarEntry()});
 lddSidebarObserver.observe(document.documentElement,{childList:true,subtree:true});
 const lddSidebarTimer=setInterval(()=>{if(!lddPerfPaused() && !(lddPerfCfg.perfEnabled&&lddPerfCfg.perfReduceObservers&&document.hidden))lddMountSidebarEntry()},2500);
@@ -2621,14 +2702,13 @@ function lddStableCardKey(card){
 }
 function lddSnapshotCardsBeforeUpload(){
   lddPreUploadCardKeys=new Set(
-    [...document.querySelectorAll('[data-testid="design-card"]')]
-      .map(lddStableCardKey).filter(Boolean)
+    lddAllDesignCards().map(lddStableCardKey).filter(Boolean)
   );
   lddPendingUploadBatch=true;
   lddUploadBatchCards=[];
 }
 function lddFindNewUploadCards(){
-  const all=[...document.querySelectorAll('[data-testid="design-card"]')];
+  const all=lddAllDesignCards();
   return all.filter(c=>{
     const k=lddStableCardKey(c);
     return k && !lddPreUploadCardKeys.has(k);
@@ -2647,9 +2727,14 @@ async function lddWaitForUploadedCards(){
       if(stable>=4)break;
     }
   }
-  lddUploadBatchCards=best;
+  const selected=[];
+  for(const card of best){
+    if(await lddSetCardChecked(card,true))selected.push(card);
+  }
+  lddUploadBatchCards=selected;
   lddPendingUploadBatch=false;
-  return best;
+  if(best.length && selected.length!==best.length)globalThis.lddToast110(`Selected ${selected.length} of ${best.length} new uploads for LDD Renamer`,true,"error");
+  return selected;
 }
 
 }
@@ -2800,7 +2885,17 @@ setTimeout(lddUpgradeFontEditorTo1900,800);
 function lddApplyScrollbarStyle(o){
  let st=document.getElementById("ldd-scrollbar-dynamic-style");
  if(!st){st=document.createElement("style");st.id="ldd-scrollbar-dynamic-style";document.head.appendChild(st)}
- if(o.wideScrollbars===false){st.textContent="";return}
+ // Never paint MyDesigns scrollbars when LDD theming is off/native.
+ // This prevents the old neon-green scrollbar from leaking into the stock UI.
+ const themed=o?.themeTweaker===true && o?.themeEnabled===true && String(o?.themePreset||"native").toLowerCase()!=="native";
+ if(!themed || o.wideScrollbars===false){
+   st.textContent="";
+   const root=document.documentElement;
+   root.classList.remove('ldd-wide-scrollbars','ldd-scrollbar-contrast');
+   root.style.removeProperty('--ldd-scrollbar-color');
+   root.style.removeProperty('--ldd-scrollbar-width');
+   return;
+ }
  const w=14;
  const c=getComputedStyle(document.documentElement).getPropertyValue("--ldd-accent-4").trim() || getComputedStyle(document.documentElement).getPropertyValue("--ldd-neon").trim() || "#8b8b93";
  const track=o.highContrastScrollbars===true?"#050607":"#15171c";
@@ -2823,8 +2918,9 @@ html::-webkit-scrollbar-corner,body::-webkit-scrollbar-corner,#ldd-app-page *::-
 function lddApplyUIEnhancements(o){
  lddApplyScrollbarStyle(o);
  const r=document.documentElement;
- r.classList.toggle('ldd-wide-scrollbars',o.wideScrollbars!==false);
- r.classList.toggle('ldd-scrollbar-contrast',o.highContrastScrollbars===true);
+ const themed=o?.themeTweaker===true && o?.themeEnabled===true && String(o?.themePreset||"native").toLowerCase()!=="native";
+ r.classList.toggle('ldd-wide-scrollbars',themed && o.wideScrollbars!==false);
+ r.classList.toggle('ldd-scrollbar-contrast',themed && o.highContrastScrollbars===true);
 
 
  if(o.visionTitleBox!==false)lddUpgradeVisionTitle(); else lddRestoreVisionTitles();
@@ -2881,7 +2977,12 @@ function lddUpgradeVisionTitle(){
    input.dataset.lddTitleUpgraded='1';
    input.style.setProperty('display','none','important');
    if(document.activeElement!==ta && ta.value!==input.value)ta.value=input.value||'';
-   lddApplyTitleRows(ta,cfg.visionTitleRows);
+   if(lddVisionTitleRowsCache==null){
+     lddSafeGet({visionTitleRows:3},o=>{
+       lddVisionTitleRowsCache=Math.min(5,Math.max(1,Number(o.visionTitleRows)||3));
+       lddApplyTitleRows(ta,lddVisionTitleRowsCache);
+     });
+   }else lddApplyTitleRows(ta,lddVisionTitleRowsCache);
  });
 }
 function lddRestoreVisionTitles(){
@@ -2911,8 +3012,9 @@ function lddNativeAction(label){
 }
 
 let lddEnhanceTimer; new MutationObserver(()=>{clearTimeout(lddEnhanceTimer);lddEnhanceTimer=setTimeout(()=>lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements),120)}).observe(document.documentElement,{childList:true,subtree:true});
-lddSafeOnChanged((ch,area)=>{if(area==='local'&&['wideScrollbars','scrollbarWidth','highContrastScrollbars','visionTitleBox','visionTitleRows'].some(k=>ch[k]))lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements)});
+lddSafeOnChanged((ch,area)=>{if(area==='local'&&ch.visionTitleRows){lddVisionTitleRowsCache=Math.min(5,Math.max(1,Number(ch.visionTitleRows.newValue)||3));document.querySelectorAll('textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]').forEach(ta=>lddApplyTitleRows(ta,lddVisionTitleRowsCache));}if(area==='local'&&['wideScrollbars','scrollbarWidth','highContrastScrollbars','visionTitleBox','visionTitleRows'].some(k=>ch[k]))lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements)});
 lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements);
+lddSafeGet({visionTitleRows:3},o=>{lddVisionTitleRowsCache=Math.min(5,Math.max(1,Number(o.visionTitleRows)||3));});
 
 window.addEventListener("resize",()=>{if(typeof lddAppRoot!=="undefined"&&lddAppRoot)lddPositionAppBesideMdSidebar()},{passive:true});
 
@@ -3184,7 +3286,7 @@ document.addEventListener("click",e=>{
  setTimeout(lddSyncAppFontPageFromStorage,30);
 },true);
 
-const LDD_SETTINGS_TIPS={"Max Length Unlocker": "Raises MyDesigns text-field character limits locally so you can enter much longer text where MD normally caps the field.", "Product Type Buttons": "Adds quick preset buttons for Product Type after you choose Other (Please specify).", "Credits": "Shows or hides the MyDesigns credits button/bar.", "Hover Preview": "Shows a larger design preview when you hover over a design card.", "Drag & Drop Upload": "Lets you drag files from Explorer onto the Designs page and sends them through the native MyDesigns upload window.", "App Font": "Changes the MyDesigns interface font locally in your browser.", "Theme": "Enables LDD's MyDesigns appearance/theme customizations.", "Carousel Renamer": "Opens the LDD renaming workflow for selected or newly uploaded designs.", "Vision AI Multi-Line Title": "Replaces the small Vision AI listing-title field with a taller multi-line title box.", "": "Controls the width of the MyDesigns scrollbar.", "Designs \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Design cards.", "Products \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Product cards.", "Create with AI": "Shows or hides MyDesigns' Create with AI control.", "Canvas Quick Menu": "Adds LDD's extra right-click menu tools in the MyDesigns canvas."};
+const LDD_SETTINGS_TIPS={"Max Length Unlocker": "Raises MyDesigns text-field character limits locally so you can enter much longer text where MD normally caps the field.", "Product Type Buttons": "Adds quick preset buttons for Product Type after you choose Other (Please specify).", "Credits": "Shows or hides the MyDesigns credits button/bar.", "Hover Preview": "Shows a larger design preview when you hover over a design card.", "Drag & Drop Upload": "Lets you drag files from Explorer onto the Designs page and sends them through the native MyDesigns upload window.", "App Font": "Changes the MyDesigns interface font locally in your browser.", "Theme": "Enables LDD's MyDesigns appearance/theme customizations.", "LDD Renamer": "Opens the LDD renaming workflow for selected or newly uploaded designs.", "Vision AI Multi-Line Title": "Replaces the small Vision AI listing-title field with a taller multi-line title box.", "": "Controls the width of the MyDesigns scrollbar.", "Designs \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Design cards.", "Products \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Product cards.", "Create with AI": "Shows or hides MyDesigns' Create with AI control.", "Canvas Quick Menu": "Adds LDD's extra right-click menu tools in the MyDesigns canvas."};
 function lddInstallSettingsHoverTips(){
  const page=document.getElementById("ldd-app-page"); if(!page)return;
  const settingsTab=document.querySelector('#ldd-app-page [data-tab="settings"].active,#ldd-app-page [data-tab="settings"][aria-selected="true"]');
@@ -3625,7 +3727,7 @@ setTimeout(lddSyncDesignsSearchVisibility,600);
 function lddRestoreTitleTextareaHeight(){
  lddSafeGet({visionTitleRows:3},o=>{
    const rows=Math.min(5,Math.max(1,Number(o.visionTitleRows)||3));
-   cfg.visionTitleRows=rows;
+   lddVisionTitleRowsCache=rows;
    document.querySelectorAll('textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]').forEach(ta=>lddApplyTitleRows(ta,rows));
  });
 }
@@ -3638,7 +3740,7 @@ setTimeout(lddRestoreTitleTextareaHeight,500);
    remount can never throw and stop the rest of LDD Tools from initializing. */
 function lddKeepTitleTextarea172(){
  try{
-   const rows=Math.min(5,Math.max(1,Number(cfg?.visionTitleRows)||3));
+   const rows=Math.min(5,Math.max(1,Number(lddVisionTitleRowsCache)||3));
    const h={1:36,2:60,3:84,4:108,5:132}[rows];
    document.querySelectorAll('textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]').forEach(ta=>{
      try{
@@ -3686,16 +3788,39 @@ async function lddRunNativeAction110(label){
  action.click();return true;
 }
 function lddCombo110(e){const p=[];if(e.ctrlKey)p.push('Ctrl');if(e.altKey)p.push('Alt');if(e.shiftKey)p.push('Shift');if(e.metaKey)p.push('Meta');const k=e.key.length===1?e.key.toUpperCase():e.key;if(!['Control','Alt','Shift','Meta'].includes(e.key))p.push(k);return p.join('+');}
-document.addEventListener('keydown',e=>{
- if(lddTypingTarget110(e.target)||e.repeat)return;
+/* v1.8.15 — hotkeys are a startup service, not a Hotkeys-page side effect.
+   Keep a synchronous cache so preventDefault/stopPropagation happen during the key event. */
+const LDD_HOTKEY_ACTIONS_1815={upscale:'Upscale image',removeBg:'Remove background',imageMockups:'Image mockups',videoMockups:'Video mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize image',colorOverlay:'Color overlay',patternOverlay:'Pattern overlay',imageEffect:'Image effect',resizeImage:'Resize image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap files',deleteFiles:'Delete files',bulkTags:'Bulk tags',bulkSyncPublications:'Bulk sync publications',checkTrademarks:'Check trademarks',searchTrademarks:'Search trademarks',translate:'Translate',deleteAction:'Delete'};
+let lddHotkeyState1815={enabled:true,map:Object.assign({},LDD_DEFAULTS.hotkeyMap)};
+/* v1.8.16: migrate the old four Ctrl+Alt defaults / blank rows to the new complete numeric map once. Custom maps are preserved. */
+lddSafeGet({hotkeyMap:null,hotkeyDefaults1816:false},o=>{
+ if(o.hotkeyDefaults1816)return;
+ const m=o.hotkeyMap||{};
+ const legacy=(!m.canvas&&!m.visionAI&&!m.vectorize) && (!m.upscale||m.upscale==='Ctrl+Alt+U') && (!m.removeBg||m.removeBg==='Ctrl+Alt+B') && (!m.imageMockups||m.imageMockups==='Ctrl+Alt+I') && (!m.videoMockups||m.videoMockups==='Ctrl+Alt+V');
+ if(legacy)lddSafeSet({hotkeyMap:Object.assign({},LDD_DEFAULTS.hotkeyMap),hotkeyDefaults1816:true});
+ else lddSafeSet({hotkeyDefaults1816:true});
+});
+function lddLoadHotkeyState1815(){
  lddSafeGet({hotkeysEnabled:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap},o=>{
-  if(o.hotkeysEnabled===false)return;
-  const defs={upscale:'Upscale image',removeBg:'Remove background',imageMockups:'Image mockups',videoMockups:'Video mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize image',colorOverlay:'Color overlay',patternOverlay:'Pattern overlay',imageEffect:'Image effect',resizeImage:'Resize image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap files',deleteFiles:'Delete files',bulkTags:'Bulk tags',bulkSyncPublications:'Bulk sync publications',checkTrademarks:'Check trademarks',searchTrademarks:'Search trademarks',translate:'Translate',deleteAction:'Delete'};
-  const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{}), combo=lddCombo110(e);
-  const hit=Object.keys(defs).find(id=>map[id]&&map[id].toLowerCase()===combo.toLowerCase());if(!hit)return;
-  e.preventDefault();e.stopPropagation();
-  lddRunNativeAction110(defs[hit]).catch(err=>globalThis.lddToast110(err.message||'MyDesigns action unavailable'));
+  lddHotkeyState1815={enabled:o.hotkeysEnabled!==false,map:Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{})};
  });
+}
+lddLoadHotkeyState1815();
+lddSafeOnChanged((changes,area)=>{
+ if(area!=='local'||(!changes.hotkeysEnabled&&!changes.hotkeyMap))return;
+ if(changes.hotkeysEnabled)lddHotkeyState1815.enabled=changes.hotkeysEnabled.newValue!==false;
+ if(changes.hotkeyMap)lddHotkeyState1815.map=Object.assign({},LDD_DEFAULTS.hotkeyMap,changes.hotkeyMap.newValue||{});
+});
+document.addEventListener('keydown',e=>{
+ if(lddTypingTarget110(e.target)||e.repeat||!lddHotkeyState1815.enabled)return;
+ const combo=lddCombo110(e);
+ const map=lddHotkeyState1815.map||LDD_DEFAULTS.hotkeyMap;
+ const hit=Object.keys(LDD_HOTKEY_ACTIONS_1815).find(id=>map[id]&&String(map[id]).toLowerCase()===combo.toLowerCase());
+ if(!hit)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ const actionLabel=LDD_HOTKEY_ACTIONS_1815[hit];
+ globalThis.lddToast110(`Hotkey: ${actionLabel}`,true,'info');
+ lddRunNativeAction110(actionLabel).then(()=>globalThis.lddToast110(`${actionLabel} opened`,true,'success')).catch(err=>globalThis.lddToast110(err.message||'MyDesigns action unavailable',true,'error'));
 },true);
 
 lddSafeOnChanged((c,a)=>{if(a==='local' && ['themeEnabled','themeTweaker','themeBg','themePanel','themeText','themeMuted','themeColor','themeAccent2','themeAccent3','themeAccent4','themeAccent5','themeBorder','themeHover','themeSelected','themeWarning','themeError','themeRadius','themeUiScale','themeGlow','themeCards'].some(k=>c[k]))lddSafeGet(LDD_DEFAULTS,lddApplyTheme110)});
@@ -3711,21 +3836,43 @@ function lddHotkeyHudOnDesigns113(){
  const p=location.pathname.replace(/\/+$/,'');
  return p==='/app/designs'||p==='/designs'||p.endsWith('/designs');
 }
+let lddHotkeyHudReadyTimer113=null;
+function lddHotkeyHudHeaderReady113(){
+ const search=document.querySelector('input[placeholder="Search designs and products..."]')||document.querySelector('button[aria-label="Search designs and products"]');
+ if(!search||!search.isConnected)return false;
+ const r=search.getBoundingClientRect();
+ return r.width>0&&r.height>0&&document.readyState!=='loading';
+}
 function lddHotkeyHud113(){
- if(!lddHotkeyHudOnDesigns113()){document.getElementById('ldd-hotkey-hud-113')?.remove();return;}
+ if(!lddHotkeyHudOnDesigns113()){document.getElementById('ldd-hotkey-hud-113')?.remove();if(lddHotkeyHudReadyTimer113){clearTimeout(lddHotkeyHudReadyTimer113);lddHotkeyHudReadyTimer113=null;}return;}
  if(document.getElementById('ldd-hotkey-hud-113'))return;
+ if(!lddHotkeyHudHeaderReady113()){
+  clearTimeout(lddHotkeyHudReadyTimer113);
+  lddHotkeyHudReadyTimer113=setTimeout(lddHotkeyHud113,350);
+  return;
+ }
+ clearTimeout(lddHotkeyHudReadyTimer113);
+ lddHotkeyHudReadyTimer113=setTimeout(()=>lddHotkeyHudMount113(),900);
+}
+function lddHotkeyHudMount113(){
+ lddHotkeyHudReadyTimer113=null;
+ if(!lddHotkeyHudOnDesigns113()||!lddHotkeyHudHeaderReady113()||document.getElementById('ldd-hotkey-hud-113'))return;
  lddSafeGet({hotkeysEnabled:true,hotkeyHudEnabled:false,
-  toastNotifications:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap,hotkeyHudCollapsed:false,hotkeyHudPosition:null},o=>{
+  toastNotifications:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap,hotkeyHudVisible:LDD_DEFAULTS.hotkeyHudVisible,hotkeyHudCollapsed:true,hotkeyHudPosition:null,hotkeyHudDragHintSeen:false},o=>{
   if(document.getElementById('ldd-hotkey-hud-113'))return;
   if(o.hotkeyHudEnabled===false)return;
   const hud=document.createElement('div');hud.id='ldd-hotkey-hud-113';
   if(o.hotkeyHudCollapsed)hud.classList.add('collapsed');
   const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{});
-  hud.innerHTML=`<div class="ldd-hotkey-hud-head-113"><b>⌨ Hotkey Tips</b><button type="button" class="ldd-hotkey-hud-collapse-113" title="Collapse hotkey tips">${o.hotkeyHudCollapsed?'＋':'−'}</button></div><div class="ldd-hotkey-hud-body-113"></div>`;
+  hud.innerHTML=`<div class="ldd-hotkey-hud-head-113" title="Drag to move"><span class="ldd-hotkey-hud-title-113"><span class="ldd-hotkey-hud-grip-113" aria-hidden="true">⠿</span><b>⌨ Hotkey Tips</b></span><span class="ldd-hotkey-hud-actions-113"><button type="button" class="ldd-hotkey-hud-collapse-113" title="Collapse hotkey tips">${o.hotkeyHudCollapsed?'＋':'−'}</button><button type="button" class="ldd-hotkey-hud-close-113" title="Turn off Hotkey Tips HUD" aria-label="Turn off Hotkey Tips HUD">×</button></span></div><div class="ldd-hotkey-hud-body-113"></div>`;
   document.body.appendChild(hud);
-  const pos=o.hotkeyHudPosition;if(pos&&Number.isFinite(pos.x)&&Number.isFinite(pos.y)){hud.style.left=Math.max(8,Math.min(pos.x,innerWidth-hud.offsetWidth-8))+'px';hud.style.top=Math.max(8,Math.min(pos.y,innerHeight-hud.offsetHeight-8))+'px';hud.style.right='auto';}
-  const render=()=>{const body=hud.querySelector('.ldd-hotkey-hud-body-113');body.innerHTML=Object.entries(LDD_HOTKEY_HUD_DEFS_113).map(([id,name])=>map[id]?`<div><span>${name}</span><kbd>${map[id]}</kbd></div>`:'').join('')||'<small>No hotkeys assigned</small>';};render();
+  const pos=o.hotkeyHudPosition;
+  const placeDefault=()=>{const search=document.querySelector('input[placeholder="Search designs and products..."]');if(!search)return;const r=search.getBoundingClientRect();const x=Math.min(innerWidth-hud.offsetWidth-8,r.right+20);const y=Math.max(8,r.top+(r.height-hud.offsetHeight)/2);hud.style.left=Math.max(8,x)+'px';hud.style.top=y+'px';hud.style.right='auto';};
+  if(pos&&Number.isFinite(pos.x)&&Number.isFinite(pos.y)){hud.style.left=Math.max(8,Math.min(pos.x,innerWidth-hud.offsetWidth-8))+'px';hud.style.top=Math.max(8,Math.min(pos.y,innerHeight-hud.offsetHeight-8))+'px';hud.style.right='auto';}else{placeDefault();setTimeout(placeDefault,250);}
+  if(!o.hotkeyHudDragHintSeen){const hint=document.createElement('div');hint.className='ldd-hotkey-drag-hint-113';hint.textContent='⠿ Drag me anywhere';hud.appendChild(hint);requestAnimationFrame(()=>hint.classList.add('show'));setTimeout(()=>{hint.classList.remove('show');setTimeout(()=>hint.remove(),250);},3200);lddSafeSet({hotkeyHudDragHintSeen:true});}
+  const visible=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});const render=()=>{const body=hud.querySelector('.ldd-hotkey-hud-body-113');body.innerHTML=Object.entries(LDD_HOTKEY_HUD_DEFS_113).map(([id,name])=>(map[id]&&visible[id]===true)?`<div><span>${name}</span><kbd>${map[id]}</kbd></div>`:'').join('')||'<small>No HUD shortcuts selected</small>';};render();
   const collapse=hud.querySelector('.ldd-hotkey-hud-collapse-113');collapse.onclick=e=>{e.stopPropagation();const v=!hud.classList.contains('collapsed');hud.classList.toggle('collapsed',v);collapse.textContent=v?'＋':'−';collapse.title=v?'Expand hotkey tips':'Collapse hotkey tips';lddSafeSet({hotkeyHudCollapsed:v});};
+  const close=hud.querySelector('.ldd-hotkey-hud-close-113');close.onclick=e=>{e.stopPropagation();hud.remove();lddSafeSet({hotkeyHudEnabled:false},()=>globalThis.lddToast110('Hotkey HUD disabled',false,'info'));};
   const head=hud.querySelector('.ldd-hotkey-hud-head-113');let drag=null;
   head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=hud.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top};head.setPointerCapture?.(e.pointerId);hud.classList.add('dragging');});
   head.addEventListener('pointermove',e=>{if(!drag)return;const x=Math.max(8,Math.min(e.clientX-drag.dx,innerWidth-hud.offsetWidth-8)),y=Math.max(8,Math.min(e.clientY-drag.dy,innerHeight-hud.offsetHeight-8));hud.style.left=x+'px';hud.style.top=y+'px';hud.style.right='auto';});
@@ -3736,7 +3883,7 @@ setTimeout(lddHotkeyHud113,500);
 let lddHudLastPath113=location.pathname;
 setInterval(()=>{if(location.pathname!==lddHudLastPath113){lddHudLastPath113=location.pathname;document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();}},350);
 window.addEventListener('popstate',()=>{document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();});
-lddSafeOnChanged((c,a)=>{if(a!=='local')return;if(c.hotkeyMap||c.hotkeysEnabled||c.hotkeyHudEnabled){document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();}});
+lddSafeOnChanged((c,a)=>{if(a!=='local')return;if(c.hotkeyMap||c.hotkeysEnabled||c.hotkeyHudEnabled||c.hotkeyHudVisible){document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();}});
 
 
 
