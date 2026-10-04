@@ -8,6 +8,8 @@ const terminal = new Set(['imported','manual-ready','fallback','failed']);
 const restore=async id=>{if(jobs.has(id))return jobs.get(id);const saved=(await chrome.storage.session.get('lddAiOwners')).lddAiOwners||{};if(saved[id]){jobs.set(id,{...saved[id],locks:new Set(saved[id].locks||[])});return jobs.get(id)}return null};
 const persist=async()=>{const data={};for(const [id,owner] of jobs)data[id]={...owner,locks:[...owner.locks]};await chrome.storage.session.set({lddAiOwners:data})};
 chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
+  const aiTypes=new Set(['LDD_AI_CHECK','LDD_AI_CANCEL','LDD_AI_OPEN','LDD_AI_CLAIM','LDD_AI_LOCK','LDD_AI_STATUS','LDD_AI_DOWNLOAD_JSON','LDD_AI_RESULT','LDD_AI_FINISH']);
+  if(!aiTypes.has(msg?.type)) return;
   (async()=>{
     const id=msg?.jobId, tabId=sender.tab?.id;
     if(msg?.type==='LDD_AI_CHECK'){
@@ -166,7 +168,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
     if(!['github.com','objects.githubusercontent.com'].includes(u.hostname) && !u.hostname.endsWith('.githubusercontent.com')) throw new Error('Update URL is not a GitHub download');
     if(!/\.zip(?:$|\?)/i.test(u.href)) throw new Error('Update asset must be a ZIP');
     const version=String(msg.version||'update').replace(/[^0-9A-Za-z._-]/g,'');
-    const id=await chrome.downloads.download({url:u.href,filename:`LDD-Tools-UPDATE-v${version}.zip`,saveAs:false,conflictAction:'uniquify'});
+    const id=await chrome.downloads.download({url:u.href,filename:'LDD-Tools-latest.zip',saveAs:false,conflictAction:'overwrite'});
     return {ok:!!id,downloadId:id};
   })().then(respond,e=>respond({ok:false,error:String(e?.message||e)}));
   return true;

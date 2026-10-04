@@ -1563,3 +1563,24 @@ textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]{box-sizing:border-bo
 #ldd-update-gate .ldd-update-gate-actions [data-download]:disabled{opacity:.78!important;cursor:default!important}
 #ldd-update-gate .ldd-update-gate-steps.ldd-download-ready{border-color:#b9dfc5!important;background:#f4fbf6!important;box-shadow:0 0 0 2px rgba(42,137,72,.08)!important}
 #ldd-update-gate .ldd-update-gate-error{margin:12px 0!important;padding:11px 14px!important;border:1px solid #e6a2a2!important;border-radius:10px!important;background:#fff3f3!important;color:#8a2020!important;font-weight:700!important}
+
+
+/* ===== v1.8.13 Dashboard corner links + Suggest a Feature white card ===== */
+#ldd-app-page .ldd-dashboard-corner{position:fixed!important;right:22px!important;bottom:18px!important;z-index:30!important;display:flex!important;align-items:center!important;gap:9px!important;padding:8px 10px!important;border:1px solid rgba(var(--ldd-neon-rgb),.24)!important;border-radius:10px!important;background:rgba(8,10,14,.94)!important;box-shadow:0 8px 26px rgba(0,0,0,.24)!important;font-size:12px!important;line-height:1!important;white-space:nowrap!important}
+#ldd-app-page .ldd-dashboard-corner span{color:#aeb2ba!important;font-weight:650!important}
+#ldd-app-page .ldd-dashboard-corner a,#ldd-app-page .ldd-dashboard-corner button{appearance:none!important;border:0!important;background:transparent!important;padding:5px 6px!important;margin:0!important;color:var(--ldd-accent,#39ff14)!important;font:750 12px/1.1 inherit!important;text-decoration:none!important;cursor:pointer!important;border-radius:6px!important}
+#ldd-app-page .ldd-dashboard-corner a:hover,#ldd-app-page .ldd-dashboard-corner button:hover{background:rgba(var(--ldd-neon-rgb),.10)!important;color:#fff!important}
+#ldd-suggestion-card{position:fixed!important;inset:0!important;z-index:2147483647!important;display:flex!important;align-items:center!important;justify-content:center!important;padding:24px!important;background:rgba(8,10,14,.62)!important;backdrop-filter:blur(5px)!important;font-family:Inter,"Helvetica Neue",Arial,sans-serif!important}
+#ldd-suggestion-card .ldd-suggestion-white-card{position:relative!important;width:min(590px,calc(100vw - 48px))!important;box-sizing:border-box!important;padding:28px!important;border:1px solid #d9dde5!important;border-radius:18px!important;background:#fff!important;color:#17191f!important;box-shadow:0 28px 90px rgba(0,0,0,.34)!important}
+#ldd-suggestion-card .ldd-suggestion-x{position:absolute!important;right:16px!important;top:14px!important;width:34px!important;height:34px!important;border:0!important;border-radius:9px!important;background:#f0f2f5!important;color:#24262c!important;font:700 22px/34px Arial,sans-serif!important;cursor:pointer!important}
+#ldd-suggestion-card .ldd-suggestion-kicker{font-size:12px!important;font-weight:900!important;letter-spacing:.13em!important;color:#6d3cff!important}
+#ldd-suggestion-card h2{margin:6px 44px 5px 0!important;font-size:25px!important;line-height:1.2!important;color:#111318!important}
+#ldd-suggestion-card p{margin:0 0 18px!important;color:#5e6470!important;font-size:14px!important}
+#ldd-suggestion-card label{display:block!important;margin:13px 0!important;color:#30343b!important;font-size:13px!important;font-weight:800!important}
+#ldd-suggestion-card input,#ldd-suggestion-card textarea{display:block!important;width:100%!important;box-sizing:border-box!important;margin-top:7px!important;padding:11px 12px!important;border:1px solid #ccd1da!important;border-radius:9px!important;background:#fff!important;color:#17191f!important;font:500 14px/1.45 Inter,"Helvetica Neue",Arial,sans-serif!important;outline:none!important;resize:vertical!important}
+#ldd-suggestion-card input:focus,#ldd-suggestion-card textarea:focus{border-color:#6d3cff!important;box-shadow:0 0 0 3px rgba(109,60,255,.12)!important}
+#ldd-suggestion-card .ldd-suggestion-actions{display:flex!important;justify-content:flex-end!important;gap:10px!important;margin-top:18px!important}
+#ldd-suggestion-card .ldd-suggestion-actions button{min-height:40px!important;padding:0 16px!important;border:1px solid #17191f!important;border-radius:9px!important;font-weight:850!important;cursor:pointer!important}
+#ldd-suggestion-card [data-cancel]{background:#fff!important;color:#17191f!important}
+#ldd-suggestion-card [data-submit]{background:#17191f!important;color:#fff!important}
+#ldd-suggestion-card .ldd-suggestion-note{margin-top:13px!important;color:#777d87!important;font-size:11px!important;line-height:1.4!important}

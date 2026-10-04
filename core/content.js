@@ -1172,8 +1172,38 @@ function lddRenderDashboard(o){
     <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, Carousel Renamer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
-    <div class="ldd-control-card ldd-support-card"><h2>Lavender Dragon Design</h2><b>Made with ❤️ by Andrea</b><span><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">Etsy Shop</a> · <a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a> · <a href="https://lddtools.lol" target="_blank" rel="noopener noreferrer">More Tools — LDDTools.lol</a></span></div>
+    <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
   </div>`;
+}
+function lddOpenSuggestionCard(){
+  if(document.getElementById("ldd-suggestion-card")) return;
+  const ov=document.createElement("div");
+  ov.id="ldd-suggestion-card";
+  ov.innerHTML=`<div class="ldd-suggestion-white-card" role="dialog" aria-modal="true" aria-label="Suggest a Feature">
+    <button type="button" class="ldd-suggestion-x" aria-label="Close">×</button>
+    <div class="ldd-suggestion-kicker">LDD TOOLS</div>
+    <h2>💡 Suggest a Feature</h2>
+    <p>Got an idea that would make LDD Tools better? Send it over.</p>
+    <label>Suggestion title<input id="ldd-suggestion-title" maxlength="120" placeholder="What should LDD Tools add?"></label>
+    <label>Details<textarea id="ldd-suggestion-details" maxlength="4000" rows="7" placeholder="Tell me what you want it to do, where it should live, or what problem it would solve."></textarea></label>
+    <div class="ldd-suggestion-actions"><button type="button" data-cancel>Cancel</button><button type="button" data-submit>Submit Suggestion</button></div>
+    <div class="ldd-suggestion-note">Submission opens the official LDD Tools suggestion form on GitHub with your idea pre-filled.</div>
+  </div>`;
+  const close=()=>ov.remove();
+  ov.querySelector(".ldd-suggestion-x").onclick=close;
+  ov.querySelector("[data-cancel]").onclick=close;
+  ov.addEventListener("click",e=>{if(e.target===ov)close()});
+  ov.querySelector("[data-submit]").onclick=()=>{
+    const title=(ov.querySelector("#ldd-suggestion-title").value||"").trim();
+    const details=(ov.querySelector("#ldd-suggestion-details").value||"").trim();
+    if(!title){ ov.querySelector("#ldd-suggestion-title").focus(); return; }
+    const body=`### Suggestion\n${details||title}\n\n---\nSubmitted from LDD Tools v${chrome.runtime.getManifest().version}`;
+    const url=`https://github.com/lavenderdragondesign/LDDEXTENSIONMD/issues/new?title=${encodeURIComponent("Suggestion: "+title)}&body=${encodeURIComponent(body)}`;
+    window.open(url,"_blank","noopener,noreferrer");
+    close();
+  };
+  document.body.appendChild(ov);
+  setTimeout(()=>ov.querySelector("#ldd-suggestion-title")?.focus(),0);
 }
 function lddRenderThemePage(o){
  return `<div class="ldd-page-title"><h2>◈ Theme</h2><p>Customize the MyDesigns app locally.</p></div>
@@ -2228,6 +2258,7 @@ document.body.appendChild(lddAppRoot);
  });
  lddShowTab("dashboard");
  const closeBtn=lddAppRoot.querySelector("#ldd-app-close"); if(closeBtn)closeBtn.onclick=lddCloseAppPage;
+ const suggestBtn=lddAppRoot.querySelector("#ldd-suggest-feature"); if(suggestBtn)suggestBtn.onclick=lddOpenSuggestionCard;
  const entry=document.getElementById("ldd-sidebar-entry");
  entry?.classList.add("ldd-active");
 
