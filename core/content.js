@@ -1172,7 +1172,6 @@ function lddRenderDashboard(o){
     <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, Carousel Renamer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
-    <div class="ldd-control-card ldd-update-card"><h2>Updates</h2><span id="ldd-update-status">Official updates are checked automatically from <b>Lavender Dragon Design</b> when you click LDD Tools in the MyDesigns sidebar. If a newer version exists, the white update popup appears before LDD opens.</span><div class="ldd-page-inline"><button type="button" id="ldd-check-update" class="ldd-page-secondary">CHECK NOW</button><button type="button" id="ldd-download-update" class="ldd-page-secondary" hidden>DOWNLOAD UPDATE</button></div><span id="ldd-update-notes"></span></div>
     <div class="ldd-control-card ldd-support-card"><h2>Lavender Dragon Design</h2><b>Made with ❤️ by Andrea</b><span><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">Etsy Shop</a> · <a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a> · <a href="https://lddtools.lol" target="_blank" rel="noopener noreferrer">More Tools — LDDTools.lol</a></span></div>
   </div>`;
 }
@@ -1453,7 +1452,6 @@ function lddRenderSettingsPage(o){
     <div class="ldd-enable-disable" data-two-button-setting="toastNotifications"><button type="button" data-setting-value="true" class="${o.toastNotifications!==false?'active':''}">ON</button><button type="button" data-setting-value="false" class="${o.toastNotifications===false?'active':''}">OFF</button></div>
     <button type="button" id="ldd-test-toast" class="ldd-page-secondary">TEST TOAST</button>
    </div>
-   <div class="ldd-control-card"><b>GitHub Updates</b><span>Official update source: <strong>lavenderdragondesign/LDDEXTENSIONMD</strong>. LDD checks GitHub Releases and can download the newest ZIP. Chrome does not allow an unpacked extension to overwrite its own folder.</span><div class="ldd-page-inline"><button type="button" id="ldd-settings-check-update" class="ldd-page-secondary">CHECK NOW</button></div><span id="ldd-settings-update-status">Ready to check official LDD Tools releases.</span></div>
    <div class="ldd-control-card"><b>Extension</b><span>LDD Tools 1.8.9 • MyDesigns /app only</span></div>
    <button type="button" class="ldd-page-secondary" data-tab="about">About</button>
    <button id="ldd-page-reset-settings" class="ldd-page-secondary">Reset LDD Settings</button>
@@ -1784,11 +1782,7 @@ function lddBindAppPage(tab,o){
    if(lddVersionCompare(latest,current)>0){if(statusEl)statusEl.textContent=`🔥 Update available: v${latest} (installed v${current})`;if(notesEl)notesEl.textContent=result.release?.name||'';if(downloadBtn){downloadBtn.hidden=false;downloadBtn.dataset.url=result.release?.assetUrl||'';downloadBtn.dataset.version=latest}globalThis.lddToast110(`LDD Tools v${latest} update found`,true,'success')}
    else {if(statusEl)statusEl.textContent=`✓ You're up to date — v${current}`;if(downloadBtn)downloadBtn.hidden=true}
    return result;
- };
- const updateStatus=lddAppRoot.querySelector('#ldd-update-status'), updateBtn=lddAppRoot.querySelector('#ldd-check-update'), downloadBtn=lddAppRoot.querySelector('#ldd-download-update'), updateNotes=lddAppRoot.querySelector('#ldd-update-notes');
- if(updateBtn)updateBtn.onclick=()=>lddCheckGithubUpdate(updateStatus,downloadBtn,updateNotes);
- if(downloadBtn)downloadBtn.onclick=()=>{const url=downloadBtn.dataset.url;if(!url){globalThis.lddToast110('This release has no ZIP asset to download',true,'error');return}chrome.runtime.sendMessage({type:'LDD_DOWNLOAD_GITHUB_UPDATE',url,version:downloadBtn.dataset.version},r=>{if(r?.ok)globalThis.lddToast110('Update ZIP downloading — extract it over your existing LDD Tools folder, then Reload in chrome://extensions',true,'success');else globalThis.lddToast110('Update download failed: '+(r?.error||'Unknown error'),true,'error')})};
- const settingsCheck=lddAppRoot.querySelector('#ldd-settings-check-update'); if(settingsCheck)settingsCheck.onclick=()=>lddCheckGithubUpdate(lddAppRoot.querySelector('#ldd-settings-update-status'),null,null);
+ }; if(settingsCheck)settingsCheck.onclick=()=>lddCheckGithubUpdate(lddAppRoot.querySelector('#ldd-settings-update-status'),null,null);
  const testToast=lddAppRoot.querySelector("#ldd-test-toast"); if(testToast)testToast.onclick=()=>globalThis.lddToast110("LDD Toasts are working ✓",true,"success");
  const pqOpen=lddAppRoot.querySelector("#ldd-open-prompt-queue"); if(pqOpen)pqOpen.onclick=()=>window.open("https://chatgpt.com/","_blank","noopener");
  const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout"); if(scoutOpen)scoutOpen.onclick=()=>{
@@ -2082,11 +2076,38 @@ function lddCompareVersions(a,b){
   for(let i=0;i<Math.max(A.length,B.length);i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}
   return 0;
 }
-function lddCheckOfficialUpdate(){
-  return new Promise(resolve=>{
-    try{chrome.runtime.sendMessage({type:"LDD_CHECK_GITHUB_UPDATE",repo:LDD_OFFICIAL_UPDATE_REPO},r=>resolve(r||{ok:false,error:chrome.runtime.lastError?.message||"No response"}))}
-    catch(e){resolve({ok:false,error:String(e?.message||e)})}
-  });
+async function lddCheckOfficialUpdate(){
+  // Ask the service worker first. If it is asleep/unavailable, fall back to a
+  // direct GitHub API request from the MyDesigns content script. This keeps the
+  // sidebar update gate reliable instead of silently opening LDD on failure.
+  try{
+    const viaWorker=await new Promise(resolve=>{
+      let settled=false;
+      const timer=setTimeout(()=>{if(!settled){settled=true;resolve(null)}},3500);
+      try{
+        chrome.runtime.sendMessage({type:"LDD_CHECK_GITHUB_UPDATE"},r=>{
+          if(settled)return;
+          settled=true;clearTimeout(timer);
+          if(chrome.runtime.lastError) resolve(null); else resolve(r||null);
+        });
+      }catch(_){clearTimeout(timer);settled=true;resolve(null)}
+    });
+    if(viaWorker?.ok && viaWorker.release?.version) return viaWorker;
+  }catch(_){}
+  try{
+    const r=await fetch("https://api.github.com/repos/lavenderdragondesign/LDDEXTENSIONMD/releases/latest",{
+      cache:"no-store",headers:{Accept:"application/vnd.github+json"}
+    });
+    if(!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
+    const rel=await r.json();
+    const assets=Array.isArray(rel.assets)?rel.assets:[];
+    const zip=assets.find(a=>/LDD[-_ ]?Tools.*\.zip$/i.test(a.name||""))||assets.find(a=>/\.zip$/i.test(a.name||""));
+    return {ok:true,release:{
+      version:String(rel.tag_name||rel.name||"").replace(/^v/i,""),
+      name:rel.name||rel.tag_name||"",body:rel.body||"",htmlUrl:rel.html_url||"",
+      assetUrl:zip?.browser_download_url||""
+    }};
+  }catch(e){return {ok:false,error:String(e?.message||e)}}
 }
 function lddShowUpdateGate(release){
   return new Promise(resolve=>{
