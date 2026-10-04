@@ -2140,12 +2140,28 @@ function lddShowUpdateGate(release){
     ov.querySelector("[data-open]").onclick=()=>finish(true);
     ov.querySelector(".ldd-update-gate-x").onclick=()=>finish(true);
     ov.addEventListener("click",e=>{if(e.target===ov)finish(true)});
-    ov.querySelector("[data-download]").onclick=()=>{
+    const downloadBtn=ov.querySelector("[data-download]");
+    downloadBtn.onclick=()=>{
       const url=release?.assetUrl;
-      if(!url){globalThis.lddToast110?.("This GitHub release has no ZIP asset",true,"error");return;}
+      if(!url){
+        downloadBtn.textContent="DOWNLOAD UNAVAILABLE";
+        downloadBtn.disabled=true;
+        return;
+      }
+      downloadBtn.disabled=true;
+      downloadBtn.textContent="DOWNLOADING…";
       chrome.runtime.sendMessage({type:"LDD_DOWNLOAD_GITHUB_UPDATE",url,version:latest},r=>{
-        if(r?.ok) globalThis.lddToast110?.("Update ZIP downloading — overwrite your existing LDD Tools folder, then Reload in chrome://extensions",true,"success");
-        else globalThis.lddToast110?.("Update download failed: "+(r?.error||"Unknown error"),true,"error");
+        if(r?.ok){
+          downloadBtn.textContent="✓ DOWNLOADED";
+          const steps=ov.querySelector(".ldd-update-gate-steps");
+          steps?.classList.add("ldd-download-ready");
+          steps?.scrollIntoView({behavior:"smooth",block:"nearest"});
+        }else{
+          downloadBtn.disabled=false;
+          downloadBtn.textContent="↻ TRY DOWNLOAD AGAIN";
+          const warning=ov.querySelector(".ldd-update-gate-warning");
+          if(warning) warning.insertAdjacentHTML("beforebegin",`<div class="ldd-update-gate-error">Download failed: ${String(r?.error||"Unknown error").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}</div>`);
+        }
       });
     };
   });

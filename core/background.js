@@ -166,7 +166,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
     if(!['github.com','objects.githubusercontent.com'].includes(u.hostname) && !u.hostname.endsWith('.githubusercontent.com')) throw new Error('Update URL is not a GitHub download');
     if(!/\.zip(?:$|\?)/i.test(u.href)) throw new Error('Update asset must be a ZIP');
     const version=String(msg.version||'update').replace(/[^0-9A-Za-z._-]/g,'');
-    const id=await chrome.downloads.download({url:u.href,filename:`LDD-Tools-UPDATE-v${version}.zip`,saveAs:true,conflictAction:'uniquify'});
+    const id=await chrome.downloads.download({url:u.href,filename:`LDD-Tools-UPDATE-v${version}.zip`,saveAs:false,conflictAction:'uniquify'});
     return {ok:!!id,downloadId:id};
   })().then(respond,e=>respond({ok:false,error:String(e?.message||e)}));
   return true;

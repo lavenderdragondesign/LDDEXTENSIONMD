@@ -1559,3 +1559,7 @@ textarea.ldd-vision-title-area[data-ldd-title-textarea="1"]{box-sizing:border-bo
 #ldd-update-gate .ldd-update-gate-actions button{min-height:42px!important;padding:0 17px!important;border-radius:10px!important;border:1px solid #17191f!important;font-weight:850!important;cursor:pointer!important}
 #ldd-update-gate .ldd-update-gate-actions [data-download]{background:#17191f!important;color:#fff!important}
 #ldd-update-gate .ldd-update-gate-actions [data-open]{background:#fff!important;color:#17191f!important}
+/* v1.8.12 direct-download state inside the white update card */
+#ldd-update-gate .ldd-update-gate-actions [data-download]:disabled{opacity:.78!important;cursor:default!important}
+#ldd-update-gate .ldd-update-gate-steps.ldd-download-ready{border-color:#b9dfc5!important;background:#f4fbf6!important;box-shadow:0 0 0 2px rgba(42,137,72,.08)!important}
+#ldd-update-gate .ldd-update-gate-error{margin:12px 0!important;padding:11px 14px!important;border:1px solid #e6a2a2!important;border-radius:10px!important;background:#fff3f3!important;color:#8a2020!important;font-weight:700!important}
