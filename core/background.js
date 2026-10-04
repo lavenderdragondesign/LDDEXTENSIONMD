@@ -161,7 +161,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
       const rel=await r.json();
       const assets=Array.isArray(rel.assets)?rel.assets:[];
       const zip=assets.find(a=>/LDD[-_ ]?Tools.*\.zip$/i.test(a.name||''))||assets.find(a=>/\.zip$/i.test(a.name||''));
-      return {ok:true,release:{version:String(rel.tag_name||rel.name||'').replace(/^v/i,''),name:rel.name||rel.tag_name||'',htmlUrl:rel.html_url||'',assetUrl:zip?.browser_download_url||''}};
+      return {ok:true,release:{version:String(rel.tag_name||rel.name||'').replace(/^v/i,''),name:rel.name||rel.tag_name||'',body:rel.body||'',htmlUrl:rel.html_url||'',assetUrl:zip?.browser_download_url||''}};
     }
     const u=new URL(String(msg.url||''));
     if(!['github.com','objects.githubusercontent.com'].includes(u.hostname) && !u.hostname.endsWith('.githubusercontent.com')) throw new Error('Update URL is not a GitHub download');

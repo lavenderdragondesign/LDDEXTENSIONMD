@@ -1128,11 +1128,11 @@ function lddMountSidebarEntry(){
       svg.classList.add("ldd-dragon-svg");
     }
 
-    a.addEventListener("click",e=>{
+    a.addEventListener("click",async e=>{
       e.preventDefault();
       e.stopPropagation();
-      try{ lddOpenAppPage(); }
-      catch(err){ console.error("LDD Tools open failed",err); }
+      try{ await lddOpenAppPageWithUpdateGate(); }
+      catch(err){ console.error("LDD Tools open failed",err); lddOpenAppPage(); }
     });
   }
 
@@ -1454,7 +1454,7 @@ function lddRenderSettingsPage(o){
     <button type="button" id="ldd-test-toast" class="ldd-page-secondary">TEST TOAST</button>
    </div>
    <div class="ldd-control-card"><b>GitHub Updates</b><span>Official update source: <strong>lavenderdragondesign/LDDEXTENSIONMD</strong>. LDD checks GitHub Releases and can download the newest ZIP. Chrome does not allow an unpacked extension to overwrite its own folder.</span><div class="ldd-page-inline"><button type="button" id="ldd-settings-check-update" class="ldd-page-secondary">CHECK NOW</button></div><span id="ldd-settings-update-status">Ready to check official LDD Tools releases.</span></div>
-   <div class="ldd-control-card"><b>Extension</b><span>LDD Tools 1.8.6 • MyDesigns /app only</span></div>
+   <div class="ldd-control-card"><b>Extension</b><span>LDD Tools 1.8.9 • MyDesigns /app only</span></div>
    <button type="button" class="ldd-page-secondary" data-tab="about">About</button>
    <button id="ldd-page-reset-settings" class="ldd-page-secondary">Reset LDD Settings</button>
  </div>`;
@@ -2073,6 +2073,73 @@ function lddPositionAppBesideMdSidebar(){
     if(rail)left=Math.max(0,Math.round(rail.getBoundingClientRect().right));
   }
   lddAppRoot.style.left=(left||80)+"px";
+}
+
+const LDD_OFFICIAL_UPDATE_REPO="lavenderdragondesign/LDDEXTENSIONMD";
+function lddCompareVersions(a,b){
+  const A=String(a||"0").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
+  const B=String(b||"0").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
+  for(let i=0;i<Math.max(A.length,B.length);i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}
+  return 0;
+}
+function lddCheckOfficialUpdate(){
+  return new Promise(resolve=>{
+    try{chrome.runtime.sendMessage({type:"LDD_CHECK_GITHUB_UPDATE",repo:LDD_OFFICIAL_UPDATE_REPO},r=>resolve(r||{ok:false,error:chrome.runtime.lastError?.message||"No response"}))}
+    catch(e){resolve({ok:false,error:String(e?.message||e)})}
+  });
+}
+function lddShowUpdateGate(release){
+  return new Promise(resolve=>{
+    document.getElementById("ldd-update-gate")?.remove();
+    const current=chrome.runtime.getManifest().version;
+    const latest=String(release?.version||"").replace(/^v/i,"");
+    const notes=String(release?.body||release?.name||"").trim();
+    const ov=document.createElement("div");
+    ov.id="ldd-update-gate";
+    ov.innerHTML=`<div class="ldd-update-gate-card" role="dialog" aria-modal="true" aria-label="LDD Tools Update Available">
+      <button type="button" class="ldd-update-gate-x" aria-label="Close">×</button>
+      <div class="ldd-update-gate-kicker">LDD TOOLS UPDATE</div>
+      <h2>🔥 Update Available — v${latest}</h2>
+      <p class="ldd-update-gate-version">Installed <b>v${current}</b> &nbsp;→&nbsp; Latest <b>v${latest}</b></p>
+      ${notes?`<div class="ldd-update-gate-notes"><b>What’s new</b><p>${notes.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])).replace(/\n/g,"<br>")}</p></div>`:""}
+      <div class="ldd-update-gate-steps"><h3>How to update</h3><ol>
+        <li>Click <b>Download Update</b> below.</li>
+        <li>Close MyDesigns / LDD Tools.</li>
+        <li>Open the downloaded ZIP and extract <b>all files and folders</b> into your existing LDD Tools extension folder.</li>
+        <li>When Windows asks, choose <b>Replace the files in the destination</b> / overwrite the existing files.</li>
+        <li>Open <b>chrome://extensions</b>, find LDD Tools, and click <b>Reload</b>.</li>
+        <li>Refresh MyDesigns.</li>
+      </ol></div>
+      <div class="ldd-update-gate-warning"><b>Do not remove LDD Tools from Chrome and do not extract into a different folder.</b> Overwrite the files in the same extension folder so Chrome keeps loading the same unpacked extension.</div>
+      <p class="ldd-update-gate-storage">Your LDD settings are stored by Chrome and should remain intact when the extension files are overwritten.</p>
+      <div class="ldd-update-gate-actions"><button type="button" data-download>⬇ DOWNLOAD UPDATE</button><button type="button" data-open>OPEN LDD TOOLS ANYWAY</button></div>
+    </div>`;
+    document.body.appendChild(ov);
+    const finish=open=>{ov.remove();resolve(open)};
+    ov.querySelector("[data-open]").onclick=()=>finish(true);
+    ov.querySelector(".ldd-update-gate-x").onclick=()=>finish(true);
+    ov.addEventListener("click",e=>{if(e.target===ov)finish(true)});
+    ov.querySelector("[data-download]").onclick=()=>{
+      const url=release?.assetUrl;
+      if(!url){globalThis.lddToast110?.("This GitHub release has no ZIP asset",true,"error");return;}
+      chrome.runtime.sendMessage({type:"LDD_DOWNLOAD_GITHUB_UPDATE",url,version:latest},r=>{
+        if(r?.ok) globalThis.lddToast110?.("Update ZIP downloading — overwrite your existing LDD Tools folder, then Reload in chrome://extensions",true,"success");
+        else globalThis.lddToast110?.("Update download failed: "+(r?.error||"Unknown error"),true,"error");
+      });
+    };
+  });
+}
+async function lddOpenAppPageWithUpdateGate(){
+  // Only gate the normal MyDesigns sidebar launch. If GitHub is unavailable,
+  // never block LDD Tools from opening.
+  const result=await lddCheckOfficialUpdate();
+  const current=chrome.runtime.getManifest().version;
+  const latest=String(result?.release?.version||"").replace(/^v/i,"");
+  if(result?.ok && latest && lddCompareVersions(latest,current)>0){
+    const open=await lddShowUpdateGate(result.release);
+    if(!open)return;
+  }
+  lddOpenAppPage();
 }
 
 function lddOpenAppPage(){
