@@ -80,9 +80,12 @@ const LDD_DEFAULTS = {
   hotkeyHudEnabled:false,
   toastNotifications:true,
   hotkeyMap:{
-    upscale:"Ctrl+Alt+U", removeBg:"Ctrl+Alt+B", imageMockups:"Ctrl+Alt+I", videoMockups:"Ctrl+Alt+V",
-    canvas:"", visionAI:"", vectorize:""
+    upscale:"Alt+1", removeBg:"Alt+2", imageMockups:"Alt+3", videoMockups:"Alt+4",
+    canvas:"Alt+5", visionAI:"Alt+6", vectorize:"Alt+7", colorOverlay:"Alt+8", patternOverlay:"Alt+9", imageEffect:"Alt+0",
+    resizeImage:"Alt+Shift+1", edit:"Alt+Shift+2", duplicate:"Alt+Shift+3", swapFiles:"Alt+Shift+4", deleteFiles:"Alt+Shift+5",
+    bulkTags:"Alt+Shift+6", bulkSyncPublications:"Alt+Shift+7", checkTrademarks:"Alt+Shift+8", searchTrademarks:"Alt+Shift+9", translate:"Alt+Shift+0", deleteAction:"Ctrl+Alt+1"
   },
+  hotkeyHudVisible:{upscale:true,removeBg:true,imageMockups:true,videoMockups:true,canvas:true,visionAI:true,vectorize:true},
   warningSuppressed:{},
   customInstructionPresets:[],
   customInstructionClipboard:[],
@@ -1686,6 +1689,7 @@ function lddBindAppPage(tab,o){
      document.addEventListener("keydown",capture,true);
    });
    lddAppRoot.querySelectorAll("[data-hotkey-clear]").forEach(btn=>btn.onclick=()=>lddSafeGet(LDD_DEFAULTS,x=>{const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,x.hotkeyMap||{});map[btn.dataset.hotkeyClear]="";saveMap(map);}));
+   lddAppRoot.querySelectorAll("[data-hotkey-hud-show]").forEach(cb=>cb.onchange=()=>lddSafeGet(LDD_DEFAULTS,x=>{const vis=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,x.hotkeyHudVisible||{});vis[cb.dataset.hotkeyHudShow]=cb.checked;lddSafeSet({hotkeyHudVisible:vis},()=>{document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();});}));
  }
  if(tab==="design"){
    lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab("design")}));
@@ -1878,35 +1882,36 @@ function lddRenderThemePage110(o){
 }
 function lddRenderHotkeysPage110(o){
  const defs=[
-  ["upscale","Upscale Image","Upscale image","Ctrl+Alt+U"],
-  ["removeBg","Remove Background","Remove background","Ctrl+Alt+B"],
-  ["imageMockups","Image Mockups","Image mockups","Ctrl+Alt+I"],
-  ["videoMockups","Video Mockups","Video mockups","Ctrl+Alt+V"],
-  ["canvas","Canvas","Canvas",""],
-  ["visionAI","Vision AI","Vision AI",""],
-  ["vectorize","Vectorize Image","Vectorize image",""],
-  ["colorOverlay","Color Overlay","Color overlay",""],
-  ["patternOverlay","Pattern Overlay","Pattern overlay",""],
-  ["imageEffect","Image Effect","Image effect",""],
-  ["resizeImage","Resize Image","Resize image",""],
-  ["edit","Edit","Edit",""],
-  ["duplicate","Duplicate","Duplicate",""],
-  ["swapFiles","Swap Files","Swap files",""],
-  ["deleteFiles","Delete Files","Delete files",""],
-  ["bulkTags","Bulk Tags","Bulk tags",""],
-  ["bulkSyncPublications","Bulk Sync Publications","Bulk sync publications",""],
-  ["checkTrademarks","Check Trademarks","Check trademarks",""],
-  ["searchTrademarks","Search Trademarks","Search trademarks",""],
-  ["translate","Translate","Translate",""],
-  ["deleteAction","Delete","Delete",""]
+  ["upscale","Upscale Image","Upscale image","Alt+1"],
+  ["removeBg","Remove Background","Remove background","Alt+2"],
+  ["imageMockups","Image Mockups","Image mockups","Alt+3"],
+  ["videoMockups","Video Mockups","Video mockups","Alt+4"],
+  ["canvas","Canvas","Canvas","Alt+5"],
+  ["visionAI","Vision AI","Vision AI","Alt+6"],
+  ["vectorize","Vectorize Image","Vectorize image","Alt+7"],
+  ["colorOverlay","Color Overlay","Color overlay","Alt+8"],
+  ["patternOverlay","Pattern Overlay","Pattern overlay","Alt+9"],
+  ["imageEffect","Image Effect","Image effect","Alt+0"],
+  ["resizeImage","Resize Image","Resize image","Alt+Shift+1"],
+  ["edit","Edit","Edit","Alt+Shift+2"],
+  ["duplicate","Duplicate","Duplicate","Alt+Shift+3"],
+  ["swapFiles","Swap Files","Swap files","Alt+Shift+4"],
+  ["deleteFiles","Delete Files","Delete files","Alt+Shift+5"],
+  ["bulkTags","Bulk Tags","Bulk tags","Alt+Shift+6"],
+  ["bulkSyncPublications","Bulk Sync Publications","Bulk sync publications","Alt+Shift+7"],
+  ["checkTrademarks","Check Trademarks","Check trademarks","Alt+Shift+8"],
+  ["searchTrademarks","Search Trademarks","Search trademarks","Alt+Shift+9"],
+  ["translate","Translate","Translate","Alt+Shift+0"],
+  ["deleteAction","Delete","Delete","Ctrl+Alt+1"]
  ];
  const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{});
- const esc=x=>String(x||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
- return `<div class="ldd-page ldd-hotkeys-page-110"><div class="ldd-page-head"><div><h1>Hotkeys</h1><p>Compact native MyDesigns shortcuts. Click Change, then press the shortcut you want.</p></div></div>
+ const hud=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});
+ const esc=x=>String(x||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;"}[c]));
+ return `<div class="ldd-page ldd-hotkeys-page-110"><div class="ldd-page-head"><div><h1>Hotkeys</h1><p>Every supported action is mapped out of the box. Alt+1–0 first, then Alt+Shift combinations. Chrome Ctrl+1–9 tab switching is left untouched.</p></div></div>
  <label class="ldd-hotkeys-master-110"><span><b>Enable LDD Hotkeys</b><small>Ignored while typing in inputs, textareas, selects, and editors.</small></span><input type="checkbox" data-setting="hotkeysEnabled" ${o.hotkeysEnabled!==false?'checked':''}></label>
- <label class="ldd-hotkeys-master-110"><span><b>Hotkey Tips HUD</b><small>Show the draggable, collapsible shortcut cheat sheet on MyDesigns.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled!==false?'checked':''}></label>
- <div class="ldd-hotkey-list-110">${defs.map(([id,name,label,fallback])=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-row-110" data-hotkey-row="${id}" data-action-label="${esc(label)}"><div class="ldd-hotkey-name-110"><b>${name}</b><span>${label}</span></div><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}" title="Press a new keyboard shortcut for ${name}">Change</button><button type="button" class="ldd-hotkey-clear-110" data-hotkey-clear="${id}" title="Disable the shortcut for ${name}">×</button></div>`}).join('')}</div>
- <div class="ldd-hotkey-note-110">Actions are triggered through MyDesigns’ native <b>Actions</b> menu. Favorite order does not matter.</div></div>`;
+ <label class="ldd-hotkeys-master-110"><span><b>Hotkey Tips HUD</b><small>HUD is off by default. When enabled, only rows checked below are shown.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled===true?'checked':''}></label>
+ <div class="ldd-hotkey-list-110">${defs.map(([id,name,label,fallback],i)=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-row-110" data-hotkey-row="${id}" data-action-label="${esc(label)}"><div class="ldd-hotkey-name-110"><b>${String(i+1).padStart(2,'0')} · ${name}</b><span>${label}</span></div><label title="Show ${name} on Hotkey Tips HUD" style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px"><input type="checkbox" data-hotkey-hud-show="${id}" ${hud[id]===true?'checked':''}> HUD</label><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}" title="Press a new keyboard shortcut for ${name}">Change</button><button type="button" class="ldd-hotkey-clear-110" data-hotkey-clear="${id}" title="Disable the shortcut for ${name}">×</button></div>`}).join('')}</div>
+ <div class="ldd-hotkey-note-110"><b>HUD defaults:</b> only actions 01–07 are checked. All mapped actions still work whether or not they are shown on the HUD.</div></div>`;
 }
 
 function lddApplyTheme110(o){
@@ -3686,16 +3691,37 @@ async function lddRunNativeAction110(label){
  action.click();return true;
 }
 function lddCombo110(e){const p=[];if(e.ctrlKey)p.push('Ctrl');if(e.altKey)p.push('Alt');if(e.shiftKey)p.push('Shift');if(e.metaKey)p.push('Meta');const k=e.key.length===1?e.key.toUpperCase():e.key;if(!['Control','Alt','Shift','Meta'].includes(e.key))p.push(k);return p.join('+');}
-document.addEventListener('keydown',e=>{
- if(lddTypingTarget110(e.target)||e.repeat)return;
+/* v1.8.15 — hotkeys are a startup service, not a Hotkeys-page side effect.
+   Keep a synchronous cache so preventDefault/stopPropagation happen during the key event. */
+const LDD_HOTKEY_ACTIONS_1815={upscale:'Upscale image',removeBg:'Remove background',imageMockups:'Image mockups',videoMockups:'Video mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize image',colorOverlay:'Color overlay',patternOverlay:'Pattern overlay',imageEffect:'Image effect',resizeImage:'Resize image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap files',deleteFiles:'Delete files',bulkTags:'Bulk tags',bulkSyncPublications:'Bulk sync publications',checkTrademarks:'Check trademarks',searchTrademarks:'Search trademarks',translate:'Translate',deleteAction:'Delete'};
+let lddHotkeyState1815={enabled:true,map:Object.assign({},LDD_DEFAULTS.hotkeyMap)};
+/* v1.8.16: migrate the old four Ctrl+Alt defaults / blank rows to the new complete numeric map once. Custom maps are preserved. */
+lddSafeGet({hotkeyMap:null,hotkeyDefaults1816:false},o=>{
+ if(o.hotkeyDefaults1816)return;
+ const m=o.hotkeyMap||{};
+ const legacy=(!m.canvas&&!m.visionAI&&!m.vectorize) && (!m.upscale||m.upscale==='Ctrl+Alt+U') && (!m.removeBg||m.removeBg==='Ctrl+Alt+B') && (!m.imageMockups||m.imageMockups==='Ctrl+Alt+I') && (!m.videoMockups||m.videoMockups==='Ctrl+Alt+V');
+ if(legacy)lddSafeSet({hotkeyMap:Object.assign({},LDD_DEFAULTS.hotkeyMap),hotkeyDefaults1816:true});
+ else lddSafeSet({hotkeyDefaults1816:true});
+});
+function lddLoadHotkeyState1815(){
  lddSafeGet({hotkeysEnabled:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap},o=>{
-  if(o.hotkeysEnabled===false)return;
-  const defs={upscale:'Upscale image',removeBg:'Remove background',imageMockups:'Image mockups',videoMockups:'Video mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize image',colorOverlay:'Color overlay',patternOverlay:'Pattern overlay',imageEffect:'Image effect',resizeImage:'Resize image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap files',deleteFiles:'Delete files',bulkTags:'Bulk tags',bulkSyncPublications:'Bulk sync publications',checkTrademarks:'Check trademarks',searchTrademarks:'Search trademarks',translate:'Translate',deleteAction:'Delete'};
-  const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{}), combo=lddCombo110(e);
-  const hit=Object.keys(defs).find(id=>map[id]&&map[id].toLowerCase()===combo.toLowerCase());if(!hit)return;
-  e.preventDefault();e.stopPropagation();
-  lddRunNativeAction110(defs[hit]).catch(err=>globalThis.lddToast110(err.message||'MyDesigns action unavailable'));
+  lddHotkeyState1815={enabled:o.hotkeysEnabled!==false,map:Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{})};
  });
+}
+lddLoadHotkeyState1815();
+lddSafeOnChanged((changes,area)=>{
+ if(area!=='local'||(!changes.hotkeysEnabled&&!changes.hotkeyMap))return;
+ if(changes.hotkeysEnabled)lddHotkeyState1815.enabled=changes.hotkeysEnabled.newValue!==false;
+ if(changes.hotkeyMap)lddHotkeyState1815.map=Object.assign({},LDD_DEFAULTS.hotkeyMap,changes.hotkeyMap.newValue||{});
+});
+document.addEventListener('keydown',e=>{
+ if(lddTypingTarget110(e.target)||e.repeat||!lddHotkeyState1815.enabled)return;
+ const combo=lddCombo110(e);
+ const map=lddHotkeyState1815.map||LDD_DEFAULTS.hotkeyMap;
+ const hit=Object.keys(LDD_HOTKEY_ACTIONS_1815).find(id=>map[id]&&String(map[id]).toLowerCase()===combo.toLowerCase());
+ if(!hit)return;
+ e.preventDefault();e.stopImmediatePropagation();
+ lddRunNativeAction110(LDD_HOTKEY_ACTIONS_1815[hit]).catch(err=>globalThis.lddToast110(err.message||'MyDesigns action unavailable',true,'error'));
 },true);
 
 lddSafeOnChanged((c,a)=>{if(a==='local' && ['themeEnabled','themeTweaker','themeBg','themePanel','themeText','themeMuted','themeColor','themeAccent2','themeAccent3','themeAccent4','themeAccent5','themeBorder','themeHover','themeSelected','themeWarning','themeError','themeRadius','themeUiScale','themeGlow','themeCards'].some(k=>c[k]))lddSafeGet(LDD_DEFAULTS,lddApplyTheme110)});
@@ -3715,16 +3741,19 @@ function lddHotkeyHud113(){
  if(!lddHotkeyHudOnDesigns113()){document.getElementById('ldd-hotkey-hud-113')?.remove();return;}
  if(document.getElementById('ldd-hotkey-hud-113'))return;
  lddSafeGet({hotkeysEnabled:true,hotkeyHudEnabled:false,
-  toastNotifications:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap,hotkeyHudCollapsed:false,hotkeyHudPosition:null},o=>{
+  toastNotifications:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap,hotkeyHudVisible:LDD_DEFAULTS.hotkeyHudVisible,hotkeyHudCollapsed:true,hotkeyHudPosition:null,hotkeyHudDragHintSeen:false},o=>{
   if(document.getElementById('ldd-hotkey-hud-113'))return;
   if(o.hotkeyHudEnabled===false)return;
   const hud=document.createElement('div');hud.id='ldd-hotkey-hud-113';
   if(o.hotkeyHudCollapsed)hud.classList.add('collapsed');
   const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{});
-  hud.innerHTML=`<div class="ldd-hotkey-hud-head-113"><b>⌨ Hotkey Tips</b><button type="button" class="ldd-hotkey-hud-collapse-113" title="Collapse hotkey tips">${o.hotkeyHudCollapsed?'＋':'−'}</button></div><div class="ldd-hotkey-hud-body-113"></div>`;
+  hud.innerHTML=`<div class="ldd-hotkey-hud-head-113" title="Drag to move"><span class="ldd-hotkey-hud-title-113"><span class="ldd-hotkey-hud-grip-113" aria-hidden="true">⠿</span><b>⌨ Hotkey Tips</b></span><button type="button" class="ldd-hotkey-hud-collapse-113" title="Collapse hotkey tips">${o.hotkeyHudCollapsed?'＋':'−'}</button></div><div class="ldd-hotkey-hud-body-113"></div>`;
   document.body.appendChild(hud);
-  const pos=o.hotkeyHudPosition;if(pos&&Number.isFinite(pos.x)&&Number.isFinite(pos.y)){hud.style.left=Math.max(8,Math.min(pos.x,innerWidth-hud.offsetWidth-8))+'px';hud.style.top=Math.max(8,Math.min(pos.y,innerHeight-hud.offsetHeight-8))+'px';hud.style.right='auto';}
-  const render=()=>{const body=hud.querySelector('.ldd-hotkey-hud-body-113');body.innerHTML=Object.entries(LDD_HOTKEY_HUD_DEFS_113).map(([id,name])=>map[id]?`<div><span>${name}</span><kbd>${map[id]}</kbd></div>`:'').join('')||'<small>No hotkeys assigned</small>';};render();
+  const pos=o.hotkeyHudPosition;
+  const placeDefault=()=>{const search=document.querySelector('input[placeholder="Search designs and products..."]');if(!search)return;const r=search.getBoundingClientRect();const x=Math.min(innerWidth-hud.offsetWidth-8,r.right+20);const y=Math.max(8,r.top+(r.height-hud.offsetHeight)/2);hud.style.left=Math.max(8,x)+'px';hud.style.top=y+'px';hud.style.right='auto';};
+  if(pos&&Number.isFinite(pos.x)&&Number.isFinite(pos.y)){hud.style.left=Math.max(8,Math.min(pos.x,innerWidth-hud.offsetWidth-8))+'px';hud.style.top=Math.max(8,Math.min(pos.y,innerHeight-hud.offsetHeight-8))+'px';hud.style.right='auto';}else{placeDefault();setTimeout(placeDefault,250);}
+  if(!o.hotkeyHudDragHintSeen){const hint=document.createElement('div');hint.className='ldd-hotkey-drag-hint-113';hint.textContent='⠿ Drag me anywhere';hud.appendChild(hint);requestAnimationFrame(()=>hint.classList.add('show'));setTimeout(()=>{hint.classList.remove('show');setTimeout(()=>hint.remove(),250);},3200);lddSafeSet({hotkeyHudDragHintSeen:true});}
+  const visible=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});const render=()=>{const body=hud.querySelector('.ldd-hotkey-hud-body-113');body.innerHTML=Object.entries(LDD_HOTKEY_HUD_DEFS_113).map(([id,name])=>(map[id]&&visible[id]===true)?`<div><span>${name}</span><kbd>${map[id]}</kbd></div>`:'').join('')||'<small>No HUD shortcuts selected</small>';};render();
   const collapse=hud.querySelector('.ldd-hotkey-hud-collapse-113');collapse.onclick=e=>{e.stopPropagation();const v=!hud.classList.contains('collapsed');hud.classList.toggle('collapsed',v);collapse.textContent=v?'＋':'−';collapse.title=v?'Expand hotkey tips':'Collapse hotkey tips';lddSafeSet({hotkeyHudCollapsed:v});};
   const head=hud.querySelector('.ldd-hotkey-hud-head-113');let drag=null;
   head.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=hud.getBoundingClientRect();drag={dx:e.clientX-r.left,dy:e.clientY-r.top};head.setPointerCapture?.(e.pointerId);hud.classList.add('dragging');});
@@ -3736,7 +3765,7 @@ setTimeout(lddHotkeyHud113,500);
 let lddHudLastPath113=location.pathname;
 setInterval(()=>{if(location.pathname!==lddHudLastPath113){lddHudLastPath113=location.pathname;document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();}},350);
 window.addEventListener('popstate',()=>{document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();});
-lddSafeOnChanged((c,a)=>{if(a!=='local')return;if(c.hotkeyMap||c.hotkeysEnabled||c.hotkeyHudEnabled){document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();}});
+lddSafeOnChanged((c,a)=>{if(a!=='local')return;if(c.hotkeyMap||c.hotkeysEnabled||c.hotkeyHudEnabled||c.hotkeyHudVisible){document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();}});
 
 
 
