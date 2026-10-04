@@ -154,8 +154,7 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
   if(msg?.type!=='LDD_CHECK_GITHUB_UPDATE' && msg?.type!=='LDD_DOWNLOAD_GITHUB_UPDATE') return;
   (async()=>{
     if(msg.type==='LDD_CHECK_GITHUB_UPDATE'){
-      const repo=String(msg.repo||'').trim();
-      if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) throw new Error('Invalid GitHub repository');
+      const repo='lavenderdragondesign/LDDEXTENSIONMD';
       const r=await fetch(`https://api.github.com/repos/${repo}/releases/latest`,{cache:'no-store',headers:{Accept:'application/vnd.github+json'}});
       if(!r.ok) throw new Error(`GitHub HTTP ${r.status}`);
       const rel=await r.json();

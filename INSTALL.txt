@@ -72,7 +72,7 @@ Made with love by Andrea — Lavender Dragon Design
 GITHUB UPDATE CHECKER
 ---------------------
 LDD Tools can check a public GitHub repository's latest Release and notify you when a newer version is available.
-Set the repository under LDD Tools > Settings > Extension using owner/repo format.
+Updates use the official Lavender Dragon Design GitHub release source automatically. No repository setup is required.
 For downloadable updates, attach the LDD Tools ZIP as a .zip asset to the GitHub Release.
 Because this is loaded as an unpacked Chrome extension, LDD Tools cannot overwrite its own source folder. The updater downloads the ZIP; extract it over the same LDD Tools folder and click Reload on chrome://extensions. Your chrome.storage settings remain in the extension profile.
 
