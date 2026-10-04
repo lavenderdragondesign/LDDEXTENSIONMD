@@ -82,8 +82,8 @@ function lddSafeOnChanged(fn){
 const LDD_DEFAULTS = {
   lddMasterEnabled:true,
   lddPerformanceDontAskAgain:false,
-  lddSetupMode:"power",
-  hotkeysEnabled:true,
+  lddSetupMode:"safe",
+  hotkeysEnabled:false,
   hotkeyHudEnabled:false,
   toastNotifications:true,
   hotkeyMap:{
@@ -163,7 +163,7 @@ const LDD_DEFAULTS = {
   perfHideSupportWidgets:false,
   perfDisableHoverPreview:false,
   perfTinyMD:false,
-  perfSelectedMode:"power",
+  perfSelectedMode:"safe",
   perfUploadTurbo:true,
   perfSpaPreload:true,
   perfSpaPreloadLevel:"smart",
@@ -1237,6 +1237,9 @@ function lddOpenSuggestionCard(){
   const close=()=>ov.remove();
   ov.querySelector(".ldd-suggestion-x").onclick=close;
   ov.querySelector("[data-cancel]").onclick=close;
+  ov.addEventListener("click",e=>{ if(e.target===ov) close(); });
+  const onKey=e=>{ if(e.key==="Escape"){ document.removeEventListener("keydown",onKey,true); close(); } };
+  document.addEventListener("keydown",onKey,true);
   ov.addEventListener("click",e=>{if(e.target===ov)close()});
   ov.querySelector("[data-submit]").onclick=()=>{
     const title=(ov.querySelector("#ldd-suggestion-title").value||"").trim();
@@ -1284,7 +1287,7 @@ function lddRenderThemePage(o){
 }
 function lddRenderFontsPage(o){
  const current=String(o.appFontFamily||"MyDesigns Default").replace(/</g,"&lt;");
- return `<div class="ldd-page-title ldd-font-page-title"><h2>Aa Fonts</h2><p>Choose the font used by the MyDesigns interface in this browser.</p></div>
+ return `<div class="ldd-page-title ldd-font-page-title"><h2>Fonts</h2><p>Choose the font used by the MyDesigns interface in this browser.</p></div>
  <div class="ldd-font-redesign">
   <div class="ldd-font-warning"><b>Font note:</b> Some fonts are naturally wider than MyDesigns' default and may make text tighter when the sidebar is collapsed. Expand the sidebar or reset to MyDesigns if needed.<br><br><b>Font list not showing?</b> Toggle <b>App Font OFF</b>, then <b>ON</b> again to refresh the font list.</div>
   <div class="ldd-font-current-card">
@@ -1310,7 +1313,7 @@ function lddRenderDesignPage(o){
  </div>`;
 }
 function lddRenderWorkflowPage(o){
- return `<div class="ldd-page-title"><h2>⇧ Upload & Rename</h2><p>Explorer → MyDesigns → rename the checked upload batch.</p></div>
+ return `<div class="ldd-page-title"><h2>Tools</h2><p>Workflow tools and utilities for MyDesigns.</p></div>
  <div class="ldd-section">
   <div class="ldd-feature-info"><h3>Preview Pro</h3><p><b>What it does:</b> Shows a fast enlarged preview when you hover over MyDesigns design cards. TinyMD may temporarily suspend Preview Pro for maximum performance without changing your saved preference.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="hoverPreview"><button type="button" data-setting-value="true" class="${o.hoverPreview!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.hoverPreview===false?'active':''}">DISABLE</button></div>
@@ -1367,7 +1370,7 @@ function lddCompactToggle(key,label,on){
 }
 function lddRenderPerformancePage(o){
  return `<div class="ldd-performance-page">
- <div class="ldd-perf-head"><div><h2>⚡ Performance</h2><p>Hover any setting for a plain-English explanation.</p></div><div class="ldd-perf-selected">${o.perfEnabled===false?'Performance: <b>OFF</b>':o.perfTinyMD===true?'Active: <b>TINYMD</b>':`Active Mode: <b>${({safe:"SAFE",medium:"MEDIUM",extreme:"EXTREME",power:"POWER USER"})[o.perfSelectedMode]||"CUSTOM"}</b>`}</div></div>
+ <div class="ldd-perf-head"><div><h2>⚡ Performance</h2><p>Hover any setting for a plain-English explanation.</p></div><div class="ldd-perf-selected">${o.perfEnabled===false?'Performance: <b>OFF</b>':o.perfTinyMD===true?'Active: <b>TINYMD</b>':`Active: <b>${({safe:"SAFE",medium:"MEDIUM",extreme:"EXTREME",power:"POWER USER"})[o.perfSelectedMode]||"CUSTOM"}</b>`}</div></div>
  <div class="ldd-perf-presets">
  <button class="ldd-perf-preset safe ldd-perf-help ${o.perfTinyMD!==true&&o.perfSelectedMode==="safe"?"active":""}" data-perf-preset="safe" data-tip="Safe — light optimizations with minimal changes to normal MyDesigns behavior.">🟢 Safe</button>
  <button class="ldd-perf-preset medium ldd-perf-help ${o.perfTinyMD!==true&&o.perfSelectedMode==="medium"?"active":""}" data-perf-preset="medium" data-tip="Medium — stronger optimizations while keeping the normal workflow.">🟡 Medium</button>
@@ -1574,7 +1577,7 @@ function lddRenderAboutPage(){
   <div class="ldd-control-card"><h2>🧪 Beta Software</h2><span>LDD Tools is actively developed and is currently in beta. Bugs can happen. A feature may occasionally stop working, display incorrectly, or behave differently than expected—especially after MyDesigns changes its interface. That does not automatically mean anything is wrong with your MyDesigns account.</span><span>If something breaks, disable the affected LDD feature when possible and report the bug so it can be updated.</span></div>
   <div class="ldd-control-card"><h2>Compatibility &amp; Updates</h2><span>LDD Tools enhances a live web application. MyDesigns can update its Vue components, menus, buttons, page structure, or other interface behavior at any time. Those changes can temporarily affect LDD selectors, hotkeys, previews, themes, automation, or workflow tools until LDD Tools is updated.</span><span>Keeping LDD Tools current is the best way to stay compatible with newer MyDesigns changes.</span></div>
   <div class="ldd-control-card"><h2>Use at Your Own Risk</h2><span>LDD Tools changes, enhances, and automates parts of the MyDesigns interface. Save important work before running automation, bulk actions, or aggressive performance features, and review important actions before publishing or making permanent changes.</span></div>
-  <div class="ldd-control-card"><h2>Safety, Performance Modes &amp; TinyMD</h2><span>LDD Tools is designed to improve local workflow and interface behavior. It does <b>not intentionally delete or modify your designs, products, listings, uploads, stores, or MyDesigns account data.</b></span><span>Safe, Medium, Extreme, Power User, and TinyMD adjust LDD/local interface performance behavior. More aggressive modes may reduce animations, previews, effects, background activity, or other nonessential interface behavior while enabled.</span></div>
+  <div class="ldd-control-card"><h2>Safety, Performance Modes &amp; TinyMD</h2><span>LDD Tools improves your local MyDesigns workflow and interface experience. <b>Your designs, products, listings, uploads, stores, and MyDesigns account data remain yours and are not deleted by LDD Tools.</b></span><span>Safe, Medium, Extreme, Power User, and TinyMD adjust LDD/local interface performance behavior. More aggressive modes may reduce animations, previews, effects, background activity, or other nonessential interface behavior while enabled.</span></div>
   <div class="ldd-control-card"><h2>Disclaimer &amp; Liability</h2><span>LDD Tools is provided as-is without guarantees of compatibility, availability, or uninterrupted operation. Because both LDD Tools and MyDesigns can change, unexpected bugs or interrupted workflows are possible. Lavender Dragon Design and Andrea are not liable for lost work, interrupted workflows, data loss, account issues, site changes, or other damages arising from use of the extension. You remain responsible for reviewing actions before publishing or making permanent changes.</span></div>
   <div class="ldd-control-card"><h2>Independent Tool</h2><span>LDD Tools is an independent utility created for MyDesigns users. It is not affiliated with, endorsed by, or sponsored by MyDesigns.</span></div>
   <div class="ldd-control-card ldd-support-card"><h2>Support, Bugs &amp; More Tools</h2><b>Made with ❤️ by Andrea</b><span>If you find a bug, something stops working after a MyDesigns update, or you have an idea for LDD Tools, please report it instead of assuming your account is broken.</span><span><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">Etsy Shop</a> · <a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a> · <a href="https://lddtools.lol" target="_blank" rel="noopener noreferrer">More Tools — LDDTools.lol</a></span></div>
@@ -1701,6 +1704,16 @@ function lddBindAppPage(tab,o){
  try{lddEnforceModeUI(o)}catch(_){}
 
  if(!lddAppRoot)return;
+ if(tab==="dashboard"){
+   const suggestBtn=lddAppRoot.querySelector("#ldd-suggest-feature");
+   if(suggestBtn){
+     suggestBtn.onclick=(e)=>{
+       e.preventDefault();
+       e.stopPropagation();
+       lddOpenSuggestionCard();
+     };
+   }
+ }
  if(tab==="theme"){
    lddAppRoot.querySelectorAll("[data-theme-preset]").forEach(btn=>btn.onclick=()=>{
      const p=btn.dataset.themePreset;
@@ -1741,6 +1754,12 @@ function lddBindAppPage(tab,o){
    });
    lddAppRoot.querySelectorAll("[data-hotkey-clear]").forEach(btn=>btn.onclick=()=>lddSafeGet(LDD_DEFAULTS,x=>{const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,x.hotkeyMap||{});map[btn.dataset.hotkeyClear]="";saveMap(map);}));
    lddAppRoot.querySelectorAll("[data-hotkey-hud-show]").forEach(cb=>cb.onchange=()=>lddSafeGet(LDD_DEFAULTS,x=>{const vis=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,x.hotkeyHudVisible||{});vis[cb.dataset.hotkeyHudShow]=cb.checked;lddSafeSet({hotkeyHudVisible:vis},()=>{document.getElementById('ldd-hotkey-hud-113')?.remove();lddHotkeyHud113();});}));
+   const hkSearch=lddAppRoot.querySelector("#ldd-hotkey-search-200"); let hkFilter="all";
+   const applyHotkeyFilter=()=>{const q=(hkSearch?.value||"").trim().toLowerCase();lddAppRoot.querySelectorAll(".ldd-hotkey-card-200").forEach(card=>{const matchQ=!q||(card.dataset.hotkeySearch||"").includes(q);const matchF=hkFilter==="all"||(hkFilter==="assigned"&&card.dataset.hotkeyAssigned==="1")||(hkFilter==="unassigned"&&card.dataset.hotkeyAssigned==="0")||(hkFilter==="hud"&&card.dataset.hotkeyHud==="1");card.hidden=!(matchQ&&matchF);});};
+   if(hkSearch)hkSearch.oninput=applyHotkeyFilter;
+   lddAppRoot.querySelectorAll("[data-hotkey-filter]").forEach(btn=>btn.onclick=()=>{hkFilter=btn.dataset.hotkeyFilter;lddAppRoot.querySelectorAll("[data-hotkey-filter]").forEach(b=>b.classList.toggle("active",b===btn));applyHotkeyFilter();});
+   const resetHotkeys=lddAppRoot.querySelector("#ldd-reset-hotkeys-200");if(resetHotkeys)resetHotkeys.onclick=()=>lddSafeSet({hotkeyMap:{...LDD_DEFAULTS.hotkeyMap}},()=>{globalThis.lddToast110("Hotkeys reset to defaults");lddShowTab("hotkeys")});
+   const resetHud=lddAppRoot.querySelector("#ldd-reset-hud-pos-200");if(resetHud)resetHud.onclick=()=>lddSafeSet({hotkeyHudPosition:null,hotkeyHudX:null,hotkeyHudY:null},()=>{document.getElementById("ldd-hotkey-hud-113")?.remove();lddHotkeyHud113();globalThis.lddToast110("Hotkey HUD position reset")});
  }
  if(tab==="design"){
    lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab(tab==="workflow"?"workflow":"design")}));
@@ -1837,6 +1856,7 @@ function lddBindAppPage(tab,o){
      if(key==="themeTweaker"||key==="themeEnabled")setTimeout(()=>lddSafeGet(LDD_DEFAULTS,lddApplyTheme),0);
      if(key==="scoutAIEnabled")setTimeout(()=>lddShowTab("scout"),40);
      if(key==="autoPromptQueueEnabled")setTimeout(()=>lddShowTab("promptqueue"),40);
+     if(key==="perfEnabled")setTimeout(()=>lddShowTab("performance"),40);
    };
  });
  lddAppRoot.querySelectorAll("[data-two-button-setting]").forEach(group=>{
@@ -1938,36 +1958,22 @@ function lddRenderThemePage110(o){
 }
 function lddRenderHotkeysPage110(o){
  const defs=[
-  ["upscale","Upscale Image","Upscale image","Alt+1"],
-  ["removeBg","Remove Background","Remove background","Alt+2"],
-  ["imageMockups","Image Mockups","Image mockups","Alt+3"],
-  ["videoMockups","Video Mockups","Video mockups","Alt+4"],
-  ["canvas","Canvas","Canvas","Alt+5"],
-  ["visionAI","Vision AI","Vision AI","Alt+6"],
-  ["vectorize","Vectorize Image","Vectorize image","Alt+7"],
-  ["colorOverlay","Color Overlay","Color overlay","Alt+8"],
-  ["patternOverlay","Pattern Overlay","Pattern overlay","Alt+9"],
-  ["imageEffect","Image Effect","Image effect","Alt+0"],
-  ["resizeImage","Resize Image","Resize image","Alt+Shift+1"],
-  ["edit","Edit","Edit","Alt+Shift+2"],
-  ["duplicate","Duplicate","Duplicate","Alt+Shift+3"],
-  ["swapFiles","Swap Files","Swap files","Alt+Shift+4"],
-  ["deleteFiles","Delete Files","Delete files","Alt+Shift+5"],
-  ["bulkTags","Bulk Tags","Bulk tags","Alt+Shift+6"],
-  ["bulkSyncPublications","Bulk Sync Publications","Bulk sync publications","Alt+Shift+7"],
-  ["checkTrademarks","Check Trademarks","Check trademarks","Alt+Shift+8"],
-  ["searchTrademarks","Search Trademarks","Search trademarks","Alt+Shift+9"],
-  ["translate","Translate","Translate","Alt+Shift+0"],
-  ["deleteAction","Delete","Delete","Ctrl+Alt+1"]
+  ["upscale","Upscale Image","Upscale image","Alt+1"],["removeBg","Remove Background","Remove background","Alt+2"],["imageMockups","Image Mockups","Image mockups","Alt+3"],["videoMockups","Video Mockups","Video mockups","Alt+4"],["canvas","Canvas","Canvas","Alt+5"],["visionAI","Vision AI","Vision AI","Alt+6"],["vectorize","Vectorize Image","Vectorize image","Alt+7"],
+  ["colorOverlay","Color Overlay","Color overlay","Alt+8"],["patternOverlay","Pattern Overlay","Pattern overlay","Alt+9"],["imageEffect","Image Effect","Image effect","Alt+0"],["resizeImage","Resize Image","Resize image","Alt+Shift+1"],["edit","Edit","Edit","Alt+Shift+2"],["duplicate","Duplicate","Duplicate","Alt+Shift+3"],["swapFiles","Swap Files","Swap files","Alt+Shift+4"],["deleteFiles","Delete Files","Delete files","Alt+Shift+5"],["bulkTags","Bulk Tags","Bulk tags","Alt+Shift+6"],["bulkSyncPublications","Bulk Sync Publications","Bulk sync publications","Alt+Shift+7"],["checkTrademarks","Check Trademarks","Check trademarks","Alt+Shift+8"],["searchTrademarks","Search Trademarks","Search trademarks","Alt+Shift+9"],["translate","Translate","Translate","Alt+Shift+0"],["deleteAction","Delete","Delete","Ctrl+Alt+1"]
  ];
- const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{});
- const hud=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});
+ const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{}), hud=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});
  const esc=x=>String(x||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;"}[c]));
- return `<div class="ldd-page ldd-hotkeys-page-110"><div class="ldd-page-head"><div><h1>Hotkeys</h1><p>Every supported action is mapped out of the box. Alt+1–0 first, then Alt+Shift combinations. Chrome Ctrl+1–9 tab switching is left untouched.</p></div></div>
- <label class="ldd-hotkeys-master-110"><span><b>Enable LDD Hotkeys</b><small>Ignored while typing in inputs, textareas, selects, and editors.</small></span><input type="checkbox" data-setting="hotkeysEnabled" ${o.hotkeysEnabled!==false?'checked':''}></label>
- <label class="ldd-hotkeys-master-110"><span><b>Hotkey Tips HUD</b><small>HUD is off by default. When enabled, only rows checked below are shown.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled===true?'checked':''}></label>
- <div class="ldd-hotkey-list-110">${defs.map(([id,name,label,fallback],i)=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-row-110" data-hotkey-row="${id}" data-action-label="${esc(label)}"><div class="ldd-hotkey-name-110"><b>${String(i+1).padStart(2,'0')} · ${name}</b><span>${label}</span></div><label title="Show ${name} on Hotkey Tips HUD" style="display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:12px"><input type="checkbox" data-hotkey-hud-show="${id}" ${hud[id]===true?'checked':''}> HUD</label><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}" title="Press a new keyboard shortcut for ${name}">Change</button><button type="button" class="ldd-hotkey-clear-110" data-hotkey-clear="${id}" title="Disable the shortcut for ${name}">×</button></div>`}).join('')}</div>
- <div class="ldd-hotkey-note-110"><b>HUD defaults:</b> only actions 01–07 are checked. All mapped actions still work whether or not they are shown on the HUD.</div></div>`;
+ const assigned=defs.filter(([id,,,fallback])=>String(map[id]??fallback).trim()).length, hudCount=defs.filter(([id])=>hud[id]===true).length;
+ return `<div class="ldd-page ldd-hotkeys-page-200">
+ <div class="ldd-page-head ldd-hotkeys-head-200"><div><h1>Hotkeys</h1><p>Fast keyboard access to MyDesigns actions. Hotkeys and the HUD are OFF on a fresh install.</p></div><div class="ldd-hotkeys-status-200"><span>${assigned} assigned</span><span>${hudCount} on HUD</span></div></div>
+ <div class="ldd-hotkey-control-grid-200">
+  <label class="ldd-hotkey-master-card-200"><span><b>⌨ Hotkeys</b><small>Enable keyboard shortcuts globally.</small></span><input type="checkbox" data-setting="hotkeysEnabled" ${o.hotkeysEnabled===true?'checked':''}></label>
+  <label class="ldd-hotkey-master-card-200"><span><b>▣ Hotkey Tips HUD</b><small>Show your selected shortcuts beside the MyDesigns header.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled===true?'checked':''}></label>
+ </div>
+ <div class="ldd-hotkey-toolbar-200"><input id="ldd-hotkey-search-200" type="search" placeholder="Search actions…" autocomplete="off"><div class="ldd-hotkey-filters-200"><button type="button" class="active" data-hotkey-filter="all">All</button><button type="button" data-hotkey-filter="assigned">Assigned</button><button type="button" data-hotkey-filter="unassigned">Unassigned</button><button type="button" data-hotkey-filter="hud">HUD</button></div></div>
+ <div class="ldd-hotkey-actions-200"><button type="button" id="ldd-reset-hotkeys-200">Reset Hotkeys</button><button type="button" id="ldd-reset-hud-pos-200">Reset HUD Position</button></div>
+ <div class="ldd-hotkey-grid-200">${defs.map(([id,name,label,fallback],i)=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-card-200" data-hotkey-row="${id}" data-hotkey-assigned="${combo?'1':'0'}" data-hotkey-hud="${hud[id]===true?'1':'0'}" data-hotkey-search="${esc((name+' '+label).toLowerCase())}"><div class="ldd-hotkey-card-top-200"><div class="ldd-hotkey-name-200"><em>${String(i+1).padStart(2,'0')}</em><span><b>${name}</b><small>${label}</small></span></div><label class="ldd-hotkey-hud-check-200" title="Show on Hotkey Tips HUD"><input type="checkbox" data-hotkey-hud-show="${id}" ${hud[id]===true?'checked':''}> HUD</label></div><div class="ldd-hotkey-card-bottom-200"><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}">Change</button>${combo?`<button type="button" class="ldd-hotkey-clear-200" data-hotkey-clear="${id}" title="Clear shortcut">×</button>`:''}</div></div>`}).join('')}</div>
+ <div class="ldd-hotkey-note-200"><b>Tip:</b> Chrome and Windows may reserve some keyboard combinations. LDD warns when a shortcut conflicts with another LDD mapping.</div></div>`;
 }
 
 function lddApplyTheme110(o){
@@ -2293,7 +2299,7 @@ function lddRenderAppPage(opts){
    <div class="ldd-app-brand"><span>${lddIconTag(28)}</span><div><b>LDD Tools</b><small>${({safe:"Safe",medium:"Medium",extreme:"Extreme",power:"Power User"})[o.perfSelectedMode]||"Power User"} mode</small></div></div>
    <button data-tab="dashboard" class="active">⌂ Home</button>
    <button data-tab="workflow">${lddIconTag()} Tools</button>
-   <button data-tab="fonts">Aa Fonts</button>
+   <button data-tab="fonts">Fonts</button>
    <button data-tab="theme">◈ Theme</button>
    <button data-tab="performance">⚡ Performance</button>
    <button data-tab="hotkeys">⌨ Hotkeys</button>
@@ -2323,7 +2329,6 @@ document.body.appendChild(lddAppRoot);
  });
  lddShowTab("dashboard");
  const closeBtn=lddAppRoot.querySelector("#ldd-app-close"); if(closeBtn)closeBtn.onclick=lddCloseAppPage;
- const suggestBtn=lddAppRoot.querySelector("#ldd-suggest-feature"); if(suggestBtn)suggestBtn.onclick=lddOpenSuggestionCard;
  const entry=document.getElementById("ldd-sidebar-entry");
  entry?.classList.add("ldd-active");
 
@@ -3801,7 +3806,7 @@ lddSafeGet({hotkeyMap:null,hotkeyDefaults1816:false},o=>{
  else lddSafeSet({hotkeyDefaults1816:true});
 });
 function lddLoadHotkeyState1815(){
- lddSafeGet({hotkeysEnabled:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap},o=>{
+ lddSafeGet({hotkeysEnabled:false,hotkeyMap:LDD_DEFAULTS.hotkeyMap},o=>{
   lddHotkeyState1815={enabled:o.hotkeysEnabled!==false,map:Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{})};
  });
 }
@@ -3857,7 +3862,7 @@ function lddHotkeyHud113(){
 function lddHotkeyHudMount113(){
  lddHotkeyHudReadyTimer113=null;
  if(!lddHotkeyHudOnDesigns113()||!lddHotkeyHudHeaderReady113()||document.getElementById('ldd-hotkey-hud-113'))return;
- lddSafeGet({hotkeysEnabled:true,hotkeyHudEnabled:false,
+ lddSafeGet({hotkeysEnabled:false,hotkeyHudEnabled:false,
   toastNotifications:true,hotkeyMap:LDD_DEFAULTS.hotkeyMap,hotkeyHudVisible:LDD_DEFAULTS.hotkeyHudVisible,hotkeyHudCollapsed:true,hotkeyHudPosition:null,hotkeyHudDragHintSeen:false},o=>{
   if(document.getElementById('ldd-hotkey-hud-113'))return;
   if(o.hotkeyHudEnabled===false)return;

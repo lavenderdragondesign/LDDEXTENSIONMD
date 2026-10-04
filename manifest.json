@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LDD Tools",
-  "version": "1.8.38",
+  "version": "1.8.45",
   "description": "LDD Tools for MyDesigns \u2014 Power User workflow tools, native DnD upload, renamer, Scout AI, hotkeys, themes, fonts, performance controls, and optional utilities.",
   "permissions": [
     "downloads",

@@ -1,4 +1,4 @@
-LDD TOOLS v1.8.7
+LDD TOOLS v1.8.40
 Lavender Dragon Design
 
 WELCOME
