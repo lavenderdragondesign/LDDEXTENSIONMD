@@ -1058,3 +1058,9 @@ html.ldd-theme-master-on body .ldd-credits-box button svg {fill:currentColor!imp
  #ldd-update-gate .ldd-update-gate-warning{font-size:13px!important;}
  #ldd-update-gate .ldd-update-gate-storage{font-size:12px!important;}
 }
+
+/* v1.8.73 hotkey engine diagnostic line */
+.ldd-hotkey-engine-1873{font-size:12px;color:#9aa4b2;margin-top:8px;line-height:1.7}
+.ldd-hotkey-engine-1873 b{color:#f5f7fa}
+.ldd-hotkey-engine-1873 .mismatch{color:#ff6b6b;font-weight:700}
+.ldd-hotkey-engine-1873 .seed{opacity:.75}

@@ -1,5 +1,14 @@
-LDD TOOLS v1.8.70
+LDD TOOLS v1.8.71
 Lavender Dragon Design
+
+CHANGELOG
+v1.8.71 — Hotkey self-healing: the hotkey service now re-syncs its saved
+state shortly after startup, on tab focus, and periodically, so hotkeys keep
+working across MyDesigns refreshes without needing an off/on toggle.
+v1.8.70 — Pressing Esc while recording a hotkey now cancels instead of
+assigning Escape as the shortcut.
+v1.8.69 — Removed the second "<action> opened" success toast; the initial
+"Hotkey: <action>" notification and error notifications are unchanged.
 
 WELCOME
 LDD Tools is an optional workflow enhancement extension for MyDesigns. It adds faster access to common tools, workflow shortcuts, visual customization, performance controls, and optional creator utilities while keeping MyDesigns as the underlying platform.

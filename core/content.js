@@ -1730,8 +1730,14 @@ function lddRenderHotkeysPage110(o){
  const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{}), hud=Object.assign({},LDD_DEFAULTS.hotkeyHudVisible,o.hotkeyHudVisible||{});
  const esc=x=>String(x||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;"}[c]));
  const assigned=defs.filter(([id,,,fallback])=>String(map[id]??fallback).trim()).length, hudCount=defs.filter(([id])=>hud[id]===true).length;
+ /* v1.8.73 diagnostic: show what the keydown engine actually sees vs storage truth. */
+ const lddEngOn=(typeof lddHotkeyState1815!=="undefined")&&!!lddHotkeyState1815.enabled;
+ const lddEngN=(typeof lddHotkeyState1815!=="undefined")?Object.keys(lddHotkeyState1815.map||{}).length:0;
+ const lddStorOn=o.hotkeysEnabled===true;
+ const lddSeed=(typeof lddHotkeySeedInfo1873!=="undefined")?lddHotkeySeedInfo1873:"n/a";
+ const lddMismatch=lddEngOn!==lddStorOn;
  return `<div class="ldd-page ldd-hotkeys-page-200">
- <div class="ldd-page-head ldd-hotkeys-head-200"><div><h1>Hotkeys</h1><p>Fast keyboard access to MyDesigns actions. On Mac, Alt means Option; Ctrl shortcuts also accept Command. Hotkeys and the HUD are OFF on a fresh install.</p></div><div class="ldd-hotkeys-status-200"><span>${assigned} assigned</span><span>${hudCount} on HUD</span></div></div>
+ <div class="ldd-page-head ldd-hotkeys-head-200"><div><h1>Hotkeys</h1><p>Fast keyboard access to MyDesigns actions. On Mac, Alt means Option; Ctrl shortcuts also accept Command. Hotkeys and the HUD are OFF on a fresh install.</p><div class="ldd-hotkey-engine-1873">Engine: <b>${lddEngOn?"ON":"OFF"}</b> · Storage: <b>${lddStorOn?"ON":"OFF"}</b> · ${lddEngN} shortcuts${lddMismatch?' · <span class="mismatch">MISMATCH</span>':""}<br><span class="seed">last engine seed: ${lddSeed}</span></div></div><div class="ldd-hotkeys-status-200"><span>${assigned} assigned</span><span>${hudCount} on HUD</span></div></div>
  <div class="ldd-hotkey-control-grid-200">
   <label class="ldd-hotkey-master-card-200"><span><b>⌨ Hotkeys</b><small>Enable keyboard shortcuts globally.</small></span><input type="checkbox" data-setting="hotkeysEnabled" ${o.hotkeysEnabled===true?'checked':''}></label>
   <label class="ldd-hotkey-master-card-200"><span><b>▣ Hotkey Tips HUD</b><small>Show your selected shortcuts beside the MyDesigns header.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled===true?'checked':''}></label>
@@ -2407,6 +2413,7 @@ document.addEventListener("change",e=>{
   if(e.target?.dataset?.setting==="perfTinyMD" && e.target.checked){
     if(!(typeof lddConfirmTinyMD==="function"?lddConfirmTinyMD:((...a)=>true))()){e.preventDefault();e.stopImmediatePropagation();e.target.checked=false}
   }
+},true);
 /* ===== v0.8.6 CLEAR ALL SELECTED ===== */
 function lddClearAllSelectedDesigns(){
   const checked=[...document.querySelectorAll('[data-testid="design-card"] [role="checkbox"][aria-checked="true"]')];
@@ -3478,6 +3485,7 @@ function lddHotkeyMatchesMac(saved,combo,commandAlias=false){
    Keep a synchronous cache so preventDefault/stopPropagation happen during the key event. */
 const LDD_HOTKEY_ACTIONS_1815={upscale:'Upscale image',removeBg:'Remove background',imageMockups:'Image mockups',videoMockups:'Video mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize image',colorOverlay:'Color overlay',patternOverlay:'Pattern overlay',imageEffect:'Image effect',resizeImage:'Resize image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap files',deleteFiles:'Delete files',bulkTags:'Bulk tags',bulkSyncPublications:'Bulk sync publications',checkTrademarks:'Check trademarks',searchTrademarks:'Search trademarks',translate:'Translate',deleteAction:'Delete'};
 let lddHotkeyState1815={enabled:true,map:Object.assign({},LDD_DEFAULTS.hotkeyMap)};
+let lddHotkeySeedInfo1873="init";
 /* v1.8.16: migrate the old four Ctrl+Alt defaults / blank rows to the new complete numeric map once. Custom maps are preserved. */
 lddSafeGet({hotkeyMap:null,hotkeyDefaults1816:false},o=>{
  if(o.hotkeyDefaults1816)return;
@@ -3489,6 +3497,7 @@ lddSafeGet({hotkeyMap:null,hotkeyDefaults1816:false},o=>{
 function lddLoadHotkeyState1815(){
  lddSafeGet({hotkeysEnabled:false,hotkeyMap:LDD_DEFAULTS.hotkeyMap},o=>{
   lddHotkeyState1815={enabled:o.hotkeysEnabled!==false,map:Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{})};
+  lddHotkeySeedInfo1873="startup-load "+new Date().toLocaleTimeString();
  });
 }
 lddLoadHotkeyState1815();
@@ -3496,7 +3505,31 @@ lddSafeOnChanged((changes,area)=>{
  if(area!=='local'||(!changes.hotkeysEnabled&&!changes.hotkeyMap))return;
  if(changes.hotkeysEnabled)lddHotkeyState1815.enabled=changes.hotkeysEnabled.newValue!==false;
  if(changes.hotkeyMap)lddHotkeyState1815.map=Object.assign({},LDD_DEFAULTS.hotkeyMap,changes.hotkeyMap.newValue||{});
+ lddHotkeySeedInfo1873="onChanged "+new Date().toLocaleTimeString();
 });
+/* v1.8.71 — self-healing hotkey cache.
+   Reported: hotkeys die on every MyDesigns refresh until hotkeys are toggled
+   off/on, and then only work until the next refresh. The toggle works solely
+   because the storage.onChanged listener above re-seeds the synchronous cache
+   the keydown handler reads — i.e. the startup load can leave a stale cache.
+   Same failure shape the v1.6.5 font "startup kick" fixed: do the loader work
+   automatically instead of relying on one startup read. Re-sync shortly after
+   startup, once more after a delay (wins any race with the one-time v1.8.16
+   migration write), whenever the tab becomes visible again, and on a slow
+   interval so the cache always converges to storage truth. Never writes the
+   user's setting; OFF stays OFF. */
+function lddHotkeyResync1871(){
+ lddSafeGet({hotkeysEnabled:false,hotkeyMap:LDD_DEFAULTS.hotkeyMap},o=>{
+  const enabled=o.hotkeysEnabled!==false;
+  if(lddHotkeyState1815.enabled!==enabled)lddHotkeyState1815.enabled=enabled;
+  lddHotkeyState1815.map=Object.assign({},LDD_DEFAULTS.hotkeyMap,o.hotkeyMap||{});
+  lddHotkeySeedInfo1873="resync "+new Date().toLocaleTimeString();
+ });
+}
+setTimeout(lddHotkeyResync1871,600);
+setTimeout(lddHotkeyResync1871,2500);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)lddHotkeyResync1871();});
+setInterval(lddHotkeyResync1871,30000);
 document.addEventListener('keydown',e=>{
  if(lddHotkeyRecording||e.isComposing||lddTypingTarget110(e.target)||e.repeat||!lddHotkeyState1815.enabled)return;
  const combo=lddCombo110(e);
@@ -3515,7 +3548,6 @@ lddSafeGet(LDD_DEFAULTS,lddApplyTheme110);
 
 /* v1.0.54 — old experimental Settings tab layers removed */
 
-},true);
 /* v1.0.24 runtime guard: old font-mount helper intentionally retired */
 /* v1.1.3 draggable + collapsible Hotkey Tips HUD */
 const LDD_HOTKEY_HUD_DEFS_113={upscale:'Upscale',removeBg:'Remove BG',imageMockups:'Image Mockups',videoMockups:'Video Mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize',colorOverlay:'Color Overlay',patternOverlay:'Pattern Overlay',imageEffect:'Image Effect',resizeImage:'Resize Image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap Files',deleteFiles:'Delete Files',bulkTags:'Bulk Tags',bulkSyncPublications:'Bulk Sync',checkTrademarks:'Check Trademarks',searchTrademarks:'Search Trademarks',translate:'Translate',deleteAction:'Delete'};
