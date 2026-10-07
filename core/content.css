@@ -1089,7 +1089,13 @@ html.ldd-theme-master-on body .ldd-credits-box button svg {fill:currentColor!imp
 .ldd-ip-empty{color:#9aa4b2;font-size:13px}
 
 /* v1.8.76 panel collapse handle + expand tab */
-#ldd-app-collapse{position:fixed;top:50%;width:28px;height:56px;margin-top:-28px;z-index:2147483001;background:#101014;border:1px solid #29292f;border-right:none;border-radius:10px 0 0 10px;color:#9d4dff;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:-2px 0 12px rgba(0,0,0,.5)}
-#ldd-app-collapse:hover{background:#19191e;color:#fff}
-#ldd-app-expand{position:fixed;top:50%;width:26px;height:64px;margin-top:-32px;z-index:2147483001;background:#101014;border:1px solid #9d4dff;border-right:none;border-radius:10px 0 0 10px;color:#9d4dff;cursor:pointer;font-size:15px;display:none;align-items:center;justify-content:center;box-shadow:-2px 0 12px rgba(0,0,0,.5)}
-#ldd-app-expand:hover{background:#19191e;color:#fff}
+/* v1.8.85 Tools tab: 4-column compact grid, no scroll */
+#ldd-app-page .ldd-tools-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+#ldd-app-page .ldd-tool-card{background:#0d0e12;border:1px solid #30323a;border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+#ldd-app-page .ldd-tool-card h3{margin:0!important;font-size:14px!important;font-weight:800!important;color:#fff!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#ldd-app-page .ldd-tool-card p{margin:0!important;color:#aeb1ba!important;font-size:12px!important;line-height:1.45!important;flex:1;min-height:36px}
+#ldd-app-page .ldd-tool-btns{display:flex;flex-direction:column;gap:8px}
+#ldd-app-page .ldd-tool-card .ldd-enable-disable{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+#ldd-app-page .ldd-tool-card .ldd-enable-disable button{min-height:34px;font-size:11px;letter-spacing:.06em}
+#ldd-app-page .ldd-tool-card .ldd-tool-open{width:100%;min-height:34px;font-size:11px;font-weight:800;letter-spacing:.08em}
+#ldd-app-page .ldd-tool-card .ldd-wip-label{font-size:10px}

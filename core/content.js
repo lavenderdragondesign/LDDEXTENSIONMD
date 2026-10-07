@@ -1078,20 +1078,17 @@ function lddRenderDesignPage(o){
  </div>`;
 }
 function lddRenderWorkflowPage(o){
+ const enDis=(key,on)=>`<div class="ldd-enable-disable" data-two-button-setting="${key}"><button type="button" data-setting-value="true" class="${on?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${!on?'active':''}">DISABLE</button></div>`;
+ const openBtn=(id,disabled)=>`<button type="button" id="${id}" class="ldd-page-secondary ldd-tool-open"${disabled?' disabled':''}>OPEN</button>`;
+ const card=(title,desc,body)=>`<div class="ldd-tool-card"><h3>${title}</h3><p>${desc}</p><div class="ldd-tool-btns">${body}</div></div>`;
  return `<div class="ldd-page-title"><h2>Tools</h2><p>Workflow tools and utilities for MyDesigns.</p></div>
- <div class="ldd-section">
-  <div class="ldd-feature-info"><h3>Preview Pro</h3><p><b>What it does:</b> Shows a fast enlarged preview when you hover over MyDesigns design cards. TinyMD may temporarily suspend Preview Pro for maximum performance without changing your saved preference.</p></div>
-  <div class="ldd-enable-disable" data-two-button-setting="hoverPreview"><button type="button" data-setting-value="true" class="${o.hoverPreview!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.hoverPreview===false?'active':''}">DISABLE</button></div>
-  <div class="ldd-feature-info"><h3>Drag & Drop Upload</h3><p><b>What it does:</b> Drag image files straight from Windows Explorer onto the MyDesigns Designs page. LDD hands them to MyDesigns' native upload flow so you can skip opening the upload picker first.</p></div>
-  <div class="ldd-enable-disable" data-two-button-setting="dragUpload"><button type="button" data-setting-value="true" class="${o.dragUpload!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.dragUpload===false?'active':''}">DISABLE</button></div>
-  <div class="ldd-feature-info ldd-renamer-wip" aria-disabled="true"><h3>LDD Renamer <span class="ldd-wip-label">Work in progress</span></h3><p>The renamer is being rebuilt and is temporarily unavailable.</p></div>
-  <div class="ldd-enable-disable ldd-renamer-wip" aria-label="Renamer unavailable"><button type="button" disabled title="Work in progress">ENABLE</button><button type="button" disabled title="Work in progress">DISABLE</button><button type="button" disabled title="Work in progress">OPEN</button></div>
-  <div class="ldd-feature-info"><h3>Scout AI Style Creator &amp; Autofiller</h3><p><b>What it does:</b> Adds the reusable Scout AI style library, Auto Fill, Create Style With AI, import/export, categories, and Dragon Pong.</p></div>
-  <div class="ldd-enable-disable" data-two-button-setting="scoutAIEnabled"><button type="button" data-setting-value="true" class="${o.scoutAIEnabled!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.scoutAIEnabled===false?'active':''}">DISABLE</button><button type="button" id="ldd-page-open-scout" class="ldd-page-secondary" ${o.scoutAIEnabled===false?'disabled':''}>OPEN</button></div>
-  <div class="ldd-feature-info"><h3>ChatGPT Prompt Queue</h3><p><b>What it does:</b> Queues prompts in ChatGPT and runs them one at a time with pause, resume, skip, stop, delay, progress, and completion tracking.</p></div>
-  <div class="ldd-enable-disable" data-two-button-setting="autoPromptQueueEnabled"><button type="button" data-setting-value="true" class="${o.autoPromptQueueEnabled===true?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.autoPromptQueueEnabled!==true?'active':''}">DISABLE</button><button type="button" id="ldd-open-prompt-queue" class="ldd-page-secondary" ${o.autoPromptQueueEnabled!==true?'disabled':''}>OPEN</button></div>
-  <div class="ldd-feature-info"><h3>DPI Changer</h3><p><b>What it does:</b> Forces 300 DPI on PNG &amp; JPG, pads to print size, and compresses for listings — right in your browser, files never leave your machine.</p></div>
-  <div class="ldd-enable-disable"><button type="button" id="ldd-open-dpi-changer" class="ldd-page-secondary">OPEN</button></div>
+ <div class="ldd-tools-grid">
+  ${card('&#128269; Preview Pro','Fast enlarged preview when you hover design cards.',enDis('hoverPreview',o.hoverPreview!==false))}
+  ${card('&#128229; Drag &amp; Drop','Drop images from Explorer straight onto Designs.',enDis('dragUpload',o.dragUpload!==false))}
+  ${card('&#9998;&#65039; Renamer <span class="ldd-wip-label">WIP</span>','Being rebuilt &mdash; temporarily unavailable.','<div class="ldd-enable-disable"><button type="button" disabled>ENABLE</button><button type="button" disabled>DISABLE</button></div>')}
+  ${card('&#129302; Scout AI','Style library, Auto Fill, Create Style With AI.',enDis('scoutAIEnabled',o.scoutAIEnabled!==false)+openBtn('ldd-page-open-scout',o.scoutAIEnabled===false))}
+  ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
+  ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
  </div>`;
 }
 
@@ -1534,6 +1531,13 @@ function lddBindAppPage(tab,o){
  if(tab==="workflow"){
    const dpiOpen=lddAppRoot.querySelector("#ldd-open-dpi-changer");
    if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
+   const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
+   if(scoutOpen)scoutOpen.onclick=()=>{
+     const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
+     if(target)target.click();else globalThis.lddToast110("Scout AI link was not found",true);
+   };
+   const pqOpen2=lddAppRoot.querySelector("#ldd-open-prompt-queue");
+   if(pqOpen2)pqOpen2.onclick=()=>lddShowTab("promptqueue");
  }
  if(tab==="imageprep"){lddBindImagePrepPage(o);}
  if(tab==="design"){
@@ -1888,105 +1892,6 @@ function lddBindImagePrepPage(o){
 }
 
 
-/* ===== v1.8.76 Panel collapse: Mac-style minimize that flies into the launcher tab ===== */
-function lddCollapseTargetRect(){
-  const launcher=document.getElementById('ldd-sidebar-entry');
-  if(launcher){const r=launcher.getBoundingClientRect();if(r.width>0&&r.height>0)return r;}
-  return null;
-}
-function lddEnsureCollapseHandle(){
-  let h=document.getElementById('ldd-app-collapse');
-  if(!h){
-    h=document.createElement('button');
-    h.id='ldd-app-collapse';h.type='button';
-    h.title='Collapse LDD Tools';h.setAttribute('aria-label','Collapse LDD Tools');
-    h.textContent='❮';
-    h.onclick=e=>{e.preventDefault();e.stopPropagation();lddCollapseAppPage(true);};
-    document.body.appendChild(h);
-  }
-  h.style.display='flex';
-  return h;
-}
-function lddPositionCollapseHandle(){
-  const h=document.getElementById('ldd-app-collapse');
-  if(!h||!lddAppRoot||lddAppRoot.style.display==='none')return;
-  const left=parseFloat(lddAppRoot.style.left||'80')||80;
-  h.style.left=Math.max(0,left-15)+'px';
-}
-function lddEnsureExpandTab(){
-  let t=document.getElementById('ldd-app-expand');
-  if(!t){
-    t=document.createElement('button');
-    t.id='ldd-app-expand';t.type='button';
-    t.title='Expand LDD Tools';t.setAttribute('aria-label','Expand LDD Tools');
-    t.textContent='❯';
-    t.onclick=e=>{e.preventDefault();e.stopPropagation();lddExpandAppPage();};
-    document.body.appendChild(t);
-  }
-  return t;
-}
-function lddPositionExpandTab(){
-  const t=document.getElementById('ldd-app-expand');if(!t)return;
-  const sidebar=lddFindMdSidebar();let left=80;
-  if(sidebar)left=Math.max(0,Math.round(sidebar.getBoundingClientRect().right));
-  t.style.left=Math.max(0,left-13)+'px';
-}
-function lddCollapseAppPage(animate){
-  if(!lddAppRoot)return;
-  const panel=lddAppRoot,lr=lddCollapseTargetRect();
-  try{lddStorageSet('lddPanelCollapsed',true);}catch(_){}
-  const h=document.getElementById('ldd-app-collapse');if(h)h.style.display='none';
-  const finish=()=>{
-    panel.style.display='none';
-    const t=lddEnsureExpandTab();lddPositionExpandTab();t.style.display='flex';
-  };
-  if(animate===false||!lr||!panel.animate){finish();return;}
-  const pr=panel.getBoundingClientRect();
-  const dx=(lr.left+lr.width/2)-(pr.left+pr.width/2),dy=(lr.top+lr.height/2)-(pr.top+pr.height/2);
-  panel.style.pointerEvents='none';
-  let done=false;
-  const end=()=>{if(done)return;done=true;panel.style.pointerEvents='';finish();};
-  try{
-    const anim=panel.animate([
-      {transform:'translate(0px,0px) scale(1)',opacity:1},
-      {transform:'translate('+dx*0.55+'px,'+dy*0.55+'px) scale(0.45)',opacity:0.9,offset:0.55},
-      {transform:'translate('+dx+'px,'+dy+'px) scale(0.03)',opacity:0}
-    ],{duration:480,easing:'cubic-bezier(0.32,0.72,0,1)'});
-    anim.onfinish=()=>{try{anim.cancel();}catch(_){}end();};
-    anim.oncancel=end;
-  }catch(_){end();}
-}
-function lddExpandAppPage(){
-  const panel=lddAppRoot;if(!panel)return;
-  try{lddStorageSet('lddPanelCollapsed',false);}catch(_){}
-  const t=document.getElementById('ldd-app-expand');if(t)t.style.display='none';
-  panel.style.display='';
-  lddPositionAppBesideMdSidebar();
-  lddEnsureCollapseHandle();lddPositionCollapseHandle();
-  const lr=lddCollapseTargetRect();
-  if(!lr||!panel.animate)return;
-  const pr=panel.getBoundingClientRect();
-  const dx=(lr.left+lr.width/2)-(pr.left+pr.width/2),dy=(lr.top+lr.height/2)-(pr.top+pr.height/2);
-  panel.style.pointerEvents='none';
-  let done=false;
-  const end=()=>{if(done)return;done=true;panel.style.pointerEvents='';};
-  try{
-    const anim=panel.animate([
-      {transform:'translate('+dx+'px,'+dy+'px) scale(0.03)',opacity:0},
-      {transform:'translate('+dx*0.55+'px,'+dy*0.55+'px) scale(0.45)',opacity:0.9,offset:0.45},
-      {transform:'translate(0px,0px) scale(1)',opacity:1}
-    ],{duration:480,easing:'cubic-bezier(0.32,0.72,0,1)'});
-    anim.onfinish=()=>{try{anim.cancel();}catch(_){}end();};
-    anim.oncancel=end;
-  }catch(_){end();}
-}
-function lddInitCollapseState(){
-  lddEnsureCollapseHandle();lddPositionCollapseHandle();
-  lddSafeGet({lddPanelCollapsed:false},o=>{
-    if(o&&o.lddPanelCollapsed&&lddAppRoot)lddCollapseAppPage(false);
-  });
-}
-
 function lddApplyTheme110(o){
  const root=document.documentElement;
  const active=!!(o.themeEnabled&&o.themeTweaker);
@@ -2179,7 +2084,6 @@ function lddPositionAppBesideMdSidebar(){
     if(rail)left=Math.max(0,Math.round(rail.getBoundingClientRect().right));
   }
   lddAppRoot.style.left=(left||80)+"px";
-  try{lddPositionCollapseHandle();}catch(_){}
 }
 
 const LDD_OFFICIAL_UPDATE_REPO="lavenderdragondesign/LDDEXTENSIONMD";
@@ -2317,7 +2221,10 @@ function lddRenderAppPage(opts){
 document.body.appendChild(lddAppRoot);
  lddPositionAppBesideMdSidebar();
  requestAnimationFrame(lddPositionAppBesideMdSidebar);
- lddInitCollapseState();
+ // v1.8.84: panel collapse removed — drop any stale collapsed state/buttons.
+ document.getElementById("ldd-app-collapse")?.remove();
+ document.getElementById("ldd-app-expand")?.remove();
+ try{lddStorageSet("lddPanelCollapsed",false);}catch(_){}
  // Bind the permanent left navigation immediately. Page-specific bind errors must
  // never make the main LDD pages unclickable.
  lddAppRoot.querySelectorAll(".ldd-app-nav button[data-tab]").forEach(btn=>{
@@ -2343,7 +2250,6 @@ document.body.appendChild(lddAppRoot);
 function lddCloseAppPage(){
  if(!lddAppRoot)return;
  lddAppRoot.remove();lddAppRoot=null;lddAppOpen=false;
- document.getElementById("ldd-app-collapse")?.remove();document.getElementById("ldd-app-expand")?.remove();
  if(lddContextAlive())document.getElementById("ldd-sidebar-entry")?.classList.remove("ldd-active");
 }
 // Any real MD sidebar navigation closes the injected LDD page first.
