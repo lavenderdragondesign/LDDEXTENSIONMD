@@ -1090,6 +1090,8 @@ function lddRenderWorkflowPage(o){
   <div class="ldd-enable-disable" data-two-button-setting="scoutAIEnabled"><button type="button" data-setting-value="true" class="${o.scoutAIEnabled!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.scoutAIEnabled===false?'active':''}">DISABLE</button><button type="button" id="ldd-page-open-scout" class="ldd-page-secondary" ${o.scoutAIEnabled===false?'disabled':''}>OPEN</button></div>
   <div class="ldd-feature-info"><h3>ChatGPT Prompt Queue</h3><p><b>What it does:</b> Queues prompts in ChatGPT and runs them one at a time with pause, resume, skip, stop, delay, progress, and completion tracking.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="autoPromptQueueEnabled"><button type="button" data-setting-value="true" class="${o.autoPromptQueueEnabled===true?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.autoPromptQueueEnabled!==true?'active':''}">DISABLE</button><button type="button" id="ldd-open-prompt-queue" class="ldd-page-secondary" ${o.autoPromptQueueEnabled!==true?'disabled':''}>OPEN</button></div>
+  <div class="ldd-feature-info"><h3>DPI Changer</h3><p><b>What it does:</b> Forces 300 DPI on PNG &amp; JPG, pads to print size, and compresses for listings — right in your browser, files never leave your machine.</p></div>
+  <div class="ldd-enable-disable"><button type="button" id="ldd-open-dpi-changer" class="ldd-page-secondary">OPEN</button></div>
  </div>`;
 }
 
@@ -1356,6 +1358,7 @@ function lddPageBody(tab,o){
  if(tab==="workflow")return lddRenderWorkflowPage(o);
  if(tab==="theme")return lddRenderThemePage110(o);
  if(tab==="hotkeys")return lddRenderHotkeysPage110(o);
+ if(tab==="imageprep")return lddRenderImagePrepPage(o);
  if(tab==="scout")return lddRenderScoutPage(o);
  if(tab==="extras")return lddRenderExtraFeaturesPage(o);
  if(tab==="performance")return lddRenderPerformancePage(o);
@@ -1528,6 +1531,11 @@ function lddBindAppPage(tab,o){
    const resetHotkeys=lddAppRoot.querySelector("#ldd-reset-hotkeys-200");if(resetHotkeys)resetHotkeys.onclick=()=>lddSafeSet({hotkeyMap:{...LDD_DEFAULTS.hotkeyMap}},()=>{globalThis.lddToast110("Hotkeys reset to defaults");lddShowTab("hotkeys")});
    const resetHud=lddAppRoot.querySelector("#ldd-reset-hud-pos-200");if(resetHud)resetHud.onclick=()=>lddSafeSet({hotkeyHudPosition:null,hotkeyHudX:null,hotkeyHudY:null},()=>{document.getElementById("ldd-hotkey-hud-113")?.remove();lddHotkeyHud113();globalThis.lddToast110("Hotkey HUD position reset")});
  }
+ if(tab==="workflow"){
+   const dpiOpen=lddAppRoot.querySelector("#ldd-open-dpi-changer");
+   if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
+ }
+ if(tab==="imageprep"){lddBindImagePrepPage(o);}
  if(tab==="design"){
    lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab(tab==="workflow"?"workflow":"design")}));
    const delay=lddAppRoot.querySelector("#ldd-preview-delay"); if(delay)delay.oninput=()=>{const v=+delay.value;const out=lddAppRoot.querySelector("#ldd-preview-delay-val");if(out)out.textContent=v+"ms";lddSafeSet({hoverPreviewDelay:v})};
@@ -1748,6 +1756,237 @@ function lddRenderHotkeysPage110(o){
  <div class="ldd-hotkey-note-200"><b>Tip:</b> Chrome and Windows may reserve some keyboard combinations. LDD warns when a shortcut conflicts with another LDD mapping. Press Esc while recording to cancel.</div></div>`;
 }
 
+
+/* ===== v1.8.75 Image Prep: force 300 DPI + compress, in-extension ===== */
+function lddCrc32_1875(bytes){
+  let t=lddCrc32_1875.t;
+  if(!t){t=lddCrc32_1875.t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c;}}
+  let crc=0xFFFFFFFF;
+  for(let i=0;i<bytes.length;i++)crc=t[(crc^bytes[i])&255]^(crc>>>8);
+  return (crc^0xFFFFFFFF)>>>0;
+}
+function lddPngSetDpi1875(u8,dpi){
+  const sig=[137,80,78,71,13,10,26,10];
+  for(let i=0;i<8;i++)if(u8[i]!==sig[i])return u8;
+  const ppm=Math.round(dpi/0.0254);
+  const pd=new Uint8Array(9),pv=new DataView(pd.buffer);
+  pv.setUint32(0,ppm);pv.setUint32(4,ppm);pv.setUint8(8,1);
+  const td=new TextEncoder().encode('pHYs');
+  const ck=new Uint8Array(21),cv=new DataView(ck.buffer);
+  cv.setUint32(0,9);ck.set(td,4);ck.set(pd,8);
+  const ci=new Uint8Array(13);ci.set(td,0);ci.set(pd,4);
+  cv.setUint32(17,lddCrc32_1875(ci));
+  const parts=[u8.slice(0,8)];let off=8,ins=false;
+  while(off+8<=u8.length){
+    const len=new DataView(u8.buffer,u8.byteOffset+off,4).getUint32(0);
+    const type=String.fromCharCode(u8[off+4],u8[off+5],u8[off+6],u8[off+7]);
+    const end=off+12+len;
+    if(type!=='pHYs')parts.push(u8.slice(off,end));
+    if(type==='IHDR'&&!ins){parts.push(ck);ins=true;}
+    off=end;
+    if(type==='IEND')break;
+  }
+  if(!ins)parts.splice(1,0,ck);
+  const total=parts.reduce((a,b)=>a+b.length,0),res=new Uint8Array(total);
+  let o=0;for(const p of parts){res.set(p,o);o+=p.length;}
+  return res;
+}
+function lddJpegSetDpi1875(u8,dpi){
+  if(u8[0]!==0xFF||u8[1]!==0xD8)return u8;
+  const seg=new Uint8Array([0xFF,0xE0,0,16,0x4A,0x46,0x49,0x46,0,1,2,1,(dpi>>8)&255,dpi&255,(dpi>>8)&255,dpi&255,0,0]);
+  let off=2;
+  if(u8[2]===0xFF&&u8[3]===0xE0)off=2+2+((u8[4]<<8)|u8[5]);
+  const out=new Uint8Array(2+seg.length+(u8.length-off));
+  out.set(u8.subarray(0,2),0);out.set(seg,2);out.set(u8.subarray(off),2+seg.length);
+  return out;
+}
+function lddRenderImagePrepPage(o){
+  return `<div class="ldd-page ldd-imageprep-page-1875">
+  <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Force <b>300 DPI</b> on PNG &amp; JPG, pad to print size, compress for listings. Files never leave your browser.</p></div></div>
+  <div class="ldd-control-card ldd-ip-drop-1875" id="ldd-ip-drop"><div class="ldd-ip-drop-hint">Drop images here or <button type="button" id="ldd-ip-browse">browse files</button></div><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
+  <div class="ldd-control-card"><h2>Output</h2>
+    <div class="ldd-ip-opts-1875">
+      <label><input type="radio" name="ldd-ip-format" value="png" checked> PNG <small>(keeps transparency)</small></label>
+      <label><input type="radio" name="ldd-ip-format" value="jpg"> JPG <small>(flattens onto white)</small></label>
+      <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ip-quality" min="50" max="100" value="85"> <b id="ldd-ip-quality-v">85</b> <small>(JPG only)</small></label>
+      <label>Pad to <input type="number" id="ldd-ip-padw" placeholder="4500" min="1"> × <input type="number" id="ldd-ip-padh" placeholder="5400" min="1"> <small>(optional, transparent pad; never shrinks)</small></label>
+    </div>
+    <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ip-process" class="ldd-ip-go-1875">⚡ Process &amp; Download</button></div>
+  </div>
+  <div class="ldd-control-card"><h2>Files <span id="ldd-ip-count"></span></h2><div id="ldd-ip-list" class="ldd-ip-list-1875"><p class="ldd-ip-empty">No images yet.</p></div></div>
+  </div>`;
+}
+function lddBindImagePrepPage(o){
+  const root=lddAppRoot;if(!root)return;
+  const drop=root.querySelector('#ldd-ip-drop'),input=root.querySelector('#ldd-ip-files'),
+    list=root.querySelector('#ldd-ip-list'),count=root.querySelector('#ldd-ip-count'),
+    proc=root.querySelector('#ldd-ip-process'),q=root.querySelector('#ldd-ip-quality'),
+    qv=root.querySelector('#ldd-ip-quality-v');
+  if(!drop||!proc)return;
+  let files=[];
+  q.oninput=()=>{qv.textContent=q.value;};
+  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const render=()=>{
+    count.textContent=files.length?`(${files.length})`:'';
+    list.innerHTML=files.length?files.map((f,i)=>{
+      const badge=f.status?` <span class="ldd-ip-${f.status==='OK'?'ok':(f.status==='LOW-RES'?'warn':'err')}">${f.status}</span>`:'';
+      const det=f.w?`${f.w}×${f.h}px · ${(f.w/300).toFixed(1)}"×${(f.h/300).toFixed(1)}" @300dpi${badge}`:'pending';
+      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><small>${det}${f.note?' · '+esc(f.note):''}</small><button type="button" data-i="${i}" title="Remove">×</button></div>`;
+    }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
+    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
+  };
+  const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f});}render();};
+  root.querySelector('#ldd-ip-browse').onclick=()=>input.click();
+  input.onchange=()=>{add([...input.files]);input.value='';};
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
+  drop.addEventListener('drop',e=>add([...e.dataTransfer.files]));
+  proc.onclick=async()=>{
+    if(!files.length){globalThis.lddToast110('Drop some images first');return;}
+    const format=root.querySelector('input[name="ldd-ip-format"]:checked').value;
+    const quality=+q.value;
+    const padW=+root.querySelector('#ldd-ip-padw').value||0,padH=+root.querySelector('#ldd-ip-padh').value||0;
+    proc.disabled=true;proc.textContent='Working…';
+    let ok=0;
+    for(const f of files){
+      try{
+        const bmp=await createImageBitmap(f.file);
+        const ow=bmp.width,oh=bmp.height;
+        let cw=ow,ch=oh,note='';
+        if(padW&&padH){
+          if(ow<=padW&&oh<=padH){cw=padW;ch=padH;note=`padded to ${cw}×${ch}`;}
+          else note='larger than pad target; left as-is';
+        }
+        const c=document.createElement('canvas');c.width=cw;c.height=ch;
+        const ctx=c.getContext('2d');
+        if(format==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,cw,ch);}
+        else ctx.clearRect(0,0,cw,ch);
+        ctx.drawImage(bmp,Math.floor((cw-ow)/2),Math.floor((ch-oh)/2),ow,oh);
+        if(bmp.close)bmp.close();
+        const type=format==='jpg'?'image/jpeg':'image/png';
+        const blob=await new Promise(r=>c.toBlob(r,type,format==='jpg'?quality/100:undefined));
+        if(!blob)throw new Error('encode failed');
+        let bytes=new Uint8Array(await blob.arrayBuffer());
+        bytes=format==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
+        const url=URL.createObjectURL(new Blob([bytes],{type}));
+        const name=f.file.name.replace(/\.[^.]+$/,'')+(format==='jpg'?'.jpg':'.png');
+        // chrome.downloads is not exposed to content scripts; anchor download works here.
+        const a=document.createElement('a');
+        a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(url),60000);
+        f.w=cw;f.h=ch;f.note=note;
+        f.status=Math.min(ow,oh)<2000?'LOW-RES':'OK';
+        ok++;
+      }catch(err){f.status='ERROR';f.note=String((err&&err.message)||err);}
+      render();
+    }
+    proc.disabled=false;proc.textContent='⚡ Process & Download';
+    globalThis.lddToast110(`Done: ${ok}/${files.length} downloaded @300 DPI`);
+    render();
+  };
+  render();
+}
+
+
+/* ===== v1.8.76 Panel collapse: Mac-style minimize that flies into the launcher tab ===== */
+function lddCollapseTargetRect(){
+  const launcher=document.getElementById('ldd-sidebar-entry');
+  if(launcher){const r=launcher.getBoundingClientRect();if(r.width>0&&r.height>0)return r;}
+  return null;
+}
+function lddEnsureCollapseHandle(){
+  let h=document.getElementById('ldd-app-collapse');
+  if(!h){
+    h=document.createElement('button');
+    h.id='ldd-app-collapse';h.type='button';
+    h.title='Collapse LDD Tools';h.setAttribute('aria-label','Collapse LDD Tools');
+    h.textContent='❮';
+    h.onclick=e=>{e.preventDefault();e.stopPropagation();lddCollapseAppPage(true);};
+    document.body.appendChild(h);
+  }
+  h.style.display='flex';
+  return h;
+}
+function lddPositionCollapseHandle(){
+  const h=document.getElementById('ldd-app-collapse');
+  if(!h||!lddAppRoot||lddAppRoot.style.display==='none')return;
+  const left=parseFloat(lddAppRoot.style.left||'80')||80;
+  h.style.left=Math.max(0,left-15)+'px';
+}
+function lddEnsureExpandTab(){
+  let t=document.getElementById('ldd-app-expand');
+  if(!t){
+    t=document.createElement('button');
+    t.id='ldd-app-expand';t.type='button';
+    t.title='Expand LDD Tools';t.setAttribute('aria-label','Expand LDD Tools');
+    t.textContent='❯';
+    t.onclick=e=>{e.preventDefault();e.stopPropagation();lddExpandAppPage();};
+    document.body.appendChild(t);
+  }
+  return t;
+}
+function lddPositionExpandTab(){
+  const t=document.getElementById('ldd-app-expand');if(!t)return;
+  const sidebar=lddFindMdSidebar();let left=80;
+  if(sidebar)left=Math.max(0,Math.round(sidebar.getBoundingClientRect().right));
+  t.style.left=Math.max(0,left-13)+'px';
+}
+function lddCollapseAppPage(animate){
+  if(!lddAppRoot)return;
+  const panel=lddAppRoot,lr=lddCollapseTargetRect();
+  try{lddStorageSet('lddPanelCollapsed',true);}catch(_){}
+  const h=document.getElementById('ldd-app-collapse');if(h)h.style.display='none';
+  const finish=()=>{
+    panel.style.display='none';
+    const t=lddEnsureExpandTab();lddPositionExpandTab();t.style.display='flex';
+  };
+  if(animate===false||!lr||!panel.animate){finish();return;}
+  const pr=panel.getBoundingClientRect();
+  const dx=(lr.left+lr.width/2)-(pr.left+pr.width/2),dy=(lr.top+lr.height/2)-(pr.top+pr.height/2);
+  panel.style.pointerEvents='none';
+  let done=false;
+  const end=()=>{if(done)return;done=true;panel.style.pointerEvents='';finish();};
+  try{
+    const anim=panel.animate([
+      {transform:'translate(0px,0px) scale(1)',opacity:1},
+      {transform:'translate('+dx*0.55+'px,'+dy*0.55+'px) scale(0.45)',opacity:0.9,offset:0.55},
+      {transform:'translate('+dx+'px,'+dy+'px) scale(0.03)',opacity:0}
+    ],{duration:480,easing:'cubic-bezier(0.32,0.72,0,1)'});
+    anim.onfinish=()=>{try{anim.cancel();}catch(_){}end();};
+    anim.oncancel=end;
+  }catch(_){end();}
+}
+function lddExpandAppPage(){
+  const panel=lddAppRoot;if(!panel)return;
+  try{lddStorageSet('lddPanelCollapsed',false);}catch(_){}
+  const t=document.getElementById('ldd-app-expand');if(t)t.style.display='none';
+  panel.style.display='';
+  lddPositionAppBesideMdSidebar();
+  lddEnsureCollapseHandle();lddPositionCollapseHandle();
+  const lr=lddCollapseTargetRect();
+  if(!lr||!panel.animate)return;
+  const pr=panel.getBoundingClientRect();
+  const dx=(lr.left+lr.width/2)-(pr.left+pr.width/2),dy=(lr.top+lr.height/2)-(pr.top+pr.height/2);
+  panel.style.pointerEvents='none';
+  let done=false;
+  const end=()=>{if(done)return;done=true;panel.style.pointerEvents='';};
+  try{
+    const anim=panel.animate([
+      {transform:'translate('+dx+'px,'+dy+'px) scale(0.03)',opacity:0},
+      {transform:'translate('+dx*0.55+'px,'+dy*0.55+'px) scale(0.45)',opacity:0.9,offset:0.45},
+      {transform:'translate(0px,0px) scale(1)',opacity:1}
+    ],{duration:480,easing:'cubic-bezier(0.32,0.72,0,1)'});
+    anim.onfinish=()=>{try{anim.cancel();}catch(_){}end();};
+    anim.oncancel=end;
+  }catch(_){end();}
+}
+function lddInitCollapseState(){
+  lddEnsureCollapseHandle();lddPositionCollapseHandle();
+  lddSafeGet({lddPanelCollapsed:false},o=>{
+    if(o&&o.lddPanelCollapsed&&lddAppRoot)lddCollapseAppPage(false);
+  });
+}
+
 function lddApplyTheme110(o){
  const root=document.documentElement;
  const active=!!(o.themeEnabled&&o.themeTweaker);
@@ -1940,6 +2179,7 @@ function lddPositionAppBesideMdSidebar(){
     if(rail)left=Math.max(0,Math.round(rail.getBoundingClientRect().right));
   }
   lddAppRoot.style.left=(left||80)+"px";
+  try{lddPositionCollapseHandle();}catch(_){}
 }
 
 const LDD_OFFICIAL_UPDATE_REPO="lavenderdragondesign/LDDEXTENSIONMD";
@@ -2077,6 +2317,7 @@ function lddRenderAppPage(opts){
 document.body.appendChild(lddAppRoot);
  lddPositionAppBesideMdSidebar();
  requestAnimationFrame(lddPositionAppBesideMdSidebar);
+ lddInitCollapseState();
  // Bind the permanent left navigation immediately. Page-specific bind errors must
  // never make the main LDD pages unclickable.
  lddAppRoot.querySelectorAll(".ldd-app-nav button[data-tab]").forEach(btn=>{
@@ -2102,6 +2343,7 @@ document.body.appendChild(lddAppRoot);
 function lddCloseAppPage(){
  if(!lddAppRoot)return;
  lddAppRoot.remove();lddAppRoot=null;lddAppOpen=false;
+ document.getElementById("ldd-app-collapse")?.remove();document.getElementById("ldd-app-expand")?.remove();
  if(lddContextAlive())document.getElementById("ldd-sidebar-entry")?.classList.remove("ldd-active");
 }
 // Any real MD sidebar navigation closes the injected LDD page first.
