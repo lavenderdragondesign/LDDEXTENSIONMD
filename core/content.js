@@ -104,7 +104,7 @@ const LDD_DEFAULTS = {
   showCompositionGallery:true,
   performanceWarningAccepted:false,
   maxLength:true,
-  productPresets:true,
+  
   credits:true,
   hoverPreview:true,
   hoverPreviewSize:"small",
@@ -112,13 +112,13 @@ const LDD_DEFAULTS = {
   hoverPreviewSwatches:true,
   hoverPreviewCloseMouseout:true,
   dragUpload:true,
-  customProductPresets:[],
+
   appFont:true,
   appFontFamily:"MyDesigns Default",
   appFontFavorites:[],
   appFontRecent:[],
   themeTweaker:false,
-  carouselRenamer:true,
+  
   themeEnabled:false,
   themeColor:"#39ff14",
   themeAccent2:"#00eaff", themeAccent3:"#ff2bd6", themeAccent4:"#9d4dff", themeAccent5:"#ffe600",
@@ -221,88 +221,24 @@ if (location.origin !== "https://mydesigns.io" || !(location.pathname === "/app"
   }
 
   function creditButton(){
-    return document.querySelector('svg g#Credit')?.closest("button")||null;
+    const icon=[...document.querySelectorAll('svg g[id]')].find(g=>/^credits?$/i.test(g.id||''));
+    if(icon){
+      // The native sidebar credits card is a div, not a button.
+      let node=icon.closest('svg')?.parentElement;
+      for(let depth=0;node&&depth<6;depth++,node=node.parentElement){
+        if(node.tagName==='DIV'&&[...node.querySelectorAll('button')].some(b=>/buy more credits/i.test(b.textContent||'')))return node;
+      }
+      const button=icon.closest('button,[role="button"]');if(button)return button;
+    }
+    return document.querySelector('button[data-testid="credits"],button[aria-label="Credits"],button[title="Credits"]');
   }
   function credits(){
-    const b=creditButton(); if(b)b.style.display=cfg.credits?"":"none";
+    const b=creditButton();if(!b)return;
+    b.classList.add('ldd-credits-box');
+    b.classList.toggle('ldd-credits-hidden',cfg.lddMasterEnabled!==false&&cfg.credits===false);
+    // Remove the old display override; the scoped class handles hiding and restoring.
+    if(b.style.display==='none')b.style.removeProperty('display');
   }
-
-  function productSection(){
-    return [...document.querySelectorAll("div")].find(d=>{
-      const kids=[...d.children];
-      return kids.some(k=>text(k)==="Product type") && d.querySelector('input[placeholder="Search option"]');
-    });
-  }
-  function otherInput(){
-    const sec=productSection();
-    const search=sec?.querySelector('input[placeholder="Search option"]');
-    const candidates=[...document.querySelectorAll('input:not([placeholder="Search option"]),textarea')]
-      .filter(i=>visible(i) && i.id!=="ldd-custom-color");
-    if(search){
-      const sr=search.getBoundingClientRect();
-      const nearby=candidates.map(i=>{
-        const r=i.getBoundingClientRect();
-        const dy=Math.abs(r.top-sr.bottom), dx=Math.abs(r.left-sr.left);
-        return {i,score:dy+(dx*.25)};
-      }).filter(x=>x.i.getBoundingClientRect().top>=sr.top-10 && x.score<500)
-        .sort((a,b)=>a.score-b.score);
-      if(nearby[0]) return nearby[0].i;
-    }
-    return candidates.find(i=>/other|please specify/i.test(text(i.closest('.relative.flex.flex-col')||i.parentElement)))||null;
-  }
-
-
-  function addPresetDialog(){
-    document.getElementById("ldd-preset-dialog")?.remove();
-    const wrap=document.createElement("div");wrap.id="ldd-preset-dialog";
-    wrap.innerHTML='<div class="box"><h3>Add Product Type Preset</h3><input maxlength="100000" placeholder="e.g. STICKER SHEET"><div class="actions"><button class="cancel">Cancel</button><button class="save">Add Preset</button></div></div>';
-    document.body.appendChild(wrap);
-    const input=wrap.querySelector("input");
-    const close=()=>wrap.remove();
-    wrap.querySelector(".cancel").onclick=close;
-    wrap.addEventListener("click",e=>{if(e.target===wrap)close()});
-    const save=()=>{
-      const val=input.value.trim();
-      if(!val)return;
-      const current=Array.isArray(cfg.customProductPresets)?cfg.customProductPresets:[];
-      if(!current.some(x=>x.toLowerCase()===val.toLowerCase())){
-        lddSafeSet({customProductPresets:[...current,val]});
-      }
-      close();
-    };
-    wrap.querySelector(".save").onclick=save;
-    input.addEventListener("keydown",e=>{if(e.key==="Enter")save();if(e.key==="Escape")close()});
-    input.focus();
-  }
-
-  function presets(){
-    document.getElementById("ldd-presets")?.remove();
-    if(!cfg.productPresets)return;
-    const input=otherInput(); if(!input)return;
-    const box=document.createElement("div"); box.id="ldd-presets";
-    const builtins=["PNG","SVG","TUMBLER WRAP","CUSTOM","MUG WRAP","PHONE CASE"];
-    const fill=value=>{
-      const live=otherInput();if(!live)return;
-      nativeValue(live,value);
-      try{live.dispatchEvent(new InputEvent("input",{bubbles:true,inputType:"insertText",data:value}))}catch(_){}
-      live.focus();
-    };
-    builtins.forEach(label=>{
-      const b=document.createElement("button"); b.type="button"; b.textContent=label;
-      b.onclick=()=>fill(label==="CUSTOM"?"":label);
-      box.appendChild(b);
-    });
-    (Array.isArray(cfg.customProductPresets)?cfg.customProductPresets:[]).forEach(label=>{
-      const w=document.createElement("span");w.className="ldd-custom-wrap";
-      const b=document.createElement("button");b.type="button";b.textContent=label;b.onclick=()=>fill(label);
-      const x=document.createElement("button");x.type="button";x.className="ldd-delete-preset";x.textContent="×";x.title="Delete preset";
-      x.onclick=()=>lddSafeSet({customProductPresets:cfg.customProductPresets.filter(v=>v!==label)});
-      w.append(b,x);box.appendChild(w);
-    });
-    const add=document.createElement("button");add.type="button";add.textContent="+ ADD PRESET";add.onclick=addPresetDialog;box.appendChild(add);
-    input.insertAdjacentElement("afterend",box);
-  }
-
   function ensurePreview(){
     let p=document.getElementById("ldd-hover-preview");
     if(p)return p;
@@ -353,26 +289,57 @@ if (location.origin !== "https://mydesigns.io" || !(location.pathname === "/app"
     p.style.setProperty("max-width",w+"px","important");
     p.style.setProperty("max-height",(stageH+swatchH)+"px","important");
     p.style.display="block";
-    const left=(e.clientX+w+28<innerWidth)?e.clientX+18:Math.max(8,e.clientX-w-18);
-    const top=Math.max(8,Math.min(innerHeight-(stageH+swatchH)-8,e.clientY-Math.round(stageH*.32)));
+    const anchor=img.getBoundingClientRect();
+    const left=Math.max(8,Math.min(innerWidth-w-8,anchor.right+12));
+    const top=Math.max(8,Math.min(innerHeight-(stageH+swatchH)-8,anchor.top));
     p.style.left=left+"px";p.style.top=top+"px";
   }
   function hidePreview(){const p=document.getElementById("ldd-hover-preview");if(p)p.style.display="none"}
   document.addEventListener("keydown",e=>{if(e.key==="Escape")hidePreview()},true);
-  document.addEventListener("mouseover",e=>{
-    if(!cfg.hoverPreview)return;
-    const card=e.target.closest?.('[data-testid="design-card"]'); if(!card)return;
-    const img=card.querySelector("img");if(!img)return;
-    clearTimeout(hoverTimer);const ev={clientX:e.clientX,clientY:e.clientY};
-    hoverTimer=setTimeout(()=>showPreview(card,img,ev),Math.max(50,Number(cfg.hoverPreviewDelay)||180));
+  let lddActiveHoverImage=null,lddHoverPointer={x:0,y:0};
+  function lddHoverImageTarget(target,x,y){
+    if(!target?.closest||target.closest('#ldd-hover-preview,#ldd-app-page,#ldd-drop-overlay'))return null;
+    const hit=document.elementFromPoint(x,y);
+    if(!hit||hit.tagName!=='IMG')return null;
+    const img=hit;
+    const r=img.getBoundingClientRect();
+    if(r.width<180||r.height<180||x<r.left||x>r.right||y<r.top||y>r.bottom)return null;
+    if(target.closest('button,a,input,[role="checkbox"],[role="menuitem"]'))return null;
+    // Only the main image in a Listing editor. Grid cards and thumbnails are excluded.
+    let panel=img.parentElement,editor=null;
+    for(let depth=0;panel&&depth<8&&panel!==document.body;depth++,panel=panel.parentElement){
+      const text=panel.textContent||'';
+      if(text.includes('Inventory and Pricing')&&text.includes('Keywords')&&text.includes('Listing')){editor=panel;break;}
+    }
+    if(!editor)return null;
+    const images=[...editor.querySelectorAll('img')].filter(i=>!i.closest('#ldd-hover-preview'));
+    const hero=images.map(i=>({i,r:i.getBoundingClientRect()})).filter(o=>o.r.width>=180&&o.r.height>=180)
+      .sort((a,b)=>(b.r.width*b.r.height)-(a.r.width*a.r.height))[0]?.i;
+    if(hero!==img)return null;
+    return {img};
+  }
+  document.addEventListener('pointermove',e=>{
+    lddHoverPointer={x:e.clientX,y:e.clientY};
+    if(!cfg.hoverPreview){clearTimeout(hoverTimer);lddActiveHoverImage=null;hidePreview();return;}
+    if(e.target.closest?.('#ldd-hover-preview'))return;
+    const match=lddHoverImageTarget(e.target,e.clientX,e.clientY);
+    if(match?.img===lddActiveHoverImage)return;
+    clearTimeout(hoverTimer);lddActiveHoverImage=match?.img||null;
+    if(!match){hidePreview();return;}
+    const ev={clientX:e.clientX,clientY:e.clientY};
+    hoverTimer=setTimeout(()=>{
+      const hit=lddHoverImageTarget(document.elementFromPoint(lddHoverPointer.x,lddHoverPointer.y),lddHoverPointer.x,lddHoverPointer.y);
+      if(match.img.isConnected&&lddActiveHoverImage===match.img&&hit?.img===match.img)showPreview(match.img,match.img,ev);
+    },Math.max(50,Number(cfg.hoverPreviewDelay)||180));
   },true);
-  document.addEventListener("mouseout",e=>{
-    const card=e.target.closest?.('[data-testid="design-card"]');
-    if(cfg.hoverPreviewCloseMouseout!==false && card && !card.contains(e.relatedTarget)){clearTimeout(hoverTimer);setTimeout(()=>{
-      const p=document.getElementById("ldd-hover-preview");
-      if(p && !p.matches(":hover"))hidePreview();
-    },140)}
+  document.addEventListener('pointerout',e=>{
+    if(e.relatedTarget)return;
+    clearTimeout(hoverTimer);lddActiveHoverImage=null;hidePreview();
   },true);
+
+  const cancelImageHover=()=>{clearTimeout(hoverTimer);lddActiveHoverImage=null;hidePreview();};
+  window.addEventListener('blur',cancelImageHover);
+  document.addEventListener('scroll',cancelImageHover,true);
 
   function overlay(){
  let o=document.getElementById("ldd-drop-overlay");
@@ -382,8 +349,20 @@ if (location.origin !== "https://mydesigns.io" || !(location.pathname === "/app"
  try{
    if(typeof chrome!=="undefined"&&chrome.runtime&&chrome.runtime.id)dragon=chrome.runtime.getURL("assets/dragon-drop.png");
  }catch(_){}
- o.innerHTML=`<div class="ldd-drop-card">${dragon?`<img class="ldd-drop-dragon" src="${dragon}">`:""}<div class="ldd-drop-title">Drop files to upload</div><div class="ldd-drop-sub">Release to send them to MyDesigns</div><div class="ldd-drop-tip"><b>TIP:</b> Drag &amp; Drop uploads always go to your <b>default first slot</b>.</div><div class="ldd-drop-warning"><b>IMPORTANT:</b> If you are adding multiple designs to a <b>single listing</b>, use the <b>default MyDesigns Upload system</b> — do not use LDD Drag &amp; Drop.</div></div>`;
+ o.innerHTML=`<div class="ldd-drop-card"><div class="ldd-drop-dragon-slot"></div><div class="ldd-drop-title">Drop files to upload</div><div class="ldd-drop-sub">Release to send them to MyDesigns</div><div class="ldd-drop-tip"><b>TIP:</b> Drag &amp; Drop uploads always go to your <b>default first slot</b>.</div><div class="ldd-drop-warning"><b>IMPORTANT:</b> If you are adding multiple designs to a <b>single listing</b>, use the <b>default MyDesigns Upload system</b> — do not use LDD Drag &amp; Drop.</div></div>`;
  document.body.appendChild(o);
+ // Mount the DnD dragon as a real extension image after the overlay is in the DOM.
+ // This keeps theme/performance DOM rewrites from dropping the image markup.
+ if(dragon){
+   const slot=o.querySelector(".ldd-drop-dragon-slot");
+   const img=document.createElement("img");
+   img.className="ldd-drop-dragon";
+   img.alt="LDD Drag and Drop";
+   img.draggable=false;
+   img.src=dragon;
+   img.onerror=()=>{ try{ img.src=chrome.runtime.getURL("assets/dragon-drop.png")+"?v="+(chrome.runtime.getManifest?.().version||"1"); }catch(_){} };
+   slot?.appendChild(img);
+ }
  return o;
 }
 function killOverlay(){dragDepth=0;document.getElementById("ldd-drop-overlay")?.remove()}
@@ -397,7 +376,6 @@ function killOverlay(){dragDepth=0;document.getElementById("ldd-drop-overlay")?.
     if(cfg.lddMasterEnabled===false||!cfg.dragUpload||!hasFiles(e)||uploadBusy)return;
     e.preventDefault();e.stopPropagation();killOverlay();
     const files=[...e.dataTransfer.files];if(!files.length)return;
-    lddSnapshotCardsBeforeUpload();
     uploadBusy=true;
     try{
       let dialog=document.querySelector('[role="dialog"][aria-label="Upload Designs"]');
@@ -486,8 +464,8 @@ function killOverlay(){dragDepth=0;document.getElementById("ldd-drop-overlay")?.
 
   function apply(){
     document.documentElement.classList.toggle("ldd-master-disabled",cfg.lddMasterEnabled===false);
-    if(cfg.lddMasterEnabled===false){hidePreview();killOverlay();document.getElementById("ldd-app-page")?.remove();return;}
-    unlock();credits();presets();
+    if(cfg.lddMasterEnabled===false){credits();hidePreview();killOverlay();document.getElementById("ldd-app-page")?.remove();return;}
+    unlock();credits();
     if(!cfg.hoverPreview)hidePreview();
   }
   lddSafeGet(LDD_DEFAULTS,d=>{cfg={...LDD_DEFAULTS,...d};apply()});
@@ -700,14 +678,12 @@ lddSafeOnChanged((changes,area)=>{
 });
 
 
-/* ===== LDD THEME TWEAKER + CAROUSEL RENAMER v0.4.0 ===== */
+/* ===== LDD THEME TWEAKER v0.4.0 ===== */
 const LDD_NEONS=[
   ["Green","#39ff14"],["Cyan","#00f5ff"],["Blue","#348cff"],["Purple","#a855f7"],
   ["Pink","#ff3bd4"],["Red","#ff365d"],["Orange","#ff7a18"],["Yellow","#f8ff3d"]
 ];
-let lddThemePanel=null,lddThemeFab=null,lddRenamePanel=null,lddRenameFab=null;
-let lddRenameItems=[],lddRenameIndex=0;
-
+let lddThemePanel=null,lddThemeFab=null;
 function lddHexToRgb(hex){
   const h=String(hex||"#39ff14").replace("#","");
   const n=parseInt(h.length===3?h.split("").map(x=>x+x).join(""):h,16);
@@ -824,34 +800,6 @@ function lddCardIsChecked(card){
   const cb=lddCardCheckbox(card); if(!cb)return false;
   return cb.getAttribute?.('aria-checked')==='true' || cb.checked===true;
 }
-async function lddSetCardChecked(card,want=true){
-  let cb=lddCardCheckbox(card); if(!cb)return false;
-  if(lddCardIsChecked(card)===want)return true;
-  try{cb.click()}catch(_){cb.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,view:window}))}
-  for(let i=0;i<20;i++){
-    await lddSleep(50);
-    cb=lddCardCheckbox(card);
-    if(cb && lddCardIsChecked(card)===want)return true;
-  }
-  return false;
-}
-function lddCheckedCards(){
-  const cards=lddAllDesignCards().filter(lddCardIsChecked);
-  cards.sort((a,b)=>{
-    const A=a.getBoundingClientRect(),B=b.getBoundingClientRect();
-    if(Math.abs(A.top-B.top)>8)return A.top-B.top;
-    return A.left-B.left;
-  });
-  return cards;
-}
-function lddCardImage(card){return card?.querySelector("img.content-image-light, img[src*='/design/preview/'], img")}
-function lddCardName(card){
-  const img=lddCardImage(card), alt=img?.getAttribute("alt");
-  if(alt&&alt.trim())return alt.trim();
-  const candidates=[...card.querySelectorAll("span,p,div")].map(x=>x.textContent?.trim()).filter(x=>x&&x.length<180);
-  return candidates.find(x=>/\.(png|jpe?g|svg|pdf|webp)$/i.test(x))||candidates.find(x=>x.length>2)||"Design";
-}
-
 /* ===== v0.8.6 MD SHOW/HIDE HELPERS ===== */
 function lddHorizontalMoreButton(card){
   if(!card)return null;
@@ -885,185 +833,12 @@ lddSafeOnChanged((changes,area)=>{
   if(area==="local"&&changes.showCreateWithAI)lddRefreshCreateWithAI();
 });
 
-function lddFindMenuButton(card){
-  const exact=lddHorizontalMoreButton(card);
-  if(exact)return exact;
-  const btns=[...card.querySelectorAll("button")];
-  return btns.find(b=>/more|menu|action|option/i.test(b.getAttribute("aria-label")||b.title||""))||null;
-}
-async function lddSleep(ms){return new Promise(r=>setTimeout(r,ms))}
-async function lddOpenCardMenu(card){
-  card.scrollIntoView({block:"center",behavior:"instant"});
-  const b=lddFindMenuButton(card); if(!b)throw new Error("Card action menu not found");
-  b.click(); await lddSleep(140);
-}
-function lddVisibleAction(text){
-  return [...document.querySelectorAll("button")].find(b=>b.offsetParent!==null&&b.textContent.trim()===text);
-}
-function lddSetVueInput(input,value){
-  const proto=input instanceof HTMLTextAreaElement?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;
-  const setter=Object.getOwnPropertyDescriptor(proto,"value")?.set;
-  setter?setter.call(input,value):input.value=value;
-  input.dispatchEvent(new Event("input",{bubbles:true}));
-  input.dispatchEvent(new Event("change",{bubbles:true}));
-}
-async function lddNativeRename(card,newName){
-  await lddOpenCardMenu(card);
-  const rename=lddVisibleAction("Rename file"); if(!rename)throw new Error("Rename file action not found");
-  rename.click();
-  let dialog=null;
-  for(let i=0;i<40&&!dialog;i++){await lddSleep(75);dialog=document.querySelector('[role="dialog"][aria-label="Edit File Name"]')}
-  if(!dialog)throw new Error("Edit File Name dialog not found");
-  const input=dialog.querySelector("input"); if(!input)throw new Error("Rename input not found");
-  lddSetVueInput(input,newName);
-  const update=[...dialog.querySelectorAll('button[type="submit"]')].find(b=>b.textContent.trim()==="Update File Name");
-  if(!update)throw new Error("Update File Name button not found");
-  update.click();
-  for(let i=0;i<50;i++){
-    await lddSleep(80);
-    if(!document.querySelector('[role="dialog"][aria-label="Edit File Name"]'))break;
-  }
-  if(document.querySelector('[role="dialog"][aria-label="Edit File Name"]'))throw new Error("Rename did not finish");
-}
-async function lddNativeDownload(card){
-  await lddOpenCardMenu(card);
-  const dl=lddVisibleAction("Download file"); if(!dl)throw new Error("Download file action not found");
-  dl.click(); await lddSleep(180);
-}
-function lddRenameSettings(){
-  const q=id=>lddRenamePanel?.querySelector(id);
-  return {
-    prefix:q("#ldd-r-prefix")?.value||"",
-    middle:q("#ldd-r-name")?.value||"",
-    suffix:q("#ldd-r-suffix")?.value||"",
-    numbering:q("#ldd-r-number")?.checked,
-    digits:+(q("#ldd-r-digits")?.value||2),
-    start:+(q("#ldd-r-start")?.value||1),
-    pos:q("#ldd-r-pos")?.value||"suffix"
-  };
-}
-function lddBuildRename(i){
-  const x=lddRenameSettings();
-  const num=String(x.start+i).padStart(x.digits,"0");
-  let bits=[x.prefix,x.middle,x.suffix].filter(Boolean);
-  if(x.numbering){x.pos==="prefix"?bits.unshift(num):bits.push(num)}
-  return bits.join(" ").replace(/\s+/g," ").trim();
-}
-function lddRefreshRename(){
-  if(!lddRenamePanel||!lddRenameItems.length)return;
-  lddRenameIndex=Math.max(0,Math.min(lddRenameIndex,lddRenameItems.length-1));
-  const card=lddRenameItems[lddRenameIndex], img=lddCardImage(card);
-  const src=img?.currentSrc||img?.src||"";
-  lddRenamePanel.querySelector("#ldd-r-img").src=src;
-  lddRenamePanel.querySelector("#ldd-r-count").textContent=`${lddRenameIndex+1} / ${lddRenameItems.length}`;
-  lddRenamePanel.querySelector("#ldd-r-original").textContent=lddCardName(card);
-  lddRenamePanel.querySelector("#ldd-r-preview").textContent=lddBuildRename(lddRenameIndex)||"Type a name…";
-}
-function lddSetRenameBusy(v,msg=""){
-  lddRenamePanel?.classList.toggle("busy",v);
-  const el=lddRenamePanel?.querySelector("#ldd-r-status");if(el)el.textContent=msg;
-}
-async function lddRenameCurrent(download=false){
-  if(!lddRenameItems.length)return;
-  const card=lddRenameItems[lddRenameIndex], name=lddBuildRename(lddRenameIndex);
-  if(!name){lddRenamePanel.querySelector("#ldd-r-name").focus();return}
-  try{
-    lddSetRenameBusy(true,"Renaming…");
-    await lddNativeRename(card,name);
-    if(download){lddSetRenameBusy(true,"Downloading…");await lddNativeDownload(card)}
-    if(lddRenameIndex<lddRenameItems.length-1){lddRenameIndex++;lddRefreshRename();lddRenamePanel.querySelector("#ldd-r-name").select()}
-    else lddSetRenameBusy(false,"Batch complete ✓");
-  }catch(e){console.error("[LDD Renamer]",e);lddSetRenameBusy(false,e.message)}
-  finally{if(lddRenameIndex<lddRenameItems.length)lddRenamePanel?.classList.remove("busy")}
-}
-function lddCloseRenamer(){
-  lddRenamePanel?.remove();lddRenamePanel=null;
-  document.getElementById("ldd-workflow-backdrop")?.remove();
-}
-function lddOpenRenamer(auto=false){
-  lddRenameItems=auto
-    ? (lddUploadBatchCards||[]).filter(c=>c&&c.isConnected&&lddCardIsChecked(c))
-    : lddCheckedCards();
-  if(!lddRenameItems.length){
-    if(!auto)alert("LDD Renamer: no checked designs found.");
-    return;
-  }
-  lddRenameIndex=0;
-  if(!document.getElementById("ldd-workflow-backdrop")){
-    const bg=document.createElement("div");bg.id="ldd-workflow-backdrop";document.body.appendChild(bg);
-  }
-  lddRenamePanel?.remove();
-  lddRenamePanel=document.createElement("section");lddRenamePanel.id="ldd-carousel-renamer";
-  lddRenamePanel.innerHTML=`
-    <div class="ldd-r-head"><div><b>🐉 LDD RENAMER</b><small>Checked designs • left → right</small></div><button id="ldd-r-close">×</button></div>
-    <div class="ldd-r-nav"><button id="ldd-r-prev">‹</button><b id="ldd-r-count">1 / 1</b><button id="ldd-r-next">›</button></div>
-    <div class="ldd-r-image-wrap"><img id="ldd-r-img"><div id="ldd-r-original"></div></div>
-    <div class="ldd-r-fields">
-      <label>Prefix<input id="ldd-r-prefix" placeholder="Optional"></label>
-      <label class="wide">Name<input id="ldd-r-name" placeholder="Type unique name"></label>
-      <label>Suffix<input id="ldd-r-suffix" placeholder="Optional"></label>
-    </div>
-    <div class="ldd-r-options">
-      <label><input id="ldd-r-number" type="checkbox"> Auto #</label>
-      <select id="ldd-r-digits"><option value="1">1</option><option value="2" selected>01</option><option value="3">001</option></select>
-      <span>Start</span><input id="ldd-r-start" type="number" value="1" min="0">
-      <select id="ldd-r-pos"><option value="suffix">Number after</option><option value="prefix">Number before</option></select>
-    </div>
-    <div class="ldd-r-live">LIVE NAME <b id="ldd-r-preview"></b></div>
-    <div id="ldd-r-status"></div>
-    <div class="ldd-r-actions">
-      <button id="ldd-r-skip" class="ldd-secondary">Skip</button>
-      <button id="ldd-r-download" class="ldd-secondary">Rename + Download + Next</button>
-      <button id="ldd-r-save" class="ldd-primary">Rename + Next ↵</button>
-      <button id="ldd-r-finish" class="ldd-secondary">Finish</button>
-    </div>`;
-  document.body.appendChild(lddRenamePanel);
-  const q=id=>lddRenamePanel.querySelector(id);
-  q("#ldd-r-close").onclick=lddCloseRenamer;q("#ldd-r-finish").onclick=lddCloseRenamer;
-  q("#ldd-r-prev").onclick=()=>{if(lddRenameIndex>0){lddRenameIndex--;lddRefreshRename()}};
-  q("#ldd-r-next").onclick=()=>{if(lddRenameIndex<lddRenameItems.length-1){lddRenameIndex++;lddRefreshRename()}};
-  q("#ldd-r-skip").onclick=()=>{if(lddRenameIndex<lddRenameItems.length-1){lddRenameIndex++;lddRefreshRename();q("#ldd-r-name").select()}};
-  q("#ldd-r-save").onclick=()=>lddRenameCurrent(false);
-  q("#ldd-r-download").onclick=()=>lddRenameCurrent(true);
-  ["#ldd-r-prefix","#ldd-r-name","#ldd-r-suffix","#ldd-r-number","#ldd-r-digits","#ldd-r-start","#ldd-r-pos"].forEach(id=>{
-    q(id).addEventListener("input",lddRefreshRename);q(id).addEventListener("change",lddRefreshRename);
-  });
-  q("#ldd-r-name").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();lddRenameCurrent(false)}});
-  lddRefreshRename();setTimeout(()=>q("#ldd-r-name").focus(),60);
-}
-function lddMountRenameFab(){
-  if(document.getElementById("ldd-rename-fab"))return;
-  lddRenameFab=document.createElement("button");lddRenameFab.id="ldd-rename-fab";lddRenameFab.className="ldd-tool-fab";lddRenameFab.textContent="✎";lddRenameFab.title="LDD Renamer";
-  document.body.appendChild(lddRenameFab);lddRenameFab.onclick=()=>lddOpenRenamer(false);
-}
-function lddUnmountRenameFab(){lddRenameFab?.remove();lddRenameFab=null;lddCloseRenamer()}
-
-/* Watch for the DnD/upload flow completing: after the Upload Designs dialog closes,
-   wait briefly for MD to render/check the new cards, then open the renamer. */
-let lddUploadDialogSeen=false,lddAutoRenameTimer=null;
-const lddUploadWatch=new MutationObserver(()=>{
-  const dlg=document.querySelector('[role="dialog"][aria-label="Upload Designs"]');
-  if(dlg){lddUploadDialogSeen=true;return}
-  if(lddUploadDialogSeen){
-    lddUploadDialogSeen=false;
-    clearTimeout(lddAutoRenameTimer);
-    lddAutoRenameTimer=setTimeout(()=>{
-      lddSafeGet(LDD_DEFAULTS,o=>{
-        if(o.carouselRenamer&&o.dragUpload)lddWaitForUploadedCards().then(cards=>{if(cards.length)lddOpenRenamer(true);});
-      });
-    },1100);
-  }
-});
-lddUploadWatch.observe(document.documentElement,{childList:true,subtree:true});
-
 lddSafeGet(LDD_DEFAULTS,o=>{
   if(o.themeTweaker){lddMountThemeUI();lddApplyTheme(o)}
-  if(o.carouselRenamer)lddMountRenameFab();
 });
 lddSafeOnChanged((ch,area)=>{
   if(area!=="local")return;
   if(ch.themeTweaker)ch.themeTweaker.newValue?lddMountThemeUI():lddUnmountThemeUI();
-  if(ch.carouselRenamer)ch.carouselRenamer.newValue?lddMountRenameFab():lddUnmountRenameFab();
   if(["themeTweaker","themeEnabled","themeColor","themeGlow","themeRadius","themeCards"].some(k=>ch[k])) lddSafeGet(LDD_DEFAULTS,lddApplyTheme);
 });
 
@@ -1075,8 +850,7 @@ function lddMountLauncherRail(){
   rail.id="ldd-launcher-rail";
   rail.innerHTML=`
     <button id="ldd-launch-theme" title="Theme Tweaker">◈<span>Theme</span></button>
-    <button id="ldd-launch-fonts" title="App Font">Aa<span>Fonts</span></button>
-    <button id="ldd-launch-rename" title="LDD Renamer">✎<span>Rename</span></button>`;
+    <button id="ldd-launch-fonts" title="App Font">Aa<span>Fonts</span></button>`;
   document.body.appendChild(rail);
 
   rail.querySelector("#ldd-launch-theme").onclick=()=>{
@@ -1095,21 +869,14 @@ function lddMountLauncherRail(){
       if(panel) panel.classList.add("open");
     });
   };
-  rail.querySelector("#ldd-launch-rename").onclick=()=>{
-    lddSafeGet(LDD_DEFAULTS,o=>{
-      if(o.carouselRenamer) lddOpenRenamer(false);
-    });
-  };
-
   const sync=()=>lddSafeGet(LDD_DEFAULTS,o=>{
-    const t=rail.querySelector("#ldd-launch-theme"),f=rail.querySelector("#ldd-launch-fonts"),r=rail.querySelector("#ldd-launch-rename");
+    const t=rail.querySelector("#ldd-launch-theme"),f=rail.querySelector("#ldd-launch-fonts");
     if(t)t.style.display=o.themeTweaker?"flex":"none";
     if(f)f.style.display=o.appFont?"flex":"none";
-    if(r)r.style.display=o.carouselRenamer?"flex":"none";
   });
   sync();
   lddSafeOnChanged((changes,area)=>{
-    if(area==="local" && (changes.themeTweaker||changes.appFont||changes.carouselRenamer)) sync();
+    if(area==="local" && (changes.themeTweaker||changes.appFont)) sync();
   });
 }
 /* v0.8.6: floating rail retired; LDD Tools now lives in the MD sidebar. */
@@ -1214,7 +981,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2><span><b>Dashboard refresh:</b> Dashboard is now a clean information page instead of another control panel.</span><span><b>Listing Title Rows:</b> choose a roomier 1–5 row title editor from UI Tweaks, with 3 rows as the default.</span><span><b>Theme consistency:</b> LDD Settings follows the active LDD theme instead of using fixed neon-green accents.</span></div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer (work in progress), Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1307,9 +1074,7 @@ function lddRenderDesignPage(o){
  <div class="ldd-control-card"><b>Custom Instructions</b><span>Save reusable MyDesigns instruction presets and paste them into the native Custom instructions field.</span><textarea id="ldd-ci-editor" rows="6" maxlength="100000" placeholder="e.g. Include emojis in description"></textarea><input id="ldd-ci-name" maxlength="80" placeholder="Preset name"><div class="ldd-page-inline"><button type="button" id="ldd-ci-save">Save Preset</button><button type="button" id="ldd-ci-apply">Apply to MyDesigns</button><button type="button" id="ldd-ci-copy">Copy</button></div><div id="ldd-ci-presets" class="ldd-ci-presets">${(o.customInstructionPresets||[]).map((x,i)=>`<button type="button" data-ci-preset="${i}">${String(x.name||`Preset ${i+1}`).replace(/</g,"&lt;")}</button>`).join("")}</div></div>
   ${lddToggleCard("showCompositionGallery","Composition Gallery","Show or hide the MyDesigns composition/template thumbnail gallery.",o.showCompositionGallery)}
   ${lddToggleCard("showDesignsSearch","Designs Search Bar","Show or hide the Designs search box.",o.showDesignsSearch)}
- ${lddToggleCard("productPresets","Product Type Buttons","PNG, SVG, tumbler wrap and your custom presets.",o.productPresets)}
  ${lddToggleCard("maxLength","Max Length Unlocker","Raise local input and textarea maxlength to 100,000.",o.maxLength)}
- ${lddToggleCard("credits","Credits","Show or hide the MD credits counter.",o.credits)}
  </div>`;
 }
 function lddRenderWorkflowPage(o){
@@ -1319,8 +1084,8 @@ function lddRenderWorkflowPage(o){
   <div class="ldd-enable-disable" data-two-button-setting="hoverPreview"><button type="button" data-setting-value="true" class="${o.hoverPreview!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.hoverPreview===false?'active':''}">DISABLE</button></div>
   <div class="ldd-feature-info"><h3>Drag & Drop Upload</h3><p><b>What it does:</b> Drag image files straight from Windows Explorer onto the MyDesigns Designs page. LDD hands them to MyDesigns' native upload flow so you can skip opening the upload picker first.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="dragUpload"><button type="button" data-setting-value="true" class="${o.dragUpload!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.dragUpload===false?'active':''}">DISABLE</button></div>
-  <div class="ldd-feature-info"><h3>LDD Renamer</h3><p><b>What it does:</b> Opens the LDD renaming workflow for the designs you intentionally choose. Enable and Disable only control availability; only Open launches the renamer.</p></div>
-  <div class="ldd-enable-disable" data-two-button-setting="carouselRenamer"><button type="button" data-setting-value="true" class="${o.carouselRenamer!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.carouselRenamer===false?'active':''}">DISABLE</button><button type="button" id="ldd-page-open-renamer" class="ldd-page-secondary" ${o.carouselRenamer===false?'disabled':''}>OPEN</button></div>
+  <div class="ldd-feature-info ldd-renamer-wip" aria-disabled="true"><h3>LDD Renamer <span class="ldd-wip-label">Work in progress</span></h3><p>The renamer is being rebuilt and is temporarily unavailable.</p></div>
+  <div class="ldd-enable-disable ldd-renamer-wip" aria-label="Renamer unavailable"><button type="button" disabled title="Work in progress">ENABLE</button><button type="button" disabled title="Work in progress">DISABLE</button><button type="button" disabled title="Work in progress">OPEN</button></div>
   <div class="ldd-feature-info"><h3>Scout AI Style Creator &amp; Autofiller</h3><p><b>What it does:</b> Adds the reusable Scout AI style library, Auto Fill, Create Style With AI, import/export, categories, and Dragon Pong.</p></div>
   <div class="ldd-enable-disable" data-two-button-setting="scoutAIEnabled"><button type="button" data-setting-value="true" class="${o.scoutAIEnabled!==false?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${o.scoutAIEnabled===false?'active':''}">DISABLE</button><button type="button" id="ldd-page-open-scout" class="ldd-page-secondary" ${o.scoutAIEnabled===false?'disabled':''}>OPEN</button></div>
   <div class="ldd-feature-info"><h3>ChatGPT Prompt Queue</h3><p><b>What it does:</b> Queues prompts in ChatGPT and runs them one at a time with pause, resume, skip, stop, delay, progress, and completion tracking.</p></div>
@@ -1460,6 +1225,8 @@ function lddRenderSettingsPage(o){
    <button data-settings-pane="extension">Extension</button>
  </div>
  <div class="ldd-section ldd-settings-pane-152 active" data-settings-pane-body="sidebar">
+  <div class="ldd-feature-info"><h3>Credits Box</h3><p>Keep your sidebar tidy: show or hide the credits box here. Visible credits match your selected LDD theme.</p></div>
+  <div class="ldd-enable-disable" data-two-button-setting="credits"><button type="button" data-setting-value="true" class="${o.credits!==false?'active':''}">SHOW CREDITS</button><button type="button" data-setting-value="false" class="${o.credits===false?'active':''}">HIDE CREDITS</button></div>
    <div class="ldd-control-card"><b>Main Sidebar</b><span>Show or hide native MyDesigns sidebar pages. LDD Tools always stays available.</span></div>
    <div class="ldd-header-toggle-grid">
     ${lddToggleCard("navHome","Home","Show Home.",o.navHome)}
@@ -1625,9 +1392,9 @@ function lddConfirmBox({title,message,confirmText="Continue",danger=false}){
 }
 
 const LDD_MODE_PRESETS={
- standard:{lddSetupComplete:true,lddSetupMode:"standard",dragUpload:true,carouselRenamer:true,maxLength:true,productPresets:true,credits:true,hoverPreview:true,perfEnabled:false},
- power:{lddSetupComplete:true,lddSetupMode:"power",dragUpload:true,carouselRenamer:true,maxLength:true,productPresets:true,credits:true,hoverPreview:true,visionTitleBox:true,highContrastScrollbars:true},
- performance:{lddSetupComplete:true,lddSetupMode:"performance",dragUpload:true,carouselRenamer:true,maxLength:true,productPresets:true,credits:true,hoverPreview:false,perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLazyImages:true,perfPauseHidden:true,perfReduceObservers:true}
+ standard:{lddSetupComplete:true,lddSetupMode:"standard",dragUpload:true,maxLength:true,credits:true,hoverPreview:true,perfEnabled:false},
+ power:{lddSetupComplete:true,lddSetupMode:"power",dragUpload:true,maxLength:true,credits:true,hoverPreview:true,visionTitleBox:true,highContrastScrollbars:true},
+ performance:{lddSetupComplete:true,lddSetupMode:"performance",dragUpload:true,maxLength:true,credits:true,hoverPreview:false,perfEnabled:true,perfAnimations:true,perfBlur:true,perfShadows:true,perfLazyImages:true,perfPauseHidden:true,perfReduceObservers:true}
 };
 function lddApplyMode(mode,done){
  const preset=LDD_MODE_PRESETS[mode]||LDD_MODE_PRESETS.standard;
@@ -1642,7 +1409,7 @@ function lddEnforceModeUI(o){
   lddAppRoot.setAttribute("data-ldd-mode-label","Power User");
   lddAppRoot.querySelectorAll("[data-ldd-mode-display]").forEach(el=>el.textContent="Power User");
 
-  // Lite = Dashboard + Rename & Upload + Settings only.
+  // Lite = Dashboard + Upload + Settings only.
   lddAppRoot.querySelectorAll("[data-tab]").forEach(el=>{
     const key=(el.dataset.tab||"").toLowerCase();
     const powerOnly=key==="fonts" || key==="performance" || key==="theme";
@@ -1736,16 +1503,15 @@ function lddBindAppPage(tab,o){
  if(tab==="hotkeys"){
    const saveMap=(map)=>lddSafeSet({hotkeyMap:map},()=>lddShowTab("hotkeys"));
    lddAppRoot.querySelectorAll("[data-hotkey-change]").forEach(btn=>btn.onclick=()=>{
-     const id=btn.dataset.hotkeyChange; btn.textContent="Press keys…"; btn.classList.add("listening");
+     const id=btn.dataset.hotkeyChange; btn.textContent="Press keys…"; btn.classList.add("listening");lddHotkeyRecording=true;
      const capture=e=>{
        e.preventDefault();e.stopPropagation();
        if(["Control","Alt","Shift","Meta"].includes(e.key))return;
        document.removeEventListener("keydown",capture,true);
-       const parts=[];if(e.ctrlKey)parts.push("Ctrl");if(e.altKey)parts.push("Alt");if(e.shiftKey)parts.push("Shift");if(e.metaKey)parts.push("Meta");
-       const k=e.key.length===1?e.key.toUpperCase():e.key;parts.push(k);
-       const combo=parts.join("+");
+       lddHotkeyRecording=false;
+       const combo=lddCombo110(e);
        lddSafeGet(LDD_DEFAULTS,x=>{const map=Object.assign({},LDD_DEFAULTS.hotkeyMap,x.hotkeyMap||{});
-         const clash=Object.entries(map).find(([other,v])=>other!==id&&v&&v.toLowerCase()===combo.toLowerCase());
+         const clash=Object.entries(map).find(([other,v])=>other!==id&&v&&lddHotkeyMatchesMac(v,combo,true));
          if(clash){globalThis.lddToast110(`Shortcut already used by ${clash[0]}`);lddShowTab("hotkeys");return;}
          map[id]=combo;saveMap(map);
        });
@@ -1864,9 +1630,9 @@ function lddBindAppPage(tab,o){
      const key=group.dataset.twoButtonSetting;
      const value=btn.dataset.settingValue==="true";
      lddStorageSet(key,value);
-     const labels={lddMasterEnabled:"LDD Tools",scoutAIEnabled:"Scout AI Style Creator & Autofiller",dragUpload:"Drag & Drop Upload",carouselRenamer:"LDD Renamer",toastNotifications:"Toast Notifications"};
+     const labels={lddMasterEnabled:"LDD Tools",scoutAIEnabled:"Scout AI Style Creator & Autofiller",dragUpload:"Drag & Drop Upload",toastNotifications:"Toast Notifications"};
      if(key!=="toastNotifications" || value) globalThis.lddToast110(`${labels[key]||key} ${value?"Enabled":"Disabled"}`);
-     if(key==="scoutAIEnabled"||key==="autoPromptQueueEnabled"||key==="dragUpload"||key==="carouselRenamer")setTimeout(()=>lddShowTab("workflow"),40);
+     if(key==="scoutAIEnabled"||key==="autoPromptQueueEnabled"||key==="dragUpload")setTimeout(()=>lddShowTab("workflow"),40);
      else if(key==="toastNotifications")setTimeout(()=>lddShowTab("settings"),40);
    });
  });
@@ -1927,7 +1693,6 @@ function lddBindAppPage(tab,o){
    });
    lddWirePerfTips();
  }
- const rn=lddAppRoot.querySelector("#ldd-page-open-renamer"); if(rn)rn.onclick=()=>lddOpenRenamer(false);
  const sbw=lddAppRoot.querySelector("#ldd-scrollbar-width");
  if(sbw){ sbw.oninput=()=>{ const v=Number(sbw.value); lddAppRoot.querySelector("#ldd-scrollbar-width-label").textContent=v+"px"; lddSafeSet({scrollbarWidth:v},()=>lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements)); }; }
  const rs=lddAppRoot.querySelector("#ldd-page-reset-settings"); if(rs)rs.onclick=()=>{
@@ -1965,7 +1730,7 @@ function lddRenderHotkeysPage110(o){
  const esc=x=>String(x||"").replace(/[&<>\"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'\"':"&quot;"}[c]));
  const assigned=defs.filter(([id,,,fallback])=>String(map[id]??fallback).trim()).length, hudCount=defs.filter(([id])=>hud[id]===true).length;
  return `<div class="ldd-page ldd-hotkeys-page-200">
- <div class="ldd-page-head ldd-hotkeys-head-200"><div><h1>Hotkeys</h1><p>Fast keyboard access to MyDesigns actions. Hotkeys and the HUD are OFF on a fresh install.</p></div><div class="ldd-hotkeys-status-200"><span>${assigned} assigned</span><span>${hudCount} on HUD</span></div></div>
+ <div class="ldd-page-head ldd-hotkeys-head-200"><div><h1>Hotkeys</h1><p>Fast keyboard access to MyDesigns actions. On Mac, Alt means Option; Ctrl shortcuts also accept Command. Hotkeys and the HUD are OFF on a fresh install.</p></div><div class="ldd-hotkeys-status-200"><span>${assigned} assigned</span><span>${hudCount} on HUD</span></div></div>
  <div class="ldd-hotkey-control-grid-200">
   <label class="ldd-hotkey-master-card-200"><span><b>⌨ Hotkeys</b><small>Enable keyboard shortcuts globally.</small></span><input type="checkbox" data-setting="hotkeysEnabled" ${o.hotkeysEnabled===true?'checked':''}></label>
   <label class="ldd-hotkey-master-card-200"><span><b>▣ Hotkey Tips HUD</b><small>Show your selected shortcuts beside the MyDesigns header.</small></span><input type="checkbox" data-setting="hotkeyHudEnabled" ${o.hotkeyHudEnabled===true?'checked':''}></label>
@@ -2224,14 +1989,7 @@ function lddShowUpdateGate(release){
       <h2>🔥 Update Available — v${latest}</h2>
       <p class="ldd-update-gate-version">Installed <b>v${current}</b> &nbsp;→&nbsp; Latest <b>v${latest}</b></p>
       ${notes?`<div class="ldd-update-gate-notes"><b>What’s new</b><p>${notes.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])).replace(/\n/g,"<br>")}</p></div>`:""}
-      <div class="ldd-update-gate-steps"><h3>How to update</h3><ol>
-        <li>Click <b>Download Update</b> below.</li>
-        <li>Close MyDesigns / LDD Tools.</li>
-        <li>Open the downloaded ZIP and extract <b>all files and folders</b> into your existing LDD Tools extension folder.</li>
-        <li>When Windows asks, choose <b>Replace the files in the destination</b> / overwrite the existing files.</li>
-        <li>Open <b>chrome://extensions</b>, find LDD Tools, and click <b>Reload</b>.</li>
-        <li>Refresh MyDesigns.</li>
-      </ol></div>
+      <div class="ldd-update-gate-steps"><img class="ldd-update-instructions-img" src="${chrome.runtime.getURL("assets/update-instructions.png")}" alt="LDD Tools update instructions: overwrite the files, go to Chrome extensions, then reload LDD Tools."></div>
       <div class="ldd-update-gate-warning"><b>Do not remove LDD Tools from Chrome and do not extract into a different folder.</b> Overwrite the files in the same extension folder so Chrome keeps loading the same unpacked extension.</div>
       <p class="ldd-update-gate-storage">Your LDD settings are stored by Chrome and should remain intact when the extension files are overwritten.</p>
       <div class="ldd-update-gate-actions"><button type="button" data-download>⬇ DOWNLOAD UPDATE</button><button type="button" data-open>OPEN LDD TOOLS ANYWAY</button></div>
@@ -2418,7 +2176,6 @@ window.addEventListener("load",()=>{
     sidebar: !!document.getElementById("ldd-sidebar-entry"),
     theme: typeof lddMountThemeUI==="function",
     fonts: typeof lddMountFontUI==="function",
-    renamer: typeof lddOpenRenamer==="function"
   });
 },{once:true});
 
@@ -2426,7 +2183,7 @@ function lddRemoveLegacyFloatingLaunchers(){
   [
     "#ldd-theme-fab",
     "#ldd-font-fab",
-    "#ldd-renamer-fab",
+    
     "#ldd-launcher-rail"
   ].forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.remove()));
 }
@@ -2436,8 +2193,8 @@ lddLegacyFabKiller.observe(document.documentElement,{childList:true,subtree:true
 
 function lddThemeOwnedUI(){
   [
-    "#ldd-app-page","#ldd-font-panel","#ldd-theme-panel","#ldd-renamer-modal",
-    "#ldd-renamer-backdrop","#ldd-drop-overlay","#ldd-product-presets",
+    "#ldd-app-page","#ldd-font-panel","#ldd-theme-panel",
+    "#ldd-drop-overlay","#ldd-product-presets",
     "#ldd-hover-preview"
   ].forEach(sel=>document.querySelectorAll(sel).forEach(el=>el.classList.add("ldd-themed-ui")));
 }
@@ -2447,32 +2204,9 @@ lddThemeOwnedUI();
 
 /* ===== v0.8.6 exact LDD geometry protection ===== */
 function lddProtectOwnGeometry(){
-  // Kill the REAL old rename FAB id.
-  document.querySelectorAll("#ldd-rename-fab,#ldd-theme-fab,#ldd-font-fab,#ldd-launcher-rail")
+  // Remove retired floating launchers.
+  document.querySelectorAll("#ldd-theme-fab,#ldd-font-fab,#ldd-launcher-rail")
     .forEach(el=>el.remove());
-
-  const ren=document.getElementById("ldd-carousel-renamer");
-  if(ren){
-    ren.style.setProperty("border-radius","18px","important");
-    ren.style.setProperty("clip-path","none","important");
-    ren.querySelectorAll(".ldd-r-head,.ldd-r-image-wrap,.ldd-r-fields,.ldd-r-options,.ldd-r-live,.ldd-r-actions,#ldd-r-status")
-      .forEach(el=>{
-        el.style.setProperty("clip-path","none","important");
-        if(el.classList.contains("ldd-r-image-wrap") || el.classList.contains("ldd-r-live"))
-          el.style.setProperty("border-radius","10px","important");
-        else
-          el.style.setProperty("border-radius","0px","important");
-      });
-    ren.querySelectorAll("input,select,.ldd-secondary,.ldd-primary").forEach(el=>{
-      el.style.setProperty("border-radius","8px","important");
-      el.style.setProperty("clip-path","none","important");
-    });
-    ren.querySelectorAll("#ldd-r-prev,#ldd-r-next").forEach(el=>{
-      el.style.setProperty("border-radius","50%","important");
-    });
-    const img=ren.querySelector("#ldd-r-img");
-    if(img){img.style.setProperty("border-radius","8px","important");img.style.setProperty("clip-path","none","important");}
-  }
 
   ["#ldd-app-page","#ldd-font-panel","#ldd-theme-panel","#ldd-product-presets","#ldd-hover-preview"].forEach(sel=>{
     document.querySelectorAll(sel).forEach(root=>{
@@ -2613,7 +2347,7 @@ lddSafeOnChanged((c,a)=>{
    MD shape settings may style MyDesigns, NEVER LDD-owned UI. */
 function lddStripShapesFromOwnUI(){
   const roots=[
-    "#ldd-app-page","#ldd-font-panel","#ldd-theme-panel","#ldd-carousel-renamer",
+    "#ldd-app-page","#ldd-font-panel","#ldd-theme-panel",
     "#ldd-product-presets","#ldd-hover-preview","#ldd-drop-overlay"
   ];
   roots.forEach(sel=>document.querySelectorAll(sel).forEach(root=>{
@@ -2628,7 +2362,7 @@ function lddStripShapesFromOwnUI(){
         el.style.setProperty("border-radius","0px","important");
     });
     // Intentional tiny UI exceptions only.
-    root.querySelectorAll(".ldd-page-neons button,.switch i,.switch i:before,#ldd-r-prev,#ldd-r-next").forEach(el=>{
+    root.querySelectorAll(".ldd-page-neons button,.switch i,.switch i:before").forEach(el=>{
       el.style.setProperty("border-radius","50%","important");
     });
   }));
@@ -2642,33 +2376,6 @@ const lddAbsoluteShapeGuard=new MutationObserver(()=>{
   requestAnimationFrame(()=>{lddShapeSanitizeQueued=false;lddStripShapesFromOwnUI()});
 });
 lddAbsoluteShapeGuard.observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:["class","style"]});
-
-/* ===== v0.8.6 upload batch isolation ===== */
-let lddPreUploadChecked=new Set();
-let lddUploadBatchCards=[];
-function lddCardKey(card){
-  if(!card)return "";
-  return card.getAttribute("data-id")||
-         card.getAttribute("data-design-id")||
-         card.querySelector("img")?.src||
-         card.textContent.trim().slice(0,160);
-}
-function lddSnapshotCheckedBeforeUpload(){
-  lddPreUploadChecked=new Set(
-    [...document.querySelectorAll('[data-testid="design-card"]')]
-      .filter(c=>c.querySelector('[role="checkbox"][aria-checked="true"]'))
-      .map(lddCardKey).filter(Boolean)
-  );
-  lddUploadBatchCards=[];
-}
-function lddCollectOnlyNewlyChecked(){
-  const checked=[...document.querySelectorAll('[data-testid="design-card"]')]
-    .filter(c=>c.querySelector('[role="checkbox"][aria-checked="true"]'));
-  lddUploadBatchCards=checked.filter(c=>!lddPreUploadChecked.has(lddCardKey(c)));
-  return lddUploadBatchCards;
-}
-
-
 
 /* ===== v0.8.6 theme OFF means OFF ===== */
 function lddHardDisableTheme(){
@@ -2692,55 +2399,6 @@ lddSafeOnChanged((c,a)=>{
 });
 lddSafeGet(LDD_DEFAULTS,o=>{if(o.themeEnabled===false)lddHardDisableTheme()});
 
-/* ===== v0.8.6 upload renamer = NEW CARDS, not checked cards ===== */
-let lddPreUploadCardKeys=new Set();
-let lddPendingUploadBatch=false;
-
-function lddStableCardKey(card){
-  if(!card)return "";
-  const img=card.querySelector("img");
-  return card.getAttribute("data-design-id")||
-         card.getAttribute("data-id")||
-         img?.getAttribute("src")||
-         img?.getAttribute("alt")||
-         card.textContent.trim().slice(0,180);
-}
-function lddSnapshotCardsBeforeUpload(){
-  lddPreUploadCardKeys=new Set(
-    lddAllDesignCards().map(lddStableCardKey).filter(Boolean)
-  );
-  lddPendingUploadBatch=true;
-  lddUploadBatchCards=[];
-}
-function lddFindNewUploadCards(){
-  const all=lddAllDesignCards();
-  return all.filter(c=>{
-    const k=lddStableCardKey(c);
-    return k && !lddPreUploadCardKeys.has(k);
-  });
-}
-async function lddWaitForUploadedCards(){
-  // Upload/render is asynchronous. Wait for the new-card set to stabilize.
-  let last=-1, stable=0, best=[];
-  for(let i=0;i<50;i++){
-    await new Promise(r=>setTimeout(r,200));
-    const now=lddFindNewUploadCards();
-    if(now.length){
-      best=now;
-      if(now.length===last) stable++; else stable=0;
-      last=now.length;
-      if(stable>=4)break;
-    }
-  }
-  const selected=[];
-  for(const card of best){
-    if(await lddSetCardChecked(card,true))selected.push(card);
-  }
-  lddUploadBatchCards=selected;
-  lddPendingUploadBatch=false;
-  if(best.length && selected.length!==best.length)globalThis.lddToast110(`Selected ${selected.length} of ${best.length} new uploads for LDD Renamer`,true,"error");
-  return selected;
-}
 
 }
 
@@ -2932,7 +2590,7 @@ function lddApplyUIEnhancements(o){
 }
 function lddVisionTitleInputs(){
  return [...document.querySelectorAll('input[placeholder="Title"]')].filter(i=>{
-   if(i.closest('#ldd-app-page,#ldd-font-panel,#ldd-renamer-modal'))return false;
+   if(i.closest('#ldd-app-page,#ldd-font-panel'))return false;
    if(i.type && !['text','search'].includes(String(i.type).toLowerCase()))return false;
    return true;
  });
@@ -3291,7 +2949,7 @@ document.addEventListener("click",e=>{
  setTimeout(lddSyncAppFontPageFromStorage,30);
 },true);
 
-const LDD_SETTINGS_TIPS={"Max Length Unlocker": "Raises MyDesigns text-field character limits locally so you can enter much longer text where MD normally caps the field.", "Product Type Buttons": "Adds quick preset buttons for Product Type after you choose Other (Please specify).", "Credits": "Shows or hides the MyDesigns credits button/bar.", "Hover Preview": "Shows a larger design preview when you hover over a design card.", "Drag & Drop Upload": "Lets you drag files from Explorer onto the Designs page and sends them through the native MyDesigns upload window.", "App Font": "Changes the MyDesigns interface font locally in your browser.", "Theme": "Enables LDD's MyDesigns appearance/theme customizations.", "LDD Renamer": "Opens the LDD renaming workflow for selected or newly uploaded designs.", "Vision AI Multi-Line Title": "Replaces the small Vision AI listing-title field with a taller multi-line title box.", "": "Controls the width of the MyDesigns scrollbar.", "Designs \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Design cards.", "Products \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Product cards.", "Create with AI": "Shows or hides MyDesigns' Create with AI control.", "Canvas Quick Menu": "Adds LDD's extra right-click menu tools in the MyDesigns canvas."};
+const LDD_SETTINGS_TIPS={"Max Length Unlocker": "Raises MyDesigns text-field character limits locally so you can enter much longer text where MD normally caps the field.", "Credits": "Shows or hides the MyDesigns credits button/bar.", "Hover Preview": "Shows a larger design preview when you hover over a design card.", "Drag & Drop Upload": "Lets you drag files from Explorer onto the Designs page and sends them through the native MyDesigns upload window.", "App Font": "Changes the MyDesigns interface font locally in your browser.", "Theme": "Enables LDD's MyDesigns appearance/theme customizations.", "Vision AI Multi-Line Title": "Replaces the small Vision AI listing-title field with a taller multi-line title box.", "": "Controls the width of the MyDesigns scrollbar.", "Designs \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Design cards.", "Products \u2022\u2022\u2022 More": "Shows or hides the three-dot More menu on Product cards.", "Create with AI": "Shows or hides MyDesigns' Create with AI control.", "Canvas Quick Menu": "Adds LDD's extra right-click menu tools in the MyDesigns canvas."};
 function lddInstallSettingsHoverTips(){
  const page=document.getElementById("ldd-app-page"); if(!page)return;
  const settingsTab=document.querySelector('#ldd-app-page [data-tab="settings"].active,#ldd-app-page [data-tab="settings"][aria-selected="true"]');
@@ -3566,7 +3224,7 @@ setTimeout(lddSyncCompositionGallery,100);
 setTimeout(lddSyncCompositionGallery,600);
 
 /* v1.0.42 — independent hover tips; survives failures in optional LDD helpers */
-const LDD_V142_TIPS={"Reduce animations": "Reduces interface animations to make MyDesigns feel lighter and less busy.", "Disable blur": "Removes blur/backdrop effects that can use extra graphics resources.", "Reduce shadows": "Simplifies heavy shadows to reduce visual rendering work.", "Lightweight effects": "Uses simpler visual effects for a lighter interface.", "Compact folders": "Makes folder areas more compact to fit more on screen.", "Pause background LDD": "Reduces LDD background activity when it is not needed.", "Viewport rendering": "Prioritizes content currently visible on screen.", "Lazy card images": "Delays loading card images until they are closer to the visible area.", "No smooth scroll": "Disables smooth scrolling effects.", "Disable hover preview": "Turns off LDD's large design hover preview.", "Hide support/chat": "Hides support/chat interface elements. It does not remove your account data.", "TinyMD debloat": "Hides or simplifies nonessential MyDesigns interface elements for better performance.", "Deep debloat": "Applies stronger interface cleanup. Core designs, products, uploads and account data are not deleted.", "Hide promos": "Hides promotional interface elements only.", "Reduce animated media": "Reduces animation of media where possible.", "Suspend hidden video": "Pauses hidden/offscreen video to reduce resource use.", "Trim card effects": "Reduces visual effects on design/product cards.", "Dense menus": "Makes menus more compact.", "Disable tooltips": "Disables nonessential MyDesigns tooltips.", "Hide noncritical toasts": "Hides noncritical popup/toast messages.", "Freeze offscreen media": "Reduces activity for media outside the visible screen.", "Reduce LDD watchers": "Reduces some LDD background DOM monitoring.", "Strip decorations": "Hides nonessential decorative interface effects.", "Compact MD modals": "Makes MyDesigns modal windows more compact.", "Hide tips/onboarding": "Hides tips and onboarding UI only.", "Max Length Unlocker": "Raises local text-field character limits where MyDesigns normally caps them.", "Product Type Buttons": "Adds quick Product Type preset buttons after choosing Other.", "Credits": "Shows or hides the MyDesigns credits control.", "Hover Preview": "Shows or hides LDD's larger design preview on hover.", "Drag & Drop Upload": "Enables dragging files from Explorer directly onto the Designs page.", "App Font": "Changes the MyDesigns interface font locally in your browser.", "Vision AI Multi-Line Title": "Makes the Vision AI listing title field taller and multi-line.", "": "Changes the visible width of the MyDesigns scrollbar.", "Composition Gallery": "Shows or hides the composition/template gallery. Nothing is deleted."};
+const LDD_V142_TIPS={"Reduce animations": "Reduces interface animations to make MyDesigns feel lighter and less busy.", "Disable blur": "Removes blur/backdrop effects that can use extra graphics resources.", "Reduce shadows": "Simplifies heavy shadows to reduce visual rendering work.", "Lightweight effects": "Uses simpler visual effects for a lighter interface.", "Compact folders": "Makes folder areas more compact to fit more on screen.", "Pause background LDD": "Reduces LDD background activity when it is not needed.", "Viewport rendering": "Prioritizes content currently visible on screen.", "Lazy card images": "Delays loading card images until they are closer to the visible area.", "No smooth scroll": "Disables smooth scrolling effects.", "Disable hover preview": "Turns off LDD's large design hover preview.", "Hide support/chat": "Hides support/chat interface elements. It does not remove your account data.", "TinyMD debloat": "Hides or simplifies nonessential MyDesigns interface elements for better performance.", "Deep debloat": "Applies stronger interface cleanup. Core designs, products, uploads and account data are not deleted.", "Hide promos": "Hides promotional interface elements only.", "Reduce animated media": "Reduces animation of media where possible.", "Suspend hidden video": "Pauses hidden/offscreen video to reduce resource use.", "Trim card effects": "Reduces visual effects on design/product cards.", "Dense menus": "Makes menus more compact.", "Disable tooltips": "Disables nonessential MyDesigns tooltips.", "Hide noncritical toasts": "Hides noncritical popup/toast messages.", "Freeze offscreen media": "Reduces activity for media outside the visible screen.", "Reduce LDD watchers": "Reduces some LDD background DOM monitoring.", "Strip decorations": "Hides nonessential decorative interface effects.", "Compact MD modals": "Makes MyDesigns modal windows more compact.", "Hide tips/onboarding": "Hides tips and onboarding UI only.", "Max Length Unlocker": "Raises local text-field character limits where MyDesigns normally caps them.", "Credits": "Shows or hides the MyDesigns credits control.", "Hover Preview": "Shows or hides LDD's larger design preview on hover.", "Drag & Drop Upload": "Enables dragging files from Explorer directly onto the Designs page.", "App Font": "Changes the MyDesigns interface font locally in your browser.", "Vision AI Multi-Line Title": "Makes the Vision AI listing title field taller and multi-line.", "": "Changes the visible width of the MyDesigns scrollbar.", "Composition Gallery": "Shows or hides the composition/template gallery. Nothing is deleted."};
 function lddV142TipTarget(el){
  let n=el?.closest?.(".ldd-control-card,.ldd-toggle-card,label,button,div");
  for(let i=0;n&&i<5;i++,n=n.parentElement){
@@ -3792,7 +3450,29 @@ async function lddRunNativeAction110(label){
  if(action.disabled||action.getAttribute('aria-disabled')==='true')throw new Error(`${label} is currently disabled`);
  action.click();return true;
 }
-function lddCombo110(e){const p=[];if(e.ctrlKey)p.push('Ctrl');if(e.altKey)p.push('Alt');if(e.shiftKey)p.push('Shift');if(e.metaKey)p.push('Meta');const k=e.key.length===1?e.key.toUpperCase():e.key;if(!['Control','Alt','Shift','Meta'].includes(e.key))p.push(k);return p.join('+');}
+const lddIsMacHotkeys= /Mac|iPhone|iPad|iPod/i.test(navigator.userAgentData?.platform||navigator.platform||'');
+let lddHotkeyRecording=false;
+function lddCombo110(e){
+ const p=[];if(e.ctrlKey)p.push('Ctrl');if(e.altKey)p.push('Alt');if(e.shiftKey)p.push('Shift');if(e.metaKey)p.push('Meta');
+ if(['Control','Alt','Shift','Meta','OS'].includes(e.key))return p.join('+');
+ let k=e.key||'';
+ if(/^Key[A-Z]$/.test(e.code||''))k=e.code.slice(3);
+ else if(/^Digit[0-9]$/.test(e.code||''))k=e.code.slice(5);
+ else if(k.length===1)k=k.toUpperCase();
+ p.push(k);return p.join('+');
+}
+function lddNormalizeShortcutMac(value){
+ return String(value||'').split('+').map(v=>{
+  const t=v.trim().toLowerCase();
+  return ({command:'meta',cmd:'meta','⌘':'meta',option:'alt',opt:'alt','⌥':'alt',control:'ctrl'})[t]||t;
+ }).filter(Boolean).sort().join('+');
+}
+function lddHotkeyMatchesMac(saved,combo,commandAlias=false){
+ const a=lddNormalizeShortcutMac(saved),b=lddNormalizeShortcutMac(combo);
+ if(a===b)return true;
+ return commandAlias&&lddIsMacHotkeys&&a.split('+').includes('ctrl')&&!a.split('+').includes('meta')&&
+   a.split('+').map(t=>t==='ctrl'?'meta':t).sort().join('+')===b;
+}
 /* v1.8.15 — hotkeys are a startup service, not a Hotkeys-page side effect.
    Keep a synchronous cache so preventDefault/stopPropagation happen during the key event. */
 const LDD_HOTKEY_ACTIONS_1815={upscale:'Upscale image',removeBg:'Remove background',imageMockups:'Image mockups',videoMockups:'Video mockups',canvas:'Canvas',visionAI:'Vision AI',vectorize:'Vectorize image',colorOverlay:'Color overlay',patternOverlay:'Pattern overlay',imageEffect:'Image effect',resizeImage:'Resize image',edit:'Edit',duplicate:'Duplicate',swapFiles:'Swap files',deleteFiles:'Delete files',bulkTags:'Bulk tags',bulkSyncPublications:'Bulk sync publications',checkTrademarks:'Check trademarks',searchTrademarks:'Search trademarks',translate:'Translate',deleteAction:'Delete'};
@@ -3817,10 +3497,11 @@ lddSafeOnChanged((changes,area)=>{
  if(changes.hotkeyMap)lddHotkeyState1815.map=Object.assign({},LDD_DEFAULTS.hotkeyMap,changes.hotkeyMap.newValue||{});
 });
 document.addEventListener('keydown',e=>{
- if(lddTypingTarget110(e.target)||e.repeat||!lddHotkeyState1815.enabled)return;
+ if(lddHotkeyRecording||e.isComposing||lddTypingTarget110(e.target)||e.repeat||!lddHotkeyState1815.enabled)return;
  const combo=lddCombo110(e);
  const map=lddHotkeyState1815.map||LDD_DEFAULTS.hotkeyMap;
- const hit=Object.keys(LDD_HOTKEY_ACTIONS_1815).find(id=>map[id]&&String(map[id]).toLowerCase()===combo.toLowerCase());
+ const ids=Object.keys(LDD_HOTKEY_ACTIONS_1815);
+ const hit=ids.find(id=>map[id]&&lddHotkeyMatchesMac(map[id],combo))||ids.find(id=>map[id]&&lddHotkeyMatchesMac(map[id],combo,true));
  if(!hit)return;
  e.preventDefault();e.stopImmediatePropagation();
  const actionLabel=LDD_HOTKEY_ACTIONS_1815[hit];
@@ -3941,3 +3622,38 @@ document.addEventListener("click",e=>{
     setTimeout(lddFontStartupKick,120);
   }
 },true);
+
+/* Upload completion leaves no designs selected. Never activate Select all. */
+{
+  let armed=false,closed=false,until=0,timer=null,enabled=true;
+  const uploadDialog=()=>[...document.querySelectorAll('[role="dialog"]')].find(d=>/upload designs/i.test(d.getAttribute('aria-label')||''));
+  const checkedControls=()=>[...document.querySelectorAll('[data-testid="designs-select-toggle"][aria-checked="true"], [data-testid="design-card"] [role="checkbox"][aria-checked="true"], [data-testid="design-card"] input[type="checkbox"]:checked')].filter(cb=>!cb.closest('#ldd-app-page'));
+  const stop=()=>{armed=false;closed=false;clearTimeout(timer);};
+  lddSafeGet(LDD_DEFAULTS,o=>enabled=o.lddMasterEnabled!==false);
+  lddSafeOnChanged((changes,area)=>{if(area==='local'&&changes.lddMasterEnabled){enabled=changes.lddMasterEnabled.newValue!==false;if(!enabled)stop();}});
+  document.addEventListener('click',e=>{
+    const button=e.target.closest?.('button');
+    if(enabled&&button&&uploadDialog()?.contains(button)&&/^start uploading$/i.test((button.textContent||'').trim())&&!button.disabled){
+      stop();armed=true;
+      // Bound cleanup even if the upload never completes.
+      timer=setTimeout(stop,10*60*1000);
+      return;
+    }
+    // A real user selection always wins over delayed upload cleanup.
+    if(e.isTrusted&&e.target.closest?.('[data-testid="designs-select-toggle"], [data-testid="design-card"], button')&&!uploadDialog())stop();
+  },true);
+  const clean=()=>{
+    if(!armed||!enabled)return;
+    if(uploadDialog())return;
+    if(!closed){closed=true;until=Date.now()+2000;clearTimeout(timer);timer=setTimeout(stop,2100);}
+    if(Date.now()>until){stop();return;}
+    for(const cb of checkedControls()){
+      if(cb.isConnected&&(cb.getAttribute('aria-checked')==='true'||cb.checked===true))cb.click();
+    }
+  };
+  let queued=false;
+  new MutationObserver(()=>{
+    if(!armed||queued)return;
+    queued=true;queueMicrotask(()=>{queued=false;clean();});
+  }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-checked']});
+}

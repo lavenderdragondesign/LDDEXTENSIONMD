@@ -1,4 +1,4 @@
-LDD TOOLS v1.8.40
+LDD TOOLS v1.8.68
 Lavender Dragon Design
 
 WELCOME
@@ -22,7 +22,7 @@ MAIN FEATURES
 - LDD Tools in-app Home / information page
 - Tools hub
 - Drag & Drop Upload
-- Carousel Renamer
+- LDD Renamer — Work in progress (disabled)
 - Scout AI Style Creator & Autofiller
 - Optional ChatGPT Prompt Queue
 - Built-in font controls
@@ -42,9 +42,6 @@ LDD Drag & Drop uses MyDesigns' native Upload Designs workflow.
 - LDD passes the dropped files to the native MyDesigns "Drag and drop files" area and waits for MyDesigns to enable Start Uploading.
 - If you are adding multiple designs to a SINGLE LISTING, use the DEFAULT MYDESIGNS UPLOAD SYSTEM. DO NOT use LDD Drag & Drop for that workflow.
 - If MyDesigns changes its uploader markup or behavior, Drag & Drop may require an LDD update.
-
-CAROUSEL RENAMER
-The renamer works with the designs LDD detects as selected/checked in MyDesigns. Always review the detected selection and resulting names before continuing a large rename job.
 
 SCOUT AI
 Scout AI Style Creator & Autofiller is optional and can be enabled, disabled, or opened from the Tools page.
@@ -80,3 +77,6 @@ UPDATES
 -------
 LDD Tools checks official GitHub Releases from lavenderdragondesign/LDDEXTENSIONMD.
 When an update is found, use the in-app download button, extract the update over your existing LDD Tools folder, then click Reload on chrome://extensions.
+
+MAC HOTKEYS
+Alt means Option on Mac. Ctrl shortcuts also accept Command. Enable Hotkeys in LDD Tools before use. Letter and number shortcuts use physical keys so Option symbols do not break matching.
