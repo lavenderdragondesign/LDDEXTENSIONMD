@@ -967,9 +967,10 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.115",items:["Home dashboard tools card now lists DPI Changer + Image Compressor"]},
+ {v:"1.8.114",items:["Changelog cleanup"]},
  {v:"1.8.113",items:["DPI Changer: drag-and-drop removed, browse button only (per Pete)","Hotkeys page: live key tester — press any combo to see what the engine detects"]},
  {v:"1.8.112",items:["DPI Changer: text sizes increased again, bigger Process button"]},
- {v:"1.8.111",items:["Drop zones now stop the file reaching MyDesigns/LDD drag-upload (dropped files no longer upload to Designs)"]},
  {v:"1.8.110",items:["DPI Changer: fixed preset size cards not rendering (init-order bug)","DPI Changer: bigger text throughout","DPI Changer: DPI radio buttons (72 / 150 / 300) instead of hardcoded 300"]},
  {v:"1.8.109",items:["New Image Compressor tool: shrink PNG & JPG with MozJPEG + oxipng, entirely in-browser"]},
  {v:"1.8.108",items:["Changelog now current through this version (standing rule)"]},
@@ -1012,7 +1013,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer (work in progress), Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Compressor, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
