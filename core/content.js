@@ -2090,9 +2090,14 @@ function lddPositionAppBesideMdSidebar(){
 }
 
 const LDD_OFFICIAL_UPDATE_REPO="lavenderdragondesign/LDDEXTENSIONMD";
+function lddNormalizeVersion(v){
+  let s=String(v||"0").replace(/^v/i,"").trim();
+  if(/^\d+$/.test(s))s="1.8."+s; // GitHub tags like v97 mean 1.8.97 in this project's scheme
+  return s;
+}
 function lddCompareVersions(a,b){
-  const A=String(a||"0").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
-  const B=String(b||"0").replace(/^v/i,"").split(".").map(n=>parseInt(n,10)||0);
+  const A=lddNormalizeVersion(a).split(".").map(n=>parseInt(n,10)||0);
+  const B=lddNormalizeVersion(b).split(".").map(n=>parseInt(n,10)||0);
   for(let i=0;i<Math.max(A.length,B.length);i++){const d=(A[i]||0)-(B[i]||0);if(d)return d}
   return 0;
 }
@@ -3850,6 +3855,7 @@ function lddRnStateInit(){
   return lddRnState;
 }
 function lddRnEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function lddRnToast(m,e){if(typeof globalThis.lddToast110==='function')globalThis.lddToast110(m,!!e);}
 function lddRnWaitFor(fn,timeout,step){
   timeout=timeout||6000;step=step||120;
   return new Promise(function(resolve,reject){
@@ -3898,6 +3904,10 @@ function lddRnScan(){
   st.items=lddRnCards().map(function(card,i){
     var title=lddRnCardTitle(card),thumb=lddRnCardThumb(card),menuBtn=lddRnCardMenuBtn(card);
     return {id:'c'+i,card:card,title:title,thumb:thumb,menuBtn:menuBtn,ok:!!menuBtn,done:false,fail:''};
+  }).filter(function(x){
+    if(/drag and drop/i.test(x.title||''))return false;
+    if(x.card.querySelector('input[type="file"]'))return false;
+    return true;
   });
   st.sel=new Set(st.items.filter(function(x){return x.ok}).map(function(x){return x.id}));
   return st.items;
@@ -3971,133 +3981,101 @@ function lddRenderRenamerPage(o){return '<div id="ldd-rn-root"></div>';}
 function lddBindRenamerPage(o){
   var root=(typeof lddAppRoot!=='undefined'&&lddAppRoot?lddAppRoot:document).querySelector('#ldd-rn-root')||document.body;
   var st=lddRnStateInit();
-  root.innerHTML=
-  '<div style="padding:14px;display:flex;flex-direction:column;gap:10px;max-width:860px">'+
-  '<div style="font-weight:700;font-size:14px">Renamer — native MyDesigns rename</div>'+
-  '<div style="font-size:11px;color:#9a9ab0">Scans the design cards on this page, then automates the native rename flow (⋮ → Rename file → Update File Name) for each selected design.</div>'+
-  '<div style="display:flex;gap:8px;align-items:center">'+
-    '<button id="ldd-rn-scan" style="padding:6px 14px;border-radius:6px;background:#7c5cff;color:#fff;border:none;cursor:pointer;font-weight:600">Scan designs on page</button>'+
-    '<span id="ldd-rn-status" style="font-size:12px;color:#9a9ab0"></span>'+
-  '</div>'+
-  '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;font-size:12px">'+
-    '<label>Prefix<br><input id="ldd-rn-prefix" style="width:130px"></label>'+
-    '<label>Suffix<br><input id="ldd-rn-suffix" style="width:130px"></label>'+
-    '<label style="display:flex;gap:4px;align-items:center;padding-bottom:4px"><input type="checkbox" id="ldd-rn-num"> Numbering</label>'+
-    '<label>Start<br><input id="ldd-rn-nstart" type="number" value="1" style="width:56px"></label>'+
-    '<label>Step<br><input id="ldd-rn-nstep" type="number" value="1" style="width:56px"></label>'+
-    '<label>Pad<br><input id="ldd-rn-npad" type="number" value="2" style="width:52px"></label>'+
-    '<label>Position<br><select id="ldd-rn-npos"><option value="after">After</option><option value="before">Before</option></select></label>'+
-    '<label>Separator<br><input id="ldd-rn-nsep" value=" " style="width:52px"></label>'+
-  '</div>'+
-  '<div style="display:flex;gap:8px;align-items:center;font-size:12px">'+
-    '<input id="ldd-rn-filter" placeholder="Filter titles…" style="flex:1;max-width:260px">'+
-    '<button id="ldd-rn-all" style="font-size:11px">All</button>'+
-    '<button id="ldd-rn-none" style="font-size:11px">None</button>'+
-    '<span id="ldd-rn-count" style="color:#9a9ab0"></span>'+
-  '</div>'+
-  '<div style="overflow:auto;border:1px solid #2e2e3f;border-radius:8px;max-height:340px">'+
-  '<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="position:sticky;top:0;background:#23232f">'+
-  '<th style="padding:6px 8px;text-align:left;width:30px"><input type="checkbox" id="ldd-rn-checkall"></th>'+
-  '<th style="padding:6px 8px;text-align:left;width:56px">Preview</th>'+
-  '<th style="padding:6px 8px;text-align:left">Current name</th>'+
-  '<th style="padding:6px 8px;text-align:left">New name</th>'+
-  '<th style="padding:6px 8px;text-align:left;width:60px">Status</th>'+
-  '</tr></thead><tbody id="ldd-rn-rows"></tbody></table></div>'+
-  '<div style="display:flex;gap:8px;align-items:center">'+
-    '<button id="ldd-rn-apply" style="padding:7px 18px;border-radius:6px;background:#22a06b;color:#fff;border:none;cursor:pointer;font-weight:700">Apply native rename</button>'+
-    '<span style="font-size:11px;color:#9a9ab0">Runs the 4-step native flow on each selected card, one at a time.</span>'+
-  '</div>'+
-  '<div id="ldd-rn-errors" hidden style="font-size:12px;color:#ff8a8a;background:#2a1a1a;border:1px solid #5a2a2a;border-radius:6px;padding:8px;max-height:120px;overflow:auto"></div>'+
-  '</div>';
+  st.idx=0;st.busy=false;
+  st.rules={prefix:'',suffix:'',num:false,numStart:1,numStep:1,numPad:2,numPos:'after',numSep:' '};
   var $=function(id){return root.querySelector('#'+id)};
+  root.innerHTML=
+  '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;max-width:480px;margin:0 auto;text-align:center">'+
+  '<div style="font-weight:800;font-size:15px">Renamer</div>'+
+  '<div style="font-size:11px;color:#9a9ab0">Automates the native rename (&#8942; &rarr; Rename file &rarr; Update File Name).</div>'+
+  '<button id="ldd-rn-scan" style="padding:8px 16px;border-radius:8px;background:#7c5cff;color:#fff;border:none;cursor:pointer;font-weight:700">Scan designs on page</button>'+
+  '<div id="ldd-rn-stage" hidden style="display:flex;flex-direction:column;gap:10px;align-items:center">'+
+    '<div style="display:flex;align-items:center;justify-content:center;gap:14px;width:100%">'+
+      '<button id="ldd-rn-prev" style="font-size:28px;padding:6px 14px;border-radius:8px;background:#1c1c26;color:#fff;border:1px solid #333;cursor:pointer">&lsaquo;</button>'+
+      '<div style="display:flex;flex-direction:column;gap:6px;align-items:center">'+
+        '<div id="ldd-rn-imgwrap" style="width:230px;height:230px;border-radius:12px;overflow:hidden;background:#1a1a24;display:flex;align-items:center;justify-content:center"></div>'+
+        '<div id="ldd-rn-count" style="font-size:11px;color:#9a9ab0"></div>'+
+      '</div>'+
+      '<button id="ldd-rn-next" style="font-size:28px;padding:6px 14px;border-radius:8px;background:#1c1c26;color:#fff;border:1px solid #333;cursor:pointer">&rsaquo;</button>'+
+    '</div>'+
+    '<div id="ldd-rn-mark" style="font-size:13px;font-weight:800;min-height:18px"></div>'+
+    '<div style="font-size:12px;color:#9a9ab0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ldd-rn-cur"></div>'+
+    '<div style="font-size:13px;font-weight:700;color:#c4b5fd;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ldd-rn-new"></div>'+
+    '<div style="display:flex;gap:8px;justify-content:center;align-items:center;font-size:12px;flex-wrap:wrap">'+
+      '<label>Prefix <input id="ldd-rn-prefix" style="width:90px"></label>'+
+      '<label>Suffix <input id="ldd-rn-suffix" style="width:90px"></label>'+
+      '<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="ldd-rn-num"> # from <input id="ldd-rn-nstart" type="number" value="1" style="width:50px"></label>'+
+    '</div>'+
+    '<button id="ldd-rn-apply" style="padding:10px 26px;border-radius:8px;background:#22a06b;color:#fff;border:none;cursor:pointer;font-weight:800;font-size:14px"></button>'+
+    '<div id="ldd-rn-status" style="font-size:12px;color:#9a9ab0;min-height:16px"></div>'+
+  '</div>'+
+  '<div id="ldd-rn-errors" hidden style="font-size:12px;color:#ff8a8a;background:#2a1a1a;border:1px solid #5a2a2a;border-radius:6px;padding:8px;max-height:110px;overflow:auto;text-align:left"></div>'+
+  '</div>';
+  function cur(){return st.items[st.idx]}
   function newTitle(item,idx){return lddRnCompute(item.title,st.rules,idx)}
-  function visibleItems(){
-    var q=(st.filter||'').toLowerCase();
-    return st.items.filter(function(x){return !q||(x.title||'').toLowerCase().indexOf(q)>=0});
+  function render(){
+    var stage=$('ldd-rn-stage');if(!stage)return;
+    if(!st.items.length){stage.hidden=true;return}
+    stage.hidden=false;
+    var x=cur();if(!x)return;
+    $('ldd-rn-imgwrap').innerHTML=x.thumb?'<img src="'+lddRnEsc(x.thumb)+'" style="width:100%;height:100%;object-fit:cover;display:block">':'<span style="color:#555">no preview</span>';
+    $('ldd-rn-count').textContent=(st.idx+1)+' / '+st.items.length;
+    $('ldd-rn-cur').textContent=x.title||'(no name)';
+    $('ldd-rn-cur').title=x.title||'';
+    var nt=newTitle(x,st.idx);
+    $('ldd-rn-new').textContent='\u2192 '+nt;
+    $('ldd-rn-new').title=nt;
+    $('ldd-rn-new').style.color=nt!==x.title?'#c4b5fd':'#9a9ab0';
+    var mark=$('ldd-rn-mark');
+    mark.textContent=x.done?'\u2713 renamed':(x.fail?'\u2717 failed':'');
+    mark.style.color=x.done?'#4ade80':(x.fail?'#ff8a8a':'transparent');
+    $('ldd-rn-apply').textContent='Rename all '+st.items.length+' designs';
+    $('ldd-rn-apply').disabled=st.busy;
   }
-  function renderRows(){
-    var rows=$('ldd-rn-rows');if(!rows)return;
-    var vis=visibleItems();
-    var html=vis.map(function(x){
-      var sel=st.sel.has(x.id);
-      var idx=Array.prototype.indexOf.call(st.items.filter(function(y){return st.sel.has(y.id)}),x);
-      var nt=sel?newTitle(x,idx):'—';
-      var changed=sel&&nt!==x.title;
-      var status=x.done?'<span style="color:#4ade80">✓</span>':(x.fail?'<span style="color:#ff8a8a" title="'+lddRnEsc(x.fail)+'">✗</span>':'');
-      return '<tr data-id="'+x.id+'" style="border-top:1px solid #2e2e3f;opacity:'+(x.ok?1:0.45)+'">'+
-        '<td style="padding:6px 8px"><input type="checkbox" data-act="sel" '+(sel?'checked':'')+(x.ok?'':' disabled')+'></td>'+
-        '<td style="padding:6px 8px">'+lddRnThumbHtml(x.thumb)+'</td>'+
-        '<td style="padding:6px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+lddRnEsc(x.title)+'">'+lddRnEsc(x.title||'(no name)')+(x.ok?'':' <span style="color:#ff8a8a;font-size:10px">no menu</span>')+'</td>'+
-        '<td style="padding:6px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:'+(changed?700:400)+';color:'+(changed?'#c4b5fd':'#9a9ab0')+'" title="'+lddRnEsc(nt)+'">'+lddRnEsc(nt)+'</td>'+
-        '<td style="padding:6px 8px">'+status+'</td></tr>';
-    }).join('');
-    rows.innerHTML=html||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#9a9ab0">Click “Scan designs on page” to load the cards.</td></tr>';
-    rows.querySelectorAll('input[data-act="sel"]').forEach(function(cb){
-      cb.onchange=function(){
-        var id=cb.closest('tr').dataset.id;
-        if(cb.checked)st.sel.add(id);else st.sel.delete(id);
-        renderRows();
-      };
-    });
-    $('ldd-rn-count').textContent=st.sel.size+' selected / '+st.items.length+' scanned';
-    var ca=$('ldd-rn-checkall');
-    if(ca){var visIds=vis.filter(function(x){return x.ok}).map(function(x){return x.id});
-      ca.checked=visIds.length>0&&visIds.every(function(id){return st.sel.has(id)});
-      ca.onchange=function(){visIds.forEach(function(id){if(ca.checked)st.sel.add(id);else st.sel.delete(id)});renderRows()}}
-  }
+  function step(d){if(!st.items.length)return;st.idx=(st.idx+d+st.items.length)%st.items.length;render()}
+  $('ldd-rn-prev').onclick=function(){step(-1)};
+  $('ldd-rn-next').onclick=function(){step(1)};
+  document.addEventListener('keydown',function h(e){
+    if(!root.isConnected){document.removeEventListener('keydown',h);return}
+    if($('ldd-rn-stage').hidden)return;
+    if(e.key==='ArrowLeft')step(-1);
+    if(e.key==='ArrowRight')step(1);
+  });
   function readRules(){
     st.rules.prefix=$('ldd-rn-prefix').value;
     st.rules.suffix=$('ldd-rn-suffix').value;
     st.rules.num=$('ldd-rn-num').checked;
     st.rules.numStart=parseInt($('ldd-rn-nstart').value,10)||1;
-    st.rules.numStep=parseInt($('ldd-rn-nstep').value,10)||1;
-    st.rules.numPad=Math.max(0,parseInt($('ldd-rn-npad').value,10)||0);
-    st.rules.numPos=$('ldd-rn-npos').value;
-    st.rules.numSep=$('ldd-rn-nsep').value;
-    renderRows();
+    render();
   }
-  ['ldd-rn-prefix','ldd-rn-suffix','ldd-rn-nstart','ldd-rn-nstep','ldd-rn-npad','ldd-rn-npos','ldd-rn-nsep'].forEach(function(id){
-    $(id).addEventListener('input',readRules);$(id).addEventListener('change',readRules);
-  });
+  ['ldd-rn-prefix','ldd-rn-suffix','ldd-rn-nstart'].forEach(function(id){$(id).addEventListener('input',readRules)});
   $('ldd-rn-num').addEventListener('change',readRules);
-  $('ldd-rn-filter').addEventListener('input',function(){st.filter=$('ldd-rn-filter').value;renderRows()});
-  $('ldd-rn-all').onclick=function(){visibleItems().forEach(function(x){if(x.ok)st.sel.add(x.id)});renderRows()};
-  $('ldd-rn-none').onclick=function(){st.sel.clear();renderRows()};
   $('ldd-rn-scan').onclick=function(){
-    var n=lddRnScan();
-    $('ldd-rn-status').textContent=n.length?n.length+' design cards found':'No design cards found — are you on the Designs page?';
-    renderRows();
+    var n=lddRnScan();st.idx=0;st.busy=false;
+    $('ldd-rn-status').textContent=n.length?n.length+' designs found':'No designs found \u2014 are you on the Designs page?';
+    render();
   };
   $('ldd-rn-apply').onclick=async function(){
-    var jobs=st.items.filter(function(x){return st.sel.has(x.id)&&x.ok});
-    if(!jobs.length){toast('Nothing selected',true);return}
-    var jobs2=jobs.map(function(x,i){return {item:x,nt:newTitle(x,i)}}).filter(function(j){return j.nt&&j.nt!==j.item.title});
-    if(!jobs2.length){toast('Nothing to rename — no names would change',true);return}
-    if(!confirm('Rename '+jobs2.length+' design'+(jobs2.length===1?'':'s')+' using the native flow?\n\nFirst: '+(jobs2[0].item.title||'(no name)')+'\n   → '+jobs2[0].nt))return;
-    var btn=$('ldd-rn-apply');btn.disabled=true;
+    if(st.busy||!st.items.length)return;
+    var jobs=st.items.map(function(x,i){return {item:x,nt:newTitle(x,i)}}).filter(function(j){return j.nt&&j.nt!==j.item.title});
+    if(!jobs.length){lddRnToast('Nothing to rename \u2014 no names would change',true);return}
+    if(!confirm('Rename '+jobs.length+' design'+(jobs.length===1?'':'s')+'?\n\nFirst: '+(jobs[0].item.title||'(no name)')+'\n   \u2192 '+jobs[0].nt))return;
+    st.busy=true;
     var errBox=$('ldd-rn-errors');errBox.hidden=true;errBox.innerHTML='';
     var ok=0,fails=[];
-    for(var i=0;i<jobs2.length;i++){
-      var j=jobs2[i];
-      $('ldd-rn-status').textContent='Renaming '+(i+1)+'/'+jobs2.length+'…';
-      try{
-        await lddRnNativeRename(j.item,j.nt);
-        j.item.title=j.nt;j.item.done=true;ok++;
-      }catch(e){
-        j.item.fail=e.message;
-        fails.push((j.item.title||'(no name)')+' → '+e.message);
-        if(fails.length>=3&&/timed out/i.test(e.message)){
-          fails.push('Stopping early — the native UI did not respond as expected. Copy the error above for Lilly.');
-          break;
-        }
-      }
-      renderRows();
+    for(var i=0;i<jobs.length;i++){
+      var j=jobs[i];
+      st.idx=st.items.indexOf(j.item);render();
+      $('ldd-rn-status').textContent='Renaming '+(i+1)+'/'+jobs.length+'\u2026';
+      try{await lddRnNativeRename(j.item,j.nt);j.item.title=j.nt;j.item.done=true;j.item.fail='';ok++}
+      catch(e){j.item.fail=e.message;fails.push((j.item.title||'(no name)')+' \u2192 '+e.message);
+        if(fails.length>=3&&/timed out/i.test(e.message)){fails.push('Stopping early \u2014 the native UI did not respond. Copy the error above for Lilly.');break}}
+      render();
     }
-    btn.disabled=false;
+    st.busy=false;render();
     $('ldd-rn-status').textContent='Done: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':'')+'.';
-    toast('Renamer: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':''),fails.length>0);
+    lddRnToast('Renamer: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':''),fails.length>0);
     if(fails.length){errBox.hidden=false;errBox.innerHTML=fails.map(function(f){return '<div>'+lddRnEsc(f)+'</div>'}).join('')}
-    renderRows();
   };
-  renderRows();
+  render();
 }
