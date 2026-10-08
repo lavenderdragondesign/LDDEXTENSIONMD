@@ -47,10 +47,12 @@ jobs:
 
           tmp = tempfile.mkdtemp()
           zp = os.path.join(tmp, 'ext.zip')
+          # NOTE: no Authorization header here -- the asset URL redirects to a
+          # signed S3 link that rejects requests carrying an extra auth header
           req = urllib.request.Request(
               z['browser_download_url'],
-              headers={'Authorization': f'Bearer {token}',
-                       'Accept': 'application/octet-stream'})
+              headers={'Accept': 'application/octet-stream',
+                       'User-Agent': 'ldd-release-bot'})
           with urllib.request.urlopen(req) as r, open(zp, 'wb') as f:
               f.write(r.read())
           with zipfile.ZipFile(zp) as zf:
