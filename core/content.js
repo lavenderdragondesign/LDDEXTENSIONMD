@@ -967,6 +967,8 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.113",items:["DPI Changer: drag-and-drop removed, browse button only (per Pete)","Hotkeys page: live key tester — press any combo to see what the engine detects"]},
+ {v:"1.8.112",items:["DPI Changer: text sizes increased again, bigger Process button"]},
  {v:"1.8.111",items:["Drop zones now stop the file reaching MyDesigns/LDD drag-upload (dropped files no longer upload to Designs)"]},
  {v:"1.8.110",items:["DPI Changer: fixed preset size cards not rendering (init-order bug)","DPI Changer: bigger text throughout","DPI Changer: DPI radio buttons (72 / 150 / 300) instead of hardcoded 300"]},
  {v:"1.8.109",items:["New Image Compressor tool: shrink PNG & JPG with MozJPEG + oxipng, entirely in-browser"]},
@@ -1558,12 +1560,29 @@ function lddBindAppPage(tab,o){
    lddAppRoot.querySelectorAll("[data-hotkey-filter]").forEach(btn=>btn.onclick=()=>{hkFilter=btn.dataset.hotkeyFilter;lddAppRoot.querySelectorAll("[data-hotkey-filter]").forEach(b=>b.classList.toggle("active",b===btn));applyHotkeyFilter();});
    const resetHotkeys=lddAppRoot.querySelector("#ldd-reset-hotkeys-200");if(resetHotkeys)resetHotkeys.onclick=()=>lddSafeSet({hotkeyMap:{...LDD_DEFAULTS.hotkeyMap}},()=>{globalThis.lddToast110("Hotkeys reset to defaults");lddShowTab("hotkeys")});
    const resetHud=lddAppRoot.querySelector("#ldd-reset-hud-pos-200");if(resetHud)resetHud.onclick=()=>lddSafeSet({hotkeyHudPosition:null,hotkeyHudX:null,hotkeyHudY:null},()=>{document.getElementById("ldd-hotkey-hud-113")?.remove();lddHotkeyHud113();globalThis.lddToast110("Hotkey HUD position reset")});
+   const tester=lddAppRoot.querySelector("#ldd-hotkey-tester-200"),testerOut=lddAppRoot.querySelector("#ldd-hotkey-tester-out-200");
+   if(tester&&testerOut){
+     tester.addEventListener("keydown",e=>{
+       e.preventDefault();e.stopPropagation();
+       if(["Control","Alt","Shift","Meta"].includes(e.key)){testerOut.innerHTML="<span style=\"color:#9a9ab0\">modifiers: "+[e.ctrlKey&&"Ctrl",e.altKey&&"Alt",e.shiftKey&&"Shift",e.metaKey&&"Meta"].filter(Boolean).join("+")+" …</span>";return;}
+       const combo=lddCombo110(e);
+       const raw="key="+JSON.stringify(e.key)+" code="+JSON.stringify(e.code)+" | ctrl="+e.ctrlKey+" alt="+e.altKey+" shift="+e.shiftKey+" meta="+e.metaKey;
+       let match="no action assigned";
+       try{
+         const map=(typeof lddHotkeyState1815!=="undefined"&&lddHotkeyState1815.map)||{};
+         const hit=Object.keys(map).find(id=>map[id]&&lddHotkeyMatchesMac(map[id],combo));
+         if(hit)match="→ "+hit+" ("+map[hit]+")";
+       }catch(_){}
+       tester.querySelector("span").textContent=combo;
+       testerOut.innerHTML="<b>"+combo+"</b> "+match+"<br><small style=\"color:#9a9ab0\">"+raw+"</small>";
+     });
+   }
  }
  if(tab==="workflow"){
    const dpiOpen=lddAppRoot.querySelector("#ldd-open-dpi-changer");
    if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
    const icOpen=lddAppRoot.querySelector("#ldd-open-imgcomp");
-   if(icOpen)icOpen.onclick=()=>lddShowTab("imgcomp");
+   if(icOpen)icOpen.onclick=()=>{try{lddShowTab("imgcomp");}catch(err){globalThis.lddToast110("Compressor failed to open: "+String((err&&err.message)||err),true);}};
    const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
    if(scoutOpen)scoutOpen.onclick=()=>{
      const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
@@ -1794,6 +1813,7 @@ function lddRenderHotkeysPage110(o){
  <div class="ldd-hotkey-toolbar-200"><input id="ldd-hotkey-search-200" type="search" placeholder="Search actions…" autocomplete="off"><div class="ldd-hotkey-filters-200"><button type="button" class="active" data-hotkey-filter="all">All</button><button type="button" data-hotkey-filter="assigned">Assigned</button><button type="button" data-hotkey-filter="unassigned">Unassigned</button><button type="button" data-hotkey-filter="hud">HUD</button></div></div>
  <div class="ldd-hotkey-actions-200"><button type="button" id="ldd-reset-hotkeys-200">Reset Hotkeys</button><button type="button" id="ldd-reset-hud-pos-200">Reset HUD Position</button></div>
  <div class="ldd-hotkey-grid-200">${defs.map(([id,name,label,fallback],i)=>{const combo=map[id]??fallback;return `<div class="ldd-hotkey-card-200" data-hotkey-row="${id}" data-hotkey-assigned="${combo?'1':'0'}" data-hotkey-hud="${hud[id]===true?'1':'0'}" data-hotkey-search="${esc((name+' '+label).toLowerCase())}"><div class="ldd-hotkey-card-top-200"><div class="ldd-hotkey-name-200"><em>${String(i+1).padStart(2,'0')}</em><span><b>${name}</b><small>${label}</small></span></div><label class="ldd-hotkey-hud-check-200" title="Show on Hotkey Tips HUD"><input type="checkbox" data-hotkey-hud-show="${id}" ${hud[id]===true?'checked':''}> HUD</label></div><div class="ldd-hotkey-card-bottom-200"><kbd data-hotkey-value="${id}">${esc(combo)||'Not set'}</kbd><button type="button" data-hotkey-change="${id}">Change</button>${combo?`<button type="button" class="ldd-hotkey-clear-200" data-hotkey-clear="${id}" title="Clear shortcut">×</button>`:''}</div></div>`}).join('')}</div>
+ <div class="ldd-control-card" style="margin-top:10px"><b>Key tester</b> <small>Click here, then press any shortcut — see exactly what the engine detects.</small><div id="ldd-hotkey-tester-200" tabindex="0" style="margin-top:8px;padding:14px;border:1px dashed #55556a;border-radius:10px;text-align:center;cursor:text;outline:none"><span style="color:#9a9ab0">press keys…</span></div><div id="ldd-hotkey-tester-out-200" style="margin-top:6px;font-size:13px;min-height:20px"></div></div>
  <div class="ldd-hotkey-note-200"><b>Tip:</b> Chrome and Windows may reserve some keyboard combinations. LDD warns when a shortcut conflicts with another LDD mapping. Press Esc while recording to cancel.</div></div>`;
 }
 
@@ -1887,7 +1907,7 @@ const LDD_IP_SIZES=[
 function lddRenderImagePrepPage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
   <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Stamp <b>your chosen DPI</b> on PNG &amp; JPG, pad to print size, batch-export. Files never leave your browser.</p></div><div class="ldd-control-card" style="margin-top:8px"><span style="font-size:12px">💡 <b>Mac tip:</b> Finder \u201cGet Info\u201d does not show DPI. Open the file in Preview \u2192 Tools \u2192 Show Inspector (\u2318I) and look for Resolution \u2014 it should match the DPI you picked above. Matching format + same size = pixels untouched, only DPI stamped.</span></div></div>
-  <div class="ldd-control-card ldd-ip-drop-1875" id="ldd-ip-drop"><div class="ldd-ip-drop-hint">Drop images here or <button type="button" id="ldd-ip-browse">browse files</button></div><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
+  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ip-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
   <div class="ldd-control-card"><h2>Output sizes <span id="ldd-ip-sizecount" class="ldd-ip-sizebadge"></span></h2>
     <p style="font-size:12px;color:#9a9ab0;margin:0 0 10px">Preset and custom dimensions for batch export. Select one or more.</p>
     <div class="ldd-ip-sizes-1875" id="ldd-ip-sizes"></div>
@@ -1913,11 +1933,11 @@ function lddRenderImagePrepPage(o){
 }
 function lddBindImagePrepPage(o){
   const root=lddAppRoot;if(!root)return;
-  const drop=root.querySelector('#ldd-ip-drop'),input=root.querySelector('#ldd-ip-files'),
+  const input=root.querySelector('#ldd-ip-files'),
     list=root.querySelector('#ldd-ip-list'),count=root.querySelector('#ldd-ip-count'),
     proc=root.querySelector('#ldd-ip-process'),q=root.querySelector('#ldd-ip-quality'),
     qv=root.querySelector('#ldd-ip-quality-v');
-  if(!drop||!proc)return;
+  if(!input||!proc)return;
   let files=[];
   const esc0=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   let sizes=LDD_IP_SIZES.map(s=>({w:s.w,h:s.h,label:s.label,custom:false}));
@@ -1966,9 +1986,6 @@ function lddBindImagePrepPage(o){
   const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f});}render();};
   root.querySelector('#ldd-ip-browse').onclick=()=>input.click();
   input.onchange=()=>{add([...input.files]);input.value='';};
-  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.add('drag');}));
-  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('drag');}));
-  drop.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();add([...e.dataTransfer.files]);});
   proc.onclick=async()=>{
     if(!files.length){globalThis.lddToast110('Drop some images first');return;}
     const format=root.querySelector('input[name="ldd-ip-format"]:checked').value;
