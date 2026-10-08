@@ -1214,6 +1214,7 @@ const LDD_TINYMD_SETTINGS={perfEnabled:true,perfUploadTurbo:true,perfSpaPreload:
 
 function lddRenderSettingsPage(o){
  return `<div class="ldd-page-title"><h2>⚙ Settings</h2><p>Choose exactly which parts of MyDesigns stay visible.</p></div>
+ <div class="ldd-cosmetic-tip"><b>👁 Show / Hide</b><span>These controls only change what you see in MyDesigns. They do not delete, disable, or modify designs, products, files, listings, folders, stores, orders, or account data.</span></div>
  <div id="ldd-settings-tabs-152">
    <button class="active" data-settings-pane="sidebar">Sidebar</button>
    <button data-settings-pane="panels">Panels & Menus</button>
@@ -1270,7 +1271,6 @@ function lddRenderSettingsPage(o){
    </div>
  </div>
  <div class="ldd-section ldd-settings-pane-152" data-settings-pane-body="home">
-   <div class="ldd-cosmetic-tip"><b>👁 COSMETIC ONLY</b><span>These controls only change what you see in MyDesigns. They do not delete, disable, or modify designs, products, files, listings, folders, stores, orders, or account data.</span></div>
    <div class="ldd-header-toggle-grid">
     ${lddToggleCard("homeGreeting","Greeting / Business Summary","Show the greeting and business summary at the top of Home.",o.homeGreeting)}
     ${lddToggleCard("homeRevenue","Revenue Graph","Show the Home Revenue · Last 7 days graph.",o.homeRevenue)}
@@ -1279,7 +1279,6 @@ function lddRenderSettingsPage(o){
    </div>
  </div>
  <div class="ldd-section ldd-settings-pane-152" data-settings-pane-body="analytics">
-   <div class="ldd-cosmetic-tip"><b>👁 COSMETIC ONLY</b><span>Hide Analytics interface pieces without changing any sales, traffic, store, or account data. Turn a switch back on at any time.</span></div>
    <div class="ldd-header-toggle-grid">
     ${lddToggleCard("analyticsDescription","Page Description","Show the Analytics description under the title.",o.analyticsDescription)}
     ${lddToggleCard("analyticsDateControls","Date Controls","Show 7/30/90 day and Custom date controls.",o.analyticsDateControls)}
@@ -3841,197 +3840,264 @@ document.addEventListener("click",e=>{
     if(!armed||queued)return;
     queued=true;queueMicrotask(()=>{queued=false;clean();});
   }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['aria-checked']});
-}
-/* ===== v1.8.89 LDD Renamer: bulk rename MyDesigns design titles via api.mydesigns.io ===== */
-const LDD_RN_API='https://api.mydesigns.io';
+}/* ===== v1.8.92 LDD Renamer: native 4-step rename automation =====
+   Per design: click card ⋮ menu → "Rename file" → set dialog input → "Update File Name".
+   No API guessing — uses MyDesigns' own flow. Rules: prefix / suffix / numbering (no find/replace). */
 let lddRnState=null;
 function lddRnStateInit(){
-  if(!lddRnState)lddRnState={designs:[],sel:new Set(),filter:'',loading:false,
-    rules:{find:'',replace:'',matchCase:false,prefix:'',suffix:'',num:false,numStart:1,numStep:1,numPad:3,numPos:'after',numSep:' '}};
+  if(!lddRnState)lddRnState={items:[],sel:new Set(),filter:'',scanning:false,
+    rules:{prefix:'',suffix:'',num:false,numStart:1,numStep:1,numPad:2,numPos:'after',numSep:' '}};
   return lddRnState;
 }
-async function lddRnApi(path,opts={}){
-  const r=await fetch(LDD_RN_API+path,{credentials:'include',headers:{'Content-Type':'application/json'},...opts});
-  const txt=await r.text().catch(()=>'');
-  if(!r.ok)throw new Error('API '+r.status+': '+txt.slice(0,220));
-  try{return txt?JSON.parse(txt):null}catch{return txt}
+function lddRnEsc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function lddRnWaitFor(fn,timeout,step){
+  timeout=timeout||6000;step=step||120;
+  return new Promise(function(resolve,reject){
+    var t0=Date.now();
+    (function poll(){
+      var v=null;try{v=fn()}catch(e){}
+      if(v){resolve(v);return}
+      if(Date.now()-t0>timeout){reject(new Error('timed out waiting for UI'));return}
+      setTimeout(poll,step);
+    })();
+  });
 }
-function lddRnList(j){
-  if(Array.isArray(j))return j;
-  if(j&&Array.isArray(j.items))return j.items;
-  if(j&&Array.isArray(j.data))return j.data;
-  if(j&&Array.isArray(j.designs))return j.designs;
-  return [];
-}
-function lddRnEsc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function lddRnTitle(d){return d.title||d.name||''}
-function lddRnId(d){return d.id||d.designId}
-function lddRnCompute(title,rules,idx){
-  let t=String(title||'');
-  if(rules.find){
-    if(rules.matchCase)t=t.split(rules.find).join(rules.replace);
-    else t=t.replace(new RegExp(rules.find.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'gi'),rules.replace);
+function lddRnCards(){return Array.prototype.slice.call(document.querySelectorAll('[data-testid="design-card"]'))}
+function lddRnCardTitle(card){
+  var t=card.querySelector('[data-testid="design-title"]');
+  if(t&&t.textContent.trim())return t.textContent.trim();
+  var walker=document.createTreeWalker(card,NodeFilter.SHOW_TEXT),node;
+  while(node=walker.nextNode()){
+    var txt=node.nodeValue.trim();
+    if(!txt||txt.length<2)continue;
+    var el=node.parentElement;
+    if(!el||el.closest('button,input,textarea,[role="checkbox"],svg'))continue;
+    return txt;
   }
+  return '';
+}
+function lddRnCardThumb(card){
+  var img=card.querySelector('img');
+  return img?(img.currentSrc||img.src||''):'';
+}
+function lddRnCardMenuBtn(card){
+  var scope=card&&card.parentElement?card.parentElement:document;
+  var btn=card.querySelector('button[aria-label*="more" i],button[title*="more" i],button[aria-haspopup="menu"]');
+  if(btn)return btn;
+  var g=card.querySelector('g[id="more/vertical"],g[id*="more/vertical" i]');
+  if(g){var b=g.closest('button');if(b)return b}
+  var btns=card.querySelectorAll('button');
+  for(var i=0;i<btns.length;i++){
+    var x=btns[i],txt=(x.textContent||'').trim();
+    if(!txt&&x.querySelector('svg'))return x;
+  }
+  return null;
+}
+function lddRnScan(){
+  var st=lddRnStateInit();
+  st.items=lddRnCards().map(function(card,i){
+    var title=lddRnCardTitle(card),thumb=lddRnCardThumb(card),menuBtn=lddRnCardMenuBtn(card);
+    return {id:'c'+i,card:card,title:title,thumb:thumb,menuBtn:menuBtn,ok:!!menuBtn,done:false,fail:''};
+  });
+  st.sel=new Set(st.items.filter(function(x){return x.ok}).map(function(x){return x.id}));
+  return st.items;
+}
+function lddRnCompute(title,rules,idx){
+  var t=String(title==null?'':title);
   if(rules.prefix)t=rules.prefix+t;
   if(rules.suffix)t=t+rules.suffix;
   if(rules.num){
-    const n=String(rules.numStart+idx*rules.numStep).padStart(Math.max(1,rules.numPad|0),'0');
-    t=rules.numPos==='before'?n+rules.numSep+t:t+rules.numSep+n;
+    var n=String(rules.numStart+idx*rules.numStep).padStart(rules.numPad,'0');
+    var seg=(rules.numSep||'')+n;
+    t=rules.numPos==='before'?seg+t:t+seg;
   }
   return t;
 }
-function lddRenderRenamerPage(o){
-  return `<div class="ldd-page ldd-renamer-page">
-  <div class="ldd-page-head"><div><h1>Renamer</h1><p>Bulk rename design titles on MyDesigns. Rules preview live before anything changes.</p></div></div>
-  <div class="ldd-control-card"><h2>1 · Designs</h2>
-    <div class="ldd-rn-row"><select id="ldd-rn-cat"><option value="">Loading categories…</option></select>
-    <button type="button" id="ldd-rn-load" class="ldd-page-secondary">Load designs</button>
-    <span id="ldd-rn-count" class="ldd-rn-hint"></span></div>
-  </div>
-  <div class="ldd-control-card"><h2>2 · Rules</h2>
-    <div class="ldd-rn-grid">
-      <label>Find <input id="ldd-rn-find" type="text" placeholder="text to find"></label>
-      <label>Replace with <input id="ldd-rn-replace" type="text" placeholder="replacement"></label>
-      <label class="ldd-rn-check"><input id="ldd-rn-case" type="checkbox"> Match case</label>
-      <label>Prefix <input id="ldd-rn-prefix" type="text" placeholder="add to start"></label>
-      <label>Suffix <input id="ldd-rn-suffix" type="text" placeholder="add to end"></label>
-      <label class="ldd-rn-check"><input id="ldd-rn-num" type="checkbox"> Numbering</label>
-      <label>Starts at <input id="ldd-rn-nstart" type="number" value="1" min="0"></label>
-      <label>Step <input id="ldd-rn-nstep" type="number" value="1" min="1"></label>
-      <label>Pad <input id="ldd-rn-npad" type="number" value="3" min="1" max="6"></label>
-      <label>Position <select id="ldd-rn-npos"><option value="after">After title</option><option value="before">Before title</option></select></label>
-      <label>Separator <input id="ldd-rn-nsep" type="text" value=" "></label>
-    </div>
-  </div>
-  <div class="ldd-control-card"><h2>3 · Preview &amp; apply</h2>
-    <div class="ldd-rn-row">
-      <input id="ldd-rn-filter" type="text" placeholder="Filter titles…">
-      <button type="button" id="ldd-rn-all" class="ldd-page-secondary">Select all</button>
-      <button type="button" id="ldd-rn-none" class="ldd-page-secondary">Select none</button>
-      <span id="ldd-rn-sel" class="ldd-rn-hint"></span>
-    </div>
-    <div class="ldd-rn-tablewrap"><table class="ldd-rn-table">
-      <thead><tr><th></th><th>Current title</th><th>New title</th></tr></thead>
-      <tbody id="ldd-rn-body"><tr><td colspan="3" class="ldd-rn-empty">Load designs to begin.</td></tr></tbody>
-    </table></div>
-    <div class="ldd-rn-row">
-      <button type="button" id="ldd-rn-apply" class="ldd-page-primary">Rename selected</button>
-      <span id="ldd-rn-status" class="ldd-rn-hint"></span>
-    </div>
-    <div id="ldd-rn-errors" class="ldd-rn-errors" hidden></div>
-  </div>
-  </div>`;
+function lddRnSetInput(input,val){
+  var proto=Object.getPrototypeOf(input);
+  var desc=Object.getOwnPropertyDescriptor(proto,'value')||Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  if(desc&&desc.set)desc.set.call(input,val);else input.value=val;
+  input.dispatchEvent(new Event('input',{bubbles:true}));
+  input.dispatchEvent(new Event('change',{bubbles:true}));
 }
-function lddBindRenamerPage(o){
-  const st=lddRnStateInit();
-  const $=id=>document.getElementById(id);
-  const body=$('ldd-rn-body'),catSel=$('ldd-rn-cat');
-  const toast=(m,force)=>globalThis.lddToast110(m,force);
-
-  const syncRules=()=>{
-    st.rules.find=$('ldd-rn-find').value;st.rules.replace=$('ldd-rn-replace').value;
-    st.rules.matchCase=$('ldd-rn-case').checked;
-    st.rules.prefix=$('ldd-rn-prefix').value;st.rules.suffix=$('ldd-rn-suffix').value;
-    st.rules.num=$('ldd-rn-num').checked;
-    st.rules.numStart=+$('ldd-rn-nstart').value||0;st.rules.numStep=+$('ldd-rn-nstep').value||1;
-    st.rules.numPad=+$('ldd-rn-npad').value||0;st.rules.numPos=$('ldd-rn-npos').value;
-    st.rules.numSep=$('ldd-rn-nsep').value;
-  };
-  const selDesigns=()=>st.designs.filter(d=>st.sel.has(String(lddRnId(d))));
-  const newTitle=(d,idx)=>lddRnCompute(lddRnTitle(d),st.rules,idx);
-
-  function renderRows(){
-    const q=st.filter.trim().toLowerCase();
-    const sels=selDesigns();
-    let html='',shown=0;
-    st.designs.forEach(d=>{
-      const title=lddRnTitle(d);
-      if(q&&!title.toLowerCase().includes(q))return;
-      shown++;
-      const idx=sels.indexOf(d);
-      const nt=idx>=0?newTitle(d,idx):lddRnCompute(title,st.rules,0);
-      const changed=idx>=0&&nt!==title;
-      const id=String(lddRnId(d));
-      html+=`<tr data-id="${lddRnEsc(id)}" class="${changed?'ldd-rn-changed':''}">`
-        +`<td><input type="checkbox" data-rn-check="${lddRnEsc(id)}" ${st.sel.has(id)?'checked':''}></td>`
-        +`<td>${lddRnEsc(title)}</td><td>${lddRnEsc(nt)}${changed?' <span class="ldd-rn-diff">●</span>':''}</td></tr>`;
-    });
-    body.innerHTML=html||'<tr><td colspan="3" class="ldd-rn-empty">No designs match.</td></tr>';
-    body.querySelectorAll('[data-rn-check]').forEach(cb=>cb.onchange=()=>{
-      cb.checked?st.sel.add(cb.dataset.rnCheck):st.sel.delete(cb.dataset.rnCheck);
-      renderRows();
-    });
-    $('ldd-rn-sel').textContent=st.sel.size+' selected';
-    $('ldd-rn-apply').textContent=`Rename selected (${st.sel.size})`;
-    $('ldd-rn-count').textContent=st.designs.length?st.designs.length+' designs loaded':'';
-  }
-  const refreshPreview=()=>{syncRules();renderRows()};
-
-  // Rule inputs -> live preview
-  ['ldd-rn-find','ldd-rn-replace','ldd-rn-case','ldd-rn-prefix','ldd-rn-suffix','ldd-rn-num',
-   'ldd-rn-nstart','ldd-rn-nstep','ldd-rn-npad','ldd-rn-npos','ldd-rn-nsep'].forEach(id=>{
-    const el=$(id);if(el)el.oninput=refreshPreview;
+function lddRnVisible(e){return e&&e.offsetParent!==null&&!e.disabled}
+async function lddRnNativeRename(item,newName){
+  var card=item.card;
+  card.scrollIntoView({block:'center'});
+  await new Promise(function(r){setTimeout(r,250)});
+  var btn=item.menuBtn||lddRnCardMenuBtn(card);
+  if(!lddRnVisible(btn))throw new Error('card menu button not found');
+  btn.click(); // step 1: open ⋮ menu
+  var renameItem=await lddRnWaitFor(function(){ // step 2: "Rename file"
+    var els=Array.prototype.slice.call(document.querySelectorAll('button,[role="menuitem"]'));
+    return els.find(function(e){return lddRnVisible(e)&&/^\s*rename file\s*$/i.test(e.textContent||'')});
+  },6000);
+  renameItem.click();
+  var input=await lddRnWaitFor(function(){ // step 3: dialog input
+    var scopes=Array.prototype.slice.call(document.querySelectorAll('[role="dialog"]'));
+    var i,s;
+    for(i=0;i<scopes.length;i++){
+      s=scopes[i].querySelector('input[type="text"],input:not([type])');
+      if(lddRnVisible(s))return s;
+    }
+    var mods=Array.prototype.slice.call(document.querySelectorAll('[class*="modal" i],[class*="dialog" i]'));
+    for(i=0;i<mods.length;i++){
+      s=mods[i].querySelector('input[type="text"],input:not([type])');
+      if(lddRnVisible(s))return s;
+    }
+    return null;
+  },6000);
+  lddRnSetInput(input,newName);
+  await new Promise(function(r){setTimeout(r,250)});
+  var scope=input.closest('[role="dialog"]')||input.closest('[class*="modal" i]')||document;
+  var update=Array.prototype.slice.call(scope.querySelectorAll('button')).find(function(e){ // step 4
+    return lddRnVisible(e)&&/^\s*update file name\s*$/i.test(e.textContent||'');
   });
-  $('ldd-rn-filter').oninput=e=>{st.filter=e.target.value;renderRows()};
-  $('ldd-rn-all').onclick=()=>{st.designs.forEach(d=>st.sel.add(String(lddRnId(d))));renderRows()};
-  $('ldd-rn-none').onclick=()=>{st.sel.clear();renderRows()};
-
-  // Categories
-  (async()=>{
-    try{
-      const cats=lddRnList(await lddRnApi('/categories'));
-      catSel.innerHTML=cats.map(c=>`<option value="${lddRnEsc(c.id)}">${lddRnEsc(c.name||c.title||('Category '+c.id))}</option>`).join('')||'<option value="">No categories</option>';
-      const urlCat=new URLSearchParams(location.search).get('categoryId');
-      if(urlCat&&[...catSel.options].some(op=>op.value===urlCat))catSel.value=urlCat;
-    }catch(e){catSel.innerHTML='<option value="">Could not load categories</option>';toast('Could not load categories: '+e.message,true)}
-  })();
-
-  // Load designs
-  $('ldd-rn-load').onclick=async()=>{
-    const cid=catSel.value;
-    if(!cid){toast('Pick a category first',true);return}
-    st.loading=true;$('ldd-rn-status').textContent='Loading…';
-    try{
-      const j=await lddRnApi('/designs?categoryId='+encodeURIComponent(cid));
-      st.designs=lddRnList(j).filter(d=>lddRnId(d)!=null);
-      st.sel=new Set(st.designs.map(d=>String(lddRnId(d))));
-      renderRows();
-      $('ldd-rn-status').textContent='';
-    }catch(e){$('ldd-rn-status').textContent='';toast('Load failed: '+e.message,true)}
-    st.loading=false;
+  if(!update)update=await lddRnWaitFor(function(){
+    return Array.prototype.slice.call(document.querySelectorAll('button')).find(function(e){
+      return lddRnVisible(e)&&/^\s*update file name\s*$/i.test(e.textContent||'');
+    });
+  },6000);
+  update.click();
+  await lddRnWaitFor(function(){return !document.contains(input)||input.offsetParent===null},10000).catch(function(){});
+  await new Promise(function(r){setTimeout(r,500)});
+}
+function lddRnThumbHtml(thumb){
+  return thumb
+    ?'<img src="'+lddRnEsc(thumb)+'" style="width:44px;height:44px;object-fit:cover;border-radius:4px;display:block" loading="lazy">'
+    :'<div style="width:44px;height:44px;border-radius:4px;background:#3a3a4a"></div>';
+}
+function lddRenderRenamerPage(o){return '<div id="ldd-rn-root"></div>';}
+function lddBindRenamerPage(o){
+  var root=(typeof lddAppRoot!=='undefined'&&lddAppRoot?lddAppRoot:document).querySelector('#ldd-rn-root')||document.body;
+  var st=lddRnStateInit();
+  root.innerHTML=
+  '<div style="padding:14px;display:flex;flex-direction:column;gap:10px;max-width:860px">'+
+  '<div style="font-weight:700;font-size:14px">Renamer — native MyDesigns rename</div>'+
+  '<div style="font-size:11px;color:#9a9ab0">Scans the design cards on this page, then automates the native rename flow (⋮ → Rename file → Update File Name) for each selected design.</div>'+
+  '<div style="display:flex;gap:8px;align-items:center">'+
+    '<button id="ldd-rn-scan" style="padding:6px 14px;border-radius:6px;background:#7c5cff;color:#fff;border:none;cursor:pointer;font-weight:600">Scan designs on page</button>'+
+    '<span id="ldd-rn-status" style="font-size:12px;color:#9a9ab0"></span>'+
+  '</div>'+
+  '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;font-size:12px">'+
+    '<label>Prefix<br><input id="ldd-rn-prefix" style="width:130px"></label>'+
+    '<label>Suffix<br><input id="ldd-rn-suffix" style="width:130px"></label>'+
+    '<label style="display:flex;gap:4px;align-items:center;padding-bottom:4px"><input type="checkbox" id="ldd-rn-num"> Numbering</label>'+
+    '<label>Start<br><input id="ldd-rn-nstart" type="number" value="1" style="width:56px"></label>'+
+    '<label>Step<br><input id="ldd-rn-nstep" type="number" value="1" style="width:56px"></label>'+
+    '<label>Pad<br><input id="ldd-rn-npad" type="number" value="2" style="width:52px"></label>'+
+    '<label>Position<br><select id="ldd-rn-npos"><option value="after">After</option><option value="before">Before</option></select></label>'+
+    '<label>Separator<br><input id="ldd-rn-nsep" value=" " style="width:52px"></label>'+
+  '</div>'+
+  '<div style="display:flex;gap:8px;align-items:center;font-size:12px">'+
+    '<input id="ldd-rn-filter" placeholder="Filter titles…" style="flex:1;max-width:260px">'+
+    '<button id="ldd-rn-all" style="font-size:11px">All</button>'+
+    '<button id="ldd-rn-none" style="font-size:11px">None</button>'+
+    '<span id="ldd-rn-count" style="color:#9a9ab0"></span>'+
+  '</div>'+
+  '<div style="overflow:auto;border:1px solid #2e2e3f;border-radius:8px;max-height:340px">'+
+  '<table style="width:100%;font-size:12px;border-collapse:collapse"><thead><tr style="position:sticky;top:0;background:#23232f">'+
+  '<th style="padding:6px 8px;text-align:left;width:30px"><input type="checkbox" id="ldd-rn-checkall"></th>'+
+  '<th style="padding:6px 8px;text-align:left;width:56px">Preview</th>'+
+  '<th style="padding:6px 8px;text-align:left">Current name</th>'+
+  '<th style="padding:6px 8px;text-align:left">New name</th>'+
+  '<th style="padding:6px 8px;text-align:left;width:60px">Status</th>'+
+  '</tr></thead><tbody id="ldd-rn-rows"></tbody></table></div>'+
+  '<div style="display:flex;gap:8px;align-items:center">'+
+    '<button id="ldd-rn-apply" style="padding:7px 18px;border-radius:6px;background:#22a06b;color:#fff;border:none;cursor:pointer;font-weight:700">Apply native rename</button>'+
+    '<span style="font-size:11px;color:#9a9ab0">Runs the 4-step native flow on each selected card, one at a time.</span>'+
+  '</div>'+
+  '<div id="ldd-rn-errors" hidden style="font-size:12px;color:#ff8a8a;background:#2a1a1a;border:1px solid #5a2a2a;border-radius:6px;padding:8px;max-height:120px;overflow:auto"></div>'+
+  '</div>';
+  var $=function(id){return root.querySelector('#'+id)};
+  function newTitle(item,idx){return lddRnCompute(item.title,st.rules,idx)}
+  function visibleItems(){
+    var q=(st.filter||'').toLowerCase();
+    return st.items.filter(function(x){return !q||(x.title||'').toLowerCase().indexOf(q)>=0});
+  }
+  function renderRows(){
+    var rows=$('ldd-rn-rows');if(!rows)return;
+    var vis=visibleItems();
+    var html=vis.map(function(x){
+      var sel=st.sel.has(x.id);
+      var idx=Array.prototype.indexOf.call(st.items.filter(function(y){return st.sel.has(y.id)}),x);
+      var nt=sel?newTitle(x,idx):'—';
+      var changed=sel&&nt!==x.title;
+      var status=x.done?'<span style="color:#4ade80">✓</span>':(x.fail?'<span style="color:#ff8a8a" title="'+lddRnEsc(x.fail)+'">✗</span>':'');
+      return '<tr data-id="'+x.id+'" style="border-top:1px solid #2e2e3f;opacity:'+(x.ok?1:0.45)+'">'+
+        '<td style="padding:6px 8px"><input type="checkbox" data-act="sel" '+(sel?'checked':'')+(x.ok?'':' disabled')+'></td>'+
+        '<td style="padding:6px 8px">'+lddRnThumbHtml(x.thumb)+'</td>'+
+        '<td style="padding:6px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+lddRnEsc(x.title)+'">'+lddRnEsc(x.title||'(no name)')+(x.ok?'':' <span style="color:#ff8a8a;font-size:10px">no menu</span>')+'</td>'+
+        '<td style="padding:6px 8px;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:'+(changed?700:400)+';color:'+(changed?'#c4b5fd':'#9a9ab0')+'" title="'+lddRnEsc(nt)+'">'+lddRnEsc(nt)+'</td>'+
+        '<td style="padding:6px 8px">'+status+'</td></tr>';
+    }).join('');
+    rows.innerHTML=html||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#9a9ab0">Click “Scan designs on page” to load the cards.</td></tr>';
+    rows.querySelectorAll('input[data-act="sel"]').forEach(function(cb){
+      cb.onchange=function(){
+        var id=cb.closest('tr').dataset.id;
+        if(cb.checked)st.sel.add(id);else st.sel.delete(id);
+        renderRows();
+      };
+    });
+    $('ldd-rn-count').textContent=st.sel.size+' selected / '+st.items.length+' scanned';
+    var ca=$('ldd-rn-checkall');
+    if(ca){var visIds=vis.filter(function(x){return x.ok}).map(function(x){return x.id});
+      ca.checked=visIds.length>0&&visIds.every(function(id){return st.sel.has(id)});
+      ca.onchange=function(){visIds.forEach(function(id){if(ca.checked)st.sel.add(id);else st.sel.delete(id)});renderRows()}}
+  }
+  function readRules(){
+    st.rules.prefix=$('ldd-rn-prefix').value;
+    st.rules.suffix=$('ldd-rn-suffix').value;
+    st.rules.num=$('ldd-rn-num').checked;
+    st.rules.numStart=parseInt($('ldd-rn-nstart').value,10)||1;
+    st.rules.numStep=parseInt($('ldd-rn-nstep').value,10)||1;
+    st.rules.numPad=Math.max(0,parseInt($('ldd-rn-npad').value,10)||0);
+    st.rules.numPos=$('ldd-rn-npos').value;
+    st.rules.numSep=$('ldd-rn-nsep').value;
+    renderRows();
+  }
+  ['ldd-rn-prefix','ldd-rn-suffix','ldd-rn-nstart','ldd-rn-nstep','ldd-rn-npad','ldd-rn-npos','ldd-rn-nsep'].forEach(function(id){
+    $(id).addEventListener('input',readRules);$(id).addEventListener('change',readRules);
+  });
+  $('ldd-rn-num').addEventListener('change',readRules);
+  $('ldd-rn-filter').addEventListener('input',function(){st.filter=$('ldd-rn-filter').value;renderRows()});
+  $('ldd-rn-all').onclick=function(){visibleItems().forEach(function(x){if(x.ok)st.sel.add(x.id)});renderRows()};
+  $('ldd-rn-none').onclick=function(){st.sel.clear();renderRows()};
+  $('ldd-rn-scan').onclick=function(){
+    var n=lddRnScan();
+    $('ldd-rn-status').textContent=n.length?n.length+' design cards found':'No design cards found — are you on the Designs page?';
+    renderRows();
   };
-
-  // Apply
-  $('ldd-rn-apply').onclick=async()=>{
-    const sels=selDesigns();
-    const jobs=sels.map((d,idx)=>({d,nt:newTitle(d,idx)})).filter(j=>j.nt!==lddRnTitle(j.d)&&j.nt.trim());
-    if(!jobs.length){toast('Nothing to rename — no titles would change',true);return}
-    if(!confirm(`Rename ${jobs.length} design${jobs.length===1?'':'s'}?\n\nFirst: ${lddRnTitle(jobs[0].d)}\n   → ${jobs[0].nt}`))return;
-    const btn=$('ldd-rn-apply');btn.disabled=true;
-    const errBox=$('ldd-rn-errors');errBox.hidden=true;errBox.innerHTML='';
-    let ok=0;const fails=[];let shapeFailed=0;
-    for(let i=0;i<jobs.length;i++){
-      const {d,nt}=jobs[i];
-      $('ldd-rn-status').textContent=`Renaming ${i+1}/${jobs.length}…`;
+  $('ldd-rn-apply').onclick=async function(){
+    var jobs=st.items.filter(function(x){return st.sel.has(x.id)&&x.ok});
+    if(!jobs.length){toast('Nothing selected',true);return}
+    var jobs2=jobs.map(function(x,i){return {item:x,nt:newTitle(x,i)}}).filter(function(j){return j.nt&&j.nt!==j.item.title});
+    if(!jobs2.length){toast('Nothing to rename — no names would change',true);return}
+    if(!confirm('Rename '+jobs2.length+' design'+(jobs2.length===1?'':'s')+' using the native flow?\n\nFirst: '+(jobs2[0].item.title||'(no name)')+'\n   → '+jobs2[0].nt))return;
+    var btn=$('ldd-rn-apply');btn.disabled=true;
+    var errBox=$('ldd-rn-errors');errBox.hidden=true;errBox.innerHTML='';
+    var ok=0,fails=[];
+    for(var i=0;i<jobs2.length;i++){
+      var j=jobs2[i];
+      $('ldd-rn-status').textContent='Renaming '+(i+1)+'/'+jobs2.length+'…';
       try{
-        await lddRnApi('/designs/values',{method:'PUT',body:JSON.stringify({designId:lddRnId(d),values:{title:nt}})});
-        d.title=nt;ok++;
+        await lddRnNativeRename(j.item,j.nt);
+        j.item.title=j.nt;j.item.done=true;ok++;
       }catch(e){
-        fails.push(lddRnTitle(d)+' → '+e.message);
-        if(/40[04]|42[12]/.test(e.message)&&++shapeFailed>=3){
-          fails.push('Stopping early — the server rejected the update shape. Copy the error above for Lilly.');
+        j.item.fail=e.message;
+        fails.push((j.item.title||'(no name)')+' → '+e.message);
+        if(fails.length>=3&&/timed out/i.test(e.message)){
+          fails.push('Stopping early — the native UI did not respond as expected. Copy the error above for Lilly.');
           break;
         }
       }
-      await new Promise(r=>setTimeout(r,350));
       renderRows();
     }
     btn.disabled=false;
-    $('ldd-rn-status').textContent=`Done: ${ok} renamed${fails.length?`, ${fails.length} failed`:''}.`;
-    toast(`Renamer: ${ok} renamed${fails.length?`, ${fails.length} failed`:''}`,fails.length>0);
-    if(fails.length){errBox.hidden=false;errBox.innerHTML=fails.map(f=>`<div>${lddRnEsc(f)}</div>`).join('')}
+    $('ldd-rn-status').textContent='Done: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':'')+'.';
+    toast('Renamer: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':''),fails.length>0);
+    if(fails.length){errBox.hidden=false;errBox.innerHTML=fails.map(function(f){return '<div>'+lddRnEsc(f)+'</div>'}).join('')}
     renderRows();
   };
-
   renderRows();
 }
