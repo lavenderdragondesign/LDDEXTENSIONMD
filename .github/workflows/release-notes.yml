@@ -1,7 +1,7 @@
 name: Auto tag + release notes
 
 # When you publish a release (upload the zip, any tag), this workflow:
-#  1. downloads the attached zip
+#  1. downloads the attached extension zip
 #  2. reads the real version from manifest.json
 #  3. renames the tag to vX.Y.Z and the title to "LDD Tools vX.Y.Z"
 #  4. fills the description from LDD_CHANGELOG inside the zip
@@ -28,7 +28,9 @@ jobs:
           rid = os.environ['RELEASE_ID']
           token = os.environ['GH_TOKEN']
           api = f'https://api.github.com/repos/{repo}/releases/{rid}'
-          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+          headers = {'Authorization': f'Bearer {token}',
+                     'Accept': 'application/vnd.github+json',
+                     'User-Agent': 'ldd-release-bot'}
 
           def gh(url, data=None, method=None):
               req = urllib.request.Request(
@@ -39,11 +41,22 @@ jobs:
                   return json.load(r)
 
           rel = gh(api)
-          z = next((a for a in rel.get('assets', [])
-                    if a['name'].lower().endswith('.zip')), None)
-          if not z:
+          print('release:', rel.get('tag_name'), '| draft:', rel.get('draft'))
+          assets = rel.get('assets', [])
+          print('assets:', [(a['name'], a['size']) for a in assets])
+          # Prefer the uploaded extension zip; skip GitHub's auto "Source code" zips.
+          # If several remain, take the largest (the real extension zip).
+          cands = [a for a in assets
+                   if a['name'].lower().endswith('.zip')
+                   and not a['name'].lower().startswith('source code')]
+          if not cands:
+              cands = [a for a in assets
+                       if a['name'].lower().endswith('.zip')]
+          if not cands:
               print('no zip asset on this release, nothing to do')
               raise SystemExit(0)
+          z = max(cands, key=lambda a: a.get('size', 0))
+          print('using asset:', z['name'], z.get('size'))
 
           tmp = tempfile.mkdtemp()
           zp = os.path.join(tmp, 'ext.zip')
@@ -55,14 +68,26 @@ jobs:
                        'User-Agent': 'ldd-release-bot'})
           with urllib.request.urlopen(req) as r, open(zp, 'wb') as f:
               f.write(r.read())
+          print('downloaded', os.path.getsize(zp), 'bytes')
           with zipfile.ZipFile(zp) as zf:
               zf.extractall(tmp)
 
-          man = json.load(open(os.path.join(tmp, 'manifest.json')))
-          ver = str(man['version']).strip()  # e.g. 1.8.109
+          # manifest.json may sit inside a top-level folder; find it
+          man_path = None
+          for dp, _, fns in os.walk(tmp):
+              if 'manifest.json' in fns:
+                  man_path = os.path.join(dp, 'manifest.json')
+                  break
+          if not man_path:
+              print('manifest.json not found in zip')
+              raise SystemExit(1)
+          print('manifest at:', man_path)
+          man = json.load(open(man_path))
+          ver = str(man['version']).strip()
+          print('version:', ver)
 
-          js = open(os.path.join(tmp, 'core', 'content.js'),
-                    encoding='utf-8', errors='replace').read()
+          js_path = os.path.join(os.path.dirname(man_path), 'core', 'content.js')
+          js = open(js_path, encoding='utf-8', errors='replace').read()
           entries = []
           m = re.search(r'const LDD_CHANGELOG=\[(.*?)\];', js, re.S)
           if m:
@@ -75,6 +100,10 @@ jobs:
                                   ).replace('\\"', '"')
                            for i in items]
                   entries.append((v, items))
+          print('changelog entries:', len(entries))
+          if not entries:
+              print('no changelog found, leaving release as-is')
+              raise SystemExit(0)
 
           lines = ["## What's new", '']
           for v, items in entries[:10]:
