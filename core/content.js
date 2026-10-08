@@ -3255,6 +3255,39 @@ document.addEventListener("click",e=>{
 if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",lddFontRestore,{once:true});
 else lddFontRestore();
 window.addEventListener("pageshow",lddFontRestore);
+
+/* Font persistence guard — same class of issue as the hotkeys toggle bug:
+   the toggle reads ON but the font isn't applied after refresh. If anything
+   (MyDesigns boot, SPA navigation) removes #ldd-app-font-style while the font
+   is enabled, put it back. */
+let lddFontGuardOn=false;
+function lddArmFontGuard(){
+  if(lddFontGuardOn)return; lddFontGuardOn=true;
+  let rt=null;
+  const check=()=>{
+    if(document.getElementById('ldd-app-font-style'))return;
+    lddSafeGet(LDD_FONT_STATE_DEFAULT,s=>{
+      if(s.appFont===true&&s.appFontFamily&&s.appFontFamily!=='MyDesigns Default'&&s.appFontFamily!=='Inter'){
+        try{lddFontApply(true,s.appFontFamily)}catch(_){}
+      }
+    });
+  };
+  new MutationObserver(ms=>{
+    for(const m of ms)for(const n of m.removedNodes||[]){
+      if(n.nodeType===1&&(n.id==='ldd-app-font-style'||(n.querySelector&&n.querySelector('#ldd-app-font-style')))){
+        clearTimeout(rt); rt=setTimeout(check,150); break;
+      }
+    }
+  }).observe(document.documentElement,{childList:true,subtree:true});
+  try{
+    const hook=fn=>function(){const r=fn.apply(this,arguments);setTimeout(check,400);setTimeout(check,1500);return r};
+    history.pushState=hook(history.pushState); history.replaceState=hook(history.replaceState);
+  }catch(_){}
+  window.addEventListener('popstate',()=>setTimeout(check,400));
+  setInterval(check,5000); // slow self-healing tick
+  setTimeout(check,2000); setTimeout(check,4000); // cover late MyDesigns boot
+}
+lddArmFontGuard();
 document.addEventListener("click",e=>{
  if(e.target?.closest?.('[data-tab="fonts"]')){
    setTimeout(lddFontRestore,0);
