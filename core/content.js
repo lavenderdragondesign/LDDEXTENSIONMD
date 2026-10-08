@@ -967,6 +967,9 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.118",items:["Image Compressor: never outputs a bigger file (keeps original if already optimal)","Image Compressor: drag-and-drop removed, browse button only"]},
+ {v:"1.8.117",items:["Image Compressor: engine status now logs the specific WASM failure to console"]},
+ {v:"1.8.116",items:["Fixed Image Compressor not opening (functions were trapped inside DPI Changer code)"]},
  {v:"1.8.115",items:["Home dashboard tools card now lists DPI Changer + Image Compressor"]},
  {v:"1.8.114",items:["Changelog cleanup"]},
  {v:"1.8.113",items:["DPI Changer: drag-and-drop removed, browse button only (per Pete)","Hotkeys page: live key tester — press any combo to see what the engine detects"]},
@@ -1988,7 +1991,7 @@ function lddBindImagePrepPage(o){
   root.querySelector('#ldd-ip-browse').onclick=()=>input.click();
   input.onchange=()=>{add([...input.files]);input.value='';};
   proc.onclick=async()=>{
-    if(!files.length){globalThis.lddToast110('Drop some images first');return;}
+    if(!files.length){globalThis.lddToast110('Add some images first');return;}
     const format=root.querySelector('input[name="ldd-ip-format"]:checked').value;
     const quality=+q.value;
     const fit=root.querySelector('#ldd-ip-fit').value||'contain';
@@ -2059,162 +2062,6 @@ function lddBindImagePrepPage(o){
     render();
   };
   render();
-function lddRenderImgCompPage(o){
-  return `<div class="ldd-page ldd-imageprep-page-1875">
-  <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG with real encoders (MozJPEG + oxipng) — entirely in your browser. <span id="ldd-ic-engine" class="ldd-ic-engine">checking engine…</span></p></div></div>
-  <div class="ldd-control-card ldd-ip-drop-1875" id="ldd-ic-drop"><div class="ldd-ip-drop-hint">Drop images here or <button type="button" id="ldd-ic-browse">browse files</button></div><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
-  <div class="ldd-control-card"><h2>Output</h2>
-    <div class="ldd-ip-opts-1875">
-      <label>Format <select id="ldd-ic-format"><option value="auto">Same as input</option><option value="jpg">JPG</option><option value="png">PNG</option></select></label>
-      <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ic-quality" min="50" max="100" value="80"> <b id="ldd-ic-quality-v">80</b> <small>(JPG only)</small></label>
-    </div>
-    <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ic-process" class="ldd-ip-go-1875">\u{1F5DC}\uFE0F Compress &amp; Download</button></div>
-  </div>
-  <div class="ldd-control-card"><h2>Files <span id="ldd-ic-count"></span></h2><div id="ldd-ic-list" class="ldd-ip-list-1875"><p class="ldd-ip-empty">No images yet.</p></div></div>
-  </div>`;
-}
-function lddBindImgCompPage(o){
-  const root=lddAppRoot;if(!root)return;
-  const drop=root.querySelector('#ldd-ic-drop'),input=root.querySelector('#ldd-ic-files'),
-    list=root.querySelector('#ldd-ic-list'),count=root.querySelector('#ldd-ic-count'),
-    proc=root.querySelector('#ldd-ic-process'),q=root.querySelector('#ldd-ic-quality'),
-    qv=root.querySelector('#ldd-ic-quality-v'),eng=root.querySelector('#ldd-ic-engine');
-  if(!drop||!proc)return;
-  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-  const fmt=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
-  let files=[];
-  q.oninput=()=>{qv.textContent=q.value;};
-  // ---------- WASM engine ----------
-  let worker=null,reqId=0;const pending={};
-  const wasmCache={};
-  const wasmUrl=k=>'core/imgcomp/'+(k==='jpg'?'jpeg/codec/enc/mozjpeg_enc.wasm':'png/codec/pkg/squoosh_png_bg.wasm');
-  async function getWasm(kind){
-    if(wasmCache[kind]==='fail')return null;
-    if(!wasmCache[kind]){
-      try{
-        const r=await fetch(chrome.runtime.getURL(wasmUrl(kind)));
-        if(!r.ok)throw new Error('http '+r.status);
-        wasmCache[kind]=await r.arrayBuffer();
-      }catch(e){wasmCache[kind]='fail';return null;}
-    }
-    return wasmCache[kind];
-  }
-  function getWorker(){
-    if(!worker){
-      worker=new Worker(chrome.runtime.getURL('core/imgcomp/worker.js'),{type:'module'});
-      worker.onmessage=e=>{const d=e.data,p=pending[d.id];if(p){delete pending[d.id];p(d);}};
-      worker.onerror=()=>{Object.keys(pending).forEach(id=>{pending[id]({ok:false,error:'worker failed'});delete pending[id];});};
-    }
-    return worker;
-  }
-  function wasmEncode(kind,pixels,width,height,quality,wasmBuf,timeoutMs){
-    return new Promise(resolve=>{
-      const id=++reqId;
-      const to=setTimeout(()=>{if(pending[id]){delete pending[id];resolve({ok:false,error:'timeout'});}},timeoutMs||90000);
-      pending[id]=d=>{clearTimeout(to);resolve(d);};
-      try{
-        getWorker().postMessage({id,kind,wasm:wasmBuf.slice(0),pixels:pixels.buffer,width,height,quality},[pixels.buffer]);
-      }catch(e){clearTimeout(to);delete pending[id];resolve({ok:false,error:String(e)});}
-    });
-  }
-  // engine ping: real 1x1 encode through the full chain
-  (async()=>{
-    try{
-      const wb=await getWasm('jpg');
-      if(!wb)throw new Error('wasm fetch failed');
-      const r=await wasmEncode('jpg',new Uint8ClampedArray([200,50,50,255]),1,1,80,wb,15000);
-      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>10){
-        eng.textContent='\u26A1 WASM engine (MozJPEG + oxipng)';eng.className='ldd-ic-engine on';
-      }else throw new Error((r&&r.error)||'self-test failed');
-    }catch(e){eng.textContent='canvas fallback (WASM blocked)';eng.className='ldd-ic-engine off';}
-  })();
-  function canvasEncode(canvas,kind,quality){
-    return new Promise((res,rej)=>{
-      canvas.toBlob(b=>b?res(b):rej(new Error('canvas encode failed')),
-        kind==='jpg'?'image/jpeg':'image/png',kind==='jpg'?quality/100:undefined);
-    });
-  }
-  async function compressFile(f,format,quality){
-    const bmp=await createImageBitmap(f.file);
-    const W=bmp.width,H=bmp.height;
-    const c=document.createElement('canvas');c.width=W;c.height=H;
-    const ctx=c.getContext('2d');
-    const inIsPng=/\.png$/i.test(f.file.name||'')||(f.file.type||'').toLowerCase()==='image/png';
-    const kind=format==='auto'?(inIsPng?'png':'jpg'):format;
-    if(kind==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
-    ctx.drawImage(bmp,0,0);
-    if(bmp.close)bmp.close();
-    const px=new Uint8ClampedArray(ctx.getImageData(0,0,W,H).data);
-    const ext=kind==='jpg'?'.jpg':'.png';
-    const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
-    const wb=await getWasm(kind);
-    if(wb){
-      const r=await wasmEncode(kind,px,W,H,quality,wb);
-      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>0)
-        return {name:base+ext,data:new Uint8Array(r.bytes),type:kind==='jpg'?'image/jpeg':'image/png'};
-      f.note='WASM failed ('+((r&&r.error)||'?')+'), used canvas';
-    }
-    const blob=await canvasEncode(c,kind,quality);
-    return {name:base+ext,data:new Uint8Array(await blob.arrayBuffer()),
-      type:kind==='jpg'?'image/jpeg':'image/png',fallback:true};
-  }
-  // ---------- UI ----------
-  const render=()=>{
-    count.textContent=files.length?`(${files.length})`:'';
-    list.innerHTML=files.length?files.map((f,i)=>{
-      let det=fmt(f.file.size);
-      if(f.origSize&&f.newSize){
-        const pct=Math.round((1-f.newSize/f.origSize)*100);
-        det=`${fmt(f.origSize)} \u2192 ${fmt(f.newSize)} <b style="color:#7dff9b">${pct}% smaller</b>`;
-      }
-      const badge=f.status==='OK'?' <span class="ldd-ip-ok">OK</span>'
-        :f.status==='WORKING'?' <span class="ldd-ip-warn">…</span>'
-        :f.status==='ERROR'?' <span class="ldd-ip-err">ERROR</span>':'';
-      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><small>${det}${badge}${f.note?' · '+esc(f.note):''}</small><button type="button" data-i="${i}">\u00d7</button></div>`;
-    }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
-    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
-  };
-  const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f,status:''});}render();};
-  root.querySelector('#ldd-ic-browse').onclick=()=>input.click();
-  input.onchange=()=>{add([...input.files]);input.value='';};
-  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.add('drag');}));
-  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('drag');}));
-  drop.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();add([...e.dataTransfer.files]);});
-  proc.onclick=async()=>{
-    if(!files.length){globalThis.lddToast110('Drop some images first');return;}
-    const format=root.querySelector('#ldd-ic-format').value;
-    const quality=+q.value;
-    proc.disabled=true;proc.textContent='Compressing…';
-    const outputs=[];let ok=0,totOrig=0,totNew=0;
-    for(const f of files){
-      try{
-        f.status='WORKING';f.note='';render();
-        const out=await compressFile(f,format,quality);
-        outputs.push(out);
-        f.origSize=f.file.size;f.newSize=out.data.length;
-        totOrig+=f.file.size;totNew+=out.data.length;
-        f.status='OK';ok++;
-      }catch(err){f.status='ERROR';f.note=String((err&&err.message)||err);}
-      render();
-    }
-    const anchorDl=(blob,name)=>{
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),60000);
-    };
-    if(outputs.length===1){
-      anchorDl(new Blob([outputs[0].data],{type:outputs[0].type}),outputs[0].name);
-    }else if(outputs.length>1){
-      anchorDl(new Blob([lddZipStore1875(outputs)],{type:'application/zip'}),'ldd-compressed.zip');
-    }
-    proc.disabled=false;proc.innerHTML='\u{1F5DC}\uFE0F Compress &amp; Download';
-    const pct=totOrig?Math.round((1-totNew/totOrig)*100):0;
-    globalThis.lddToast110(`Done: ${ok}/${files.length} · ${fmt(totOrig)} \u2192 ${fmt(totNew)} (${pct}% smaller)`);
-    render();
-  };
-  render();
-}
 }
 
 
@@ -2341,6 +2188,173 @@ function lddWireThemeControls(root,o){
   });
   bind("ldd-page-themeCards","themeCards",()=>lddSafeGet(LDD_DEFAULTS,n=>lddApplyTheme(n)));
   bind("ldd-page-themeGlow","themeGlow",()=>lddSafeGet(LDD_DEFAULTS,n=>lddApplyTheme(n)));
+}
+
+function lddRenderImgCompPage(o){
+  return `<div class="ldd-page ldd-imageprep-page-1875">
+  <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG with real encoders (MozJPEG + oxipng) — entirely in your browser. <span id="ldd-ic-engine" class="ldd-ic-engine">checking engine…</span></p></div></div>
+  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ic-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
+  <div class="ldd-control-card"><h2>Output</h2>
+    <div class="ldd-ip-opts-1875">
+      <label>Format <select id="ldd-ic-format"><option value="auto">Same as input</option><option value="jpg">JPG</option><option value="png">PNG</option></select></label>
+      <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ic-quality" min="50" max="100" value="80"> <b id="ldd-ic-quality-v">80</b> <small>(JPG only)</small></label>
+    </div>
+    <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ic-process" class="ldd-ip-go-1875">\u{1F5DC}\uFE0F Compress &amp; Download</button></div>
+  </div>
+  <div class="ldd-control-card"><h2>Files <span id="ldd-ic-count"></span></h2><div id="ldd-ic-list" class="ldd-ip-list-1875"><p class="ldd-ip-empty">No images yet.</p></div></div>
+  </div>`;
+}
+function lddBindImgCompPage(o){
+  const root=lddAppRoot;if(!root)return;
+  const input=root.querySelector('#ldd-ic-files'),
+    list=root.querySelector('#ldd-ic-list'),count=root.querySelector('#ldd-ic-count'),
+    proc=root.querySelector('#ldd-ic-process'),q=root.querySelector('#ldd-ic-quality'),
+    qv=root.querySelector('#ldd-ic-quality-v'),eng=root.querySelector('#ldd-ic-engine');
+  if(!proc)return;
+  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const fmt=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+  let files=[];
+  q.oninput=()=>{qv.textContent=q.value;};
+  // ---------- WASM engine ----------
+  let worker=null,reqId=0;const pending={};
+  const wasmCache={};
+  const wasmUrl=k=>'core/imgcomp/'+(k==='jpg'?'jpeg/codec/enc/mozjpeg_enc.wasm':'png/codec/pkg/squoosh_png_bg.wasm');
+  async function getWasm(kind){
+    if(wasmCache[kind]==='fail')return null;
+    if(!wasmCache[kind]){
+      try{
+        const r=await fetch(chrome.runtime.getURL(wasmUrl(kind)));
+        if(!r.ok)throw new Error('http '+r.status);
+        wasmCache[kind]=await r.arrayBuffer();
+      }catch(e){wasmCache[kind]='fail';return null;}
+    }
+    return wasmCache[kind];
+  }
+  function getWorker(){
+    if(!worker){
+      worker=new Worker(chrome.runtime.getURL('core/imgcomp/worker.js'),{type:'module'});
+      worker.onmessage=e=>{const d=e.data,p=pending[d.id];if(p){delete pending[d.id];p(d);}};
+      worker.onerror=()=>{Object.keys(pending).forEach(id=>{pending[id]({ok:false,error:'worker failed'});delete pending[id];});};
+    }
+    return worker;
+  }
+  function wasmEncode(kind,pixels,width,height,quality,wasmBuf,timeoutMs){
+    return new Promise(resolve=>{
+      const id=++reqId;
+      const to=setTimeout(()=>{if(pending[id]){delete pending[id];resolve({ok:false,error:'timeout'});}},timeoutMs||90000);
+      pending[id]=d=>{clearTimeout(to);resolve(d);};
+      try{
+        getWorker().postMessage({id,kind,wasm:wasmBuf.slice(0),pixels:pixels.buffer,width,height,quality},[pixels.buffer]);
+      }catch(e){clearTimeout(to);delete pending[id];resolve({ok:false,error:String(e)});}
+    });
+  }
+  // engine ping: real 1x1 encode through the full chain
+  (async()=>{
+    try{
+      const wb=await getWasm('jpg');
+      if(!wb)throw new Error('wasm fetch failed');
+      const r=await wasmEncode('jpg',new Uint8ClampedArray([200,50,50,255]),1,1,80,wb,15000);
+      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>10){
+        eng.textContent='\u26A1 WASM engine (MozJPEG + oxipng)';eng.className='ldd-ic-engine on';
+      }else throw new Error((r&&r.error)||'self-test failed');
+    }catch(e){eng.textContent='canvas fallback (WASM blocked)';eng.className='ldd-ic-engine off';eng.title=String((e&&e.message)||e);try{console.warn('[LDD imgcomp] WASM engine failed:',(e&&e.message)||e);}catch(_){}}
+  })();
+  function canvasEncode(canvas,kind,quality){
+    return new Promise((res,rej)=>{
+      canvas.toBlob(b=>b?res(b):rej(new Error('canvas encode failed')),
+        kind==='jpg'?'image/jpeg':'image/png',kind==='jpg'?quality/100:undefined);
+    });
+  }
+  async function compressFile(f,format,quality){
+    const bmp=await createImageBitmap(f.file);
+    const W=bmp.width,H=bmp.height;
+    const c=document.createElement('canvas');c.width=W;c.height=H;
+    const ctx=c.getContext('2d');
+    const inIsPng=/\.png$/i.test(f.file.name||'')||(f.file.type||'').toLowerCase()==='image/png';
+    const kind=format==='auto'?(inIsPng?'png':'jpg'):format;
+    if(kind==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
+    ctx.drawImage(bmp,0,0);
+    if(bmp.close)bmp.close();
+    const px=new Uint8ClampedArray(ctx.getImageData(0,0,W,H).data);
+    const ext=kind==='jpg'?'.jpg':'.png';
+    const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
+    const wb=await getWasm(kind);
+    if(wb){
+      const r=await wasmEncode(kind,px,W,H,quality,wb);
+      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>0){
+        const wdata=new Uint8Array(r.bytes);
+        if(wdata.length>=f.file.size){
+          const orig=new Uint8Array(await f.file.arrayBuffer());
+          f.note='already optimal — kept original';
+          return {name:f.file.name,data:orig,type:f.file.type||(kind==='jpg'?'image/jpeg':'image/png'),kept:true};
+        }
+        return {name:base+ext,data:wdata,type:kind==='jpg'?'image/jpeg':'image/png'};
+      }
+      f.note='WASM failed ('+((r&&r.error)||'?')+'), used canvas';
+    }
+    const blob=await canvasEncode(c,kind,quality);
+    const cdata=new Uint8Array(await blob.arrayBuffer());
+    if(cdata.length>=f.file.size){
+      const orig=new Uint8Array(await f.file.arrayBuffer());
+      f.note='already optimal — kept original';
+      return {name:f.file.name,data:orig,type:f.file.type||(kind==='jpg'?'image/jpeg':'image/png'),kept:true};
+    }
+    return {name:base+ext,data:cdata,
+      type:kind==='jpg'?'image/jpeg':'image/png',fallback:true};
+  }
+  // ---------- UI ----------
+  const render=()=>{
+    count.textContent=files.length?`(${files.length})`:'';
+    list.innerHTML=files.length?files.map((f,i)=>{
+      let det=fmt(f.file.size);
+      if(f.origSize&&f.newSize){
+        const pct=Math.round((1-f.newSize/f.origSize)*100);
+        det=`${fmt(f.origSize)} \u2192 ${fmt(f.newSize)} <b style="color:#7dff9b">${pct}% smaller</b>`;
+      }
+      const badge=f.status==='OK'?' <span class="ldd-ip-ok">OK</span>'
+        :f.status==='WORKING'?' <span class="ldd-ip-warn">…</span>'
+        :f.status==='ERROR'?' <span class="ldd-ip-err">ERROR</span>':'';
+      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><small>${det}${badge}${f.note?' · '+esc(f.note):''}</small><button type="button" data-i="${i}">\u00d7</button></div>`;
+    }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
+    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
+  };
+  const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f,status:''});}render();};
+  root.querySelector('#ldd-ic-browse').onclick=()=>input.click();
+  input.onchange=()=>{add([...input.files]);input.value='';};
+  proc.onclick=async()=>{
+    if(!files.length){globalThis.lddToast110('Drop some images first');return;}
+    const format=root.querySelector('#ldd-ic-format').value;
+    const quality=+q.value;
+    proc.disabled=true;proc.textContent='Compressing…';
+    const outputs=[];let ok=0,totOrig=0,totNew=0;
+    for(const f of files){
+      try{
+        f.status='WORKING';f.note='';render();
+        const out=await compressFile(f,format,quality);
+        outputs.push(out);
+        f.origSize=f.file.size;f.newSize=out.data.length;
+        totOrig+=f.file.size;totNew+=out.data.length;
+        f.status='OK';ok++;
+      }catch(err){f.status='ERROR';f.note=String((err&&err.message)||err);}
+      render();
+    }
+    const anchorDl=(blob,name)=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+    };
+    if(outputs.length===1){
+      anchorDl(new Blob([outputs[0].data],{type:outputs[0].type}),outputs[0].name);
+    }else if(outputs.length>1){
+      anchorDl(new Blob([lddZipStore1875(outputs)],{type:'application/zip'}),'ldd-compressed.zip');
+    }
+    proc.disabled=false;proc.innerHTML='\u{1F5DC}\uFE0F Compress &amp; Download';
+    const pct=totOrig?Math.round((1-totNew/totOrig)*100):0;
+    globalThis.lddToast110(`Done: ${ok}/${files.length} · ${fmt(totOrig)} \u2192 ${fmt(totNew)} (${pct}% smaller)`);
+    render();
+  };
+  render();
 }
 
 function lddShowTab(tab="dashboard"){
