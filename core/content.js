@@ -1791,6 +1791,39 @@ function lddCrc32_1875(bytes){
   for(let i=0;i<bytes.length;i++)crc=t[(crc^bytes[i])&255]^(crc>>>8);
   return (crc^0xFFFFFFFF)>>>0;
 }
+function lddZipStore1875(files){
+  const enc=new TextEncoder(),chunks=[],central=[];
+  let offset=0;
+  for(const f of files){
+    const nb=enc.encode(f.name),crc=lddCrc32_1875(f.data),len=f.data.length;
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);
+    lh.setUint16(8,0,true);lh.setUint16(10,0,true);lh.setUint16(12,0,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,len,true);lh.setUint32(22,len,true);
+    lh.setUint16(26,nb.length,true);lh.setUint16(28,0,true);
+    chunks.push(new Uint8Array(lh.buffer),nb,f.data);
+    central.push({nb,crc,len,offset});
+    offset+=30+nb.length+len;
+  }
+  const cdStart=offset,cdParts=[];let cdSize=0;
+  for(const c of central){
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);
+    ch.setUint16(8,0x0800,true);ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,0,true);
+    ch.setUint32(16,c.crc,true);ch.setUint32(20,c.len,true);ch.setUint32(24,c.len,true);
+    ch.setUint16(28,c.nb.length,true);ch.setUint16(30,0,true);ch.setUint16(32,0,true);
+    ch.setUint16(34,0,true);ch.setUint16(36,0,true);ch.setUint32(38,0,true);ch.setUint32(42,c.offset,true);
+    const ca=new Uint8Array(ch.buffer);
+    cdParts.push(ca,c.nb);cdSize+=46+c.nb.length;
+  }
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true);eo.setUint16(8,central.length,true);eo.setUint16(10,central.length,true);
+  eo.setUint32(12,cdSize,true);eo.setUint32(16,cdStart,true);eo.setUint16(20,0,true);
+  const res=new Uint8Array(offset+cdSize+22);let o=0;
+  for(const p of chunks.concat(cdParts)){res.set(p,o);o+=p.length;}
+  res.set(new Uint8Array(eo.buffer),o);
+  return res;
+}
 function lddPngSetDpi1875(u8,dpi){
   const sig=[137,80,78,71,13,10,26,10];
   for(let i=0;i<8;i++)if(u8[i]!==sig[i])return u8;
@@ -1826,16 +1859,36 @@ function lddJpegSetDpi1875(u8,dpi){
   out.set(u8.subarray(0,2),0);out.set(seg,2);out.set(u8.subarray(off),2+seg.length);
   return out;
 }
+const LDD_IP_SIZES=[
+ {w:4500,h:5400,label:'POD Default'},
+ {w:4500,h:4500,label:'Merch Square'},
+ {w:1080,h:1080,label:'Instagram Post'},
+ {w:1080,h:1920,label:'Instagram Story'},
+ {w:3000,h:3000,label:'Etsy Listing'},
+ {w:2400,h:3000,label:'8x10 Print'},
+ {w:2048,h:2048,label:'2K Resolution'},
+ {w:1200,h:1200,label:'Web Preview'},
+];
 function lddRenderImagePrepPage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
-  <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Force <b>300 DPI</b> on PNG &amp; JPG, pad to print size, compress for listings. Files never leave your browser.</p></div></div>
+  <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Force <b>300 DPI</b> on PNG &amp; JPG, pad to print size, compress for listings. Files never leave your browser.</p></div><div class="ldd-control-card" style="margin-top:8px"><span style="font-size:12px">💡 <b>Mac tip:</b> Finder \u201cGet Info\u201d does not show DPI. Open the file in Preview \u2192 Tools \u2192 Show Inspector (\u2318I) and look for Resolution \u2014 it should read 300 pixels/inch. Matching format + no padding = pixels untouched, only DPI stamped.</span></div></div>
   <div class="ldd-control-card ldd-ip-drop-1875" id="ldd-ip-drop"><div class="ldd-ip-drop-hint">Drop images here or <button type="button" id="ldd-ip-browse">browse files</button></div><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
+  <div class="ldd-control-card"><h2>Output sizes <span id="ldd-ip-sizecount" class="ldd-ip-sizebadge"></span></h2>
+    <p style="font-size:12px;color:#9a9ab0;margin:0 0 10px">Preset and custom dimensions for batch export. Select one or more.</p>
+    <div class="ldd-ip-sizes-1875" id="ldd-ip-sizes"></div>
+    <div class="ldd-ip-custom-1875">
+      <b>ADD CUSTOM SIZE</b>
+      <input type="number" id="ldd-ip-cw" placeholder="Width" min="1">
+      <input type="number" id="ldd-ip-ch" placeholder="Height" min="1">
+      <button type="button" id="ldd-ip-add">+ Add</button>
+    </div>
+  </div>
   <div class="ldd-control-card"><h2>Output</h2>
     <div class="ldd-ip-opts-1875">
       <label><input type="radio" name="ldd-ip-format" value="png" checked> PNG <small>(keeps transparency)</small></label>
       <label><input type="radio" name="ldd-ip-format" value="jpg"> JPG <small>(flattens onto white)</small></label>
       <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ip-quality" min="50" max="100" value="85"> <b id="ldd-ip-quality-v">85</b> <small>(JPG only)</small></label>
-      <label>Pad to <input type="number" id="ldd-ip-padw" placeholder="4500" min="1"> × <input type="number" id="ldd-ip-padh" placeholder="5400" min="1"> <small>(optional, transparent pad; never shrinks)</small></label>
+      <label>Fit mode <select id="ldd-ip-fit"><option value="contain">Contain (fit inside)</option><option value="cover">Cover (fill &amp; crop)</option></select></label>
     </div>
     <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ip-process" class="ldd-ip-go-1875">⚡ Process &amp; Download</button></div>
   </div>
@@ -1850,7 +1903,40 @@ function lddBindImagePrepPage(o){
     qv=root.querySelector('#ldd-ip-quality-v');
   if(!drop||!proc)return;
   let files=[];
+  let sizes=LDD_IP_SIZES.map(s=>({w:s.w,h:s.h,label:s.label,custom:false}));
+  let selSizes=new Set([0]);
   q.oninput=()=>{qv.textContent=q.value;};
+  const sizeGrid=root.querySelector('#ldd-ip-sizes'),sizeCount=root.querySelector('#ldd-ip-sizecount');
+  const renderSizes=()=>{
+    sizeGrid.innerHTML=sizes.map((s,i)=>{
+      const sel=selSizes.has(i);
+      return '<button type="button" class="ldd-ip-size-1875'+(sel?' sel':'')+'" data-i="'+i+'">'+
+        '<b>'+s.w+' × '+s.h+'</b><small>'+esc(s.label||(s.custom?'Custom':''))+'</small>'+
+        (sel?'<i>✓</i>':'')+
+        (s.custom?'<u data-del="'+i+'" title="Remove">×</u>':'')+'</button>';
+    }).join('');
+    sizeGrid.querySelectorAll('button.ldd-ip-size-1875').forEach(b=>{
+      b.onclick=e=>{
+        const del=e.target.closest('[data-del]');
+        if(del){e.stopPropagation();const d=+del.dataset.del;sizes.splice(d,1);
+          selSizes=new Set([...selSizes].filter(x=>x!==d).map(x=>x>d?x-1:x));renderSizes();return;}
+        const i=+b.dataset.i;
+        if(selSizes.has(i))selSizes.delete(i);else selSizes.add(i);
+        renderSizes();
+      };
+    });
+    const n=selSizes.size;
+    sizeCount.textContent=n?('· '+n+' SELECTED'):'';
+  };
+  root.querySelector('#ldd-ip-add').onclick=()=>{
+    const w=+root.querySelector('#ldd-ip-cw').value||0,h=+root.querySelector('#ldd-ip-ch').value||0;
+    if(!w||!h){globalThis.lddToast110('Enter width and height',true);return;}
+    sizes.push({w,h,label:'Custom',custom:true});
+    selSizes.add(sizes.length-1);
+    root.querySelector('#ldd-ip-cw').value='';root.querySelector('#ldd-ip-ch').value='';
+    renderSizes();
+  };
+  renderSizes();
   const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   const render=()=>{
     count.textContent=files.length?`(${files.length})`:'';
@@ -1871,43 +1957,70 @@ function lddBindImagePrepPage(o){
     if(!files.length){globalThis.lddToast110('Drop some images first');return;}
     const format=root.querySelector('input[name="ldd-ip-format"]:checked').value;
     const quality=+q.value;
-    const padW=+root.querySelector('#ldd-ip-padw').value||0,padH=+root.querySelector('#ldd-ip-padh').value||0;
+    const fit=root.querySelector('#ldd-ip-fit').value||'contain';
+    const targets=[...selSizes].map(i=>sizes[i]).filter(Boolean);
+    if(!targets.length){globalThis.lddToast110('Select at least one output size',true);return;}
     proc.disabled=true;proc.textContent='Working…';
     let ok=0;
+    const outputs=[];
     for(const f of files){
       try{
+        const inType=(f.file.type||'').toLowerCase(),inName=(f.file.name||'').toLowerCase();
+        const inIsPng=inType==='image/png'||/\.png$/.test(inName);
+        const inIsJpg=inType==='image/jpeg'||/\.jpe?g$/.test(inName);
+        const sameFormat=(format==='png'&&inIsPng)||(format==='jpg'&&inIsJpg);
+        const type=format==='jpg'?'image/jpeg':'image/png';
+        const ext=format==='jpg'?'.jpg':'.png';
+        const base=f.file.name.replace(/\.[^.]+$/,'');
         const bmp=await createImageBitmap(f.file);
         const ow=bmp.width,oh=bmp.height;
-        let cw=ow,ch=oh,note='';
-        if(padW&&padH){
-          if(ow<=padW&&oh<=padH){cw=padW;ch=padH;note=`padded to ${cw}×${ch}`;}
-          else note='larger than pad target; left as-is';
+        let made=0;
+        for(const t of targets){
+          const W=t.w,H=t.h;
+          let bytes;
+          // fast path: already exactly this size + same format = stamp DPI only
+          if(sameFormat&&ow===W&&oh===H){
+            bytes=new Uint8Array(await f.file.arrayBuffer());
+            bytes=format==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
+          }else{
+            const c=document.createElement('canvas');c.width=W;c.height=H;
+            const ctx=c.getContext('2d');
+            if(format==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
+            else ctx.clearRect(0,0,W,H);
+            const sc=fit==='cover'?Math.max(W/ow,H/oh):Math.min(W/ow,H/oh);
+            const dw=ow*sc,dh=oh*sc;
+            ctx.drawImage(bmp,(W-dw)/2,(H-dh)/2,dw,dh);
+            const blob=await new Promise(r=>c.toBlob(r,type,format==='jpg'?quality/100:undefined));
+            if(!blob)throw new Error('encode failed');
+            bytes=new Uint8Array(await blob.arrayBuffer());
+            bytes=format==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
+          }
+          outputs.push({name:`${base}-${W}x${H}${ext}`,data:bytes,type});
+          made++;
         }
-        const c=document.createElement('canvas');c.width=cw;c.height=ch;
-        const ctx=c.getContext('2d');
-        if(format==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,cw,ch);}
-        else ctx.clearRect(0,0,cw,ch);
-        ctx.drawImage(bmp,Math.floor((cw-ow)/2),Math.floor((ch-oh)/2),ow,oh);
         if(bmp.close)bmp.close();
-        const type=format==='jpg'?'image/jpeg':'image/png';
-        const blob=await new Promise(r=>c.toBlob(r,type,format==='jpg'?quality/100:undefined));
-        if(!blob)throw new Error('encode failed');
-        let bytes=new Uint8Array(await blob.arrayBuffer());
-        bytes=format==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
-        const url=URL.createObjectURL(new Blob([bytes],{type}));
-        const name=f.file.name.replace(/\.[^.]+$/,'')+(format==='jpg'?'.jpg':'.png');
-        // chrome.downloads is not exposed to content scripts; anchor download works here.
-        const a=document.createElement('a');
-        a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
-        setTimeout(()=>URL.revokeObjectURL(url),60000);
-        f.w=cw;f.h=ch;f.note=note;
+        f.w=ow;f.h=oh;f.note=made+' size'+(made===1?'':'s');
         f.status=Math.min(ow,oh)<2000?'LOW-RES':'OK';
         ok++;
+
       }catch(err){f.status='ERROR';f.note=String((err&&err.message)||err);}
       render();
     }
+    // deliver: single file downloads directly, multiple go in one zip
+    const anchorDl=(blob,name)=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+    };
+    if(outputs.length===1){
+      anchorDl(new Blob([outputs[0].data],{type:outputs[0].type}),outputs[0].name);
+    }else if(outputs.length>1){
+      const zip=lddZipStore1875(outputs);
+      anchorDl(new Blob([zip],{type:'application/zip'}),'ldd-dpi-changer.zip');
+    }
     proc.disabled=false;proc.textContent='⚡ Process & Download';
-    globalThis.lddToast110(`Done: ${ok}/${files.length} downloaded @300 DPI`);
+    globalThis.lddToast110(`Done: ${ok} file${ok===1?'':'s'} → ${outputs.length} output${outputs.length===1?'':'s'} @300 DPI`);
     render();
   };
   render();
