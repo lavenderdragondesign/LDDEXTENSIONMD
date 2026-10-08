@@ -966,6 +966,25 @@ function lddToggleCard(key,title,desc,on){
     <label class="ldd-page-switch"><input data-setting="${key}" type="checkbox" ${on?"checked":""}><i></i></label>
   </div>`;
 }
+const LDD_CHANGELOG=[
+ {v:"1.8.101",items:["Renamer: table sits right of the carousel, custom-name field, single-item rename","Release zips now live in the LDD-Tools-latest folder"]},
+ {v:"1.8.100",items:["Fixed false \u2018Update Available \u2014 v97\u2019 nag (version scheme normalization)"]},
+ {v:"1.8.99",items:["Renamer rebuilt as a simple carousel with big preview","\u2018Drag and drop file\u2019 card filtered out of scans"]},
+ {v:"1.8.98",items:["Fixed \u2018toast is not defined\u2019 crash on Renamer Apply"]},
+ {v:"1.8.97",items:["Fixed Renamer \u2018no menu\u2019 \u2014 \u22ee button detection via icon"]},
+ {v:"1.8.96",items:["Fixed \u2018renamer is undefined\u2019 tab error"]},
+ {v:"1.8.95",items:["No-scroll Home dashboard (compact 3-column grid)"]},
+ {v:"1.8.94",items:["Settings banner renamed to \u2018Show / Hide\u2019, slimmer style"]},
+];
+function lddChangelogHtml(maxV){
+  return LDD_CHANGELOG.slice(0,maxV||3).map(function(e){
+    return '<span><b>v'+e.v+':</b> '+e.items.map(lddRnEscSafe).join('; ')+'</span>';
+  }).join('');
+}
+function lddRnEscSafe(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function lddChangelogText(maxV){
+  return LDD_CHANGELOG.slice(0,maxV||4).map(function(e){return 'v'+e.v+' \u2014 '+e.items.join('; ')}).join('\n');
+}
 function lddRenderDashboard(o){
   const enabled=Object.values(o).filter(v=>v===true).length;
   const mode=(o.mode||o.appMode||"Power User");
@@ -980,7 +999,7 @@ function lddRenderDashboard(o){
     <div class="ldd-sidebar-expanded-banner"><div class="ldd-sidebar-expanded-banner-title">⚠ LDD TOOLS WORKS BEST WITH THE MYDESIGNS SIDEBAR EXPANDED</div><div class="ldd-sidebar-expanded-banner-body">For the cleanest layout, native sidebar spacing, and easiest access to LDD Tools, keep the MyDesigns sidebar expanded while using LDD Tools.</div></div>
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
-    <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2><span><b>Dashboard refresh:</b> Dashboard is now a clean information page instead of another control panel.</span><span><b>Listing Title Rows:</b> choose a roomier 1–5 row title editor from UI Tweaks, with 3 rows as the default.</span><span><b>Theme consistency:</b> LDD Settings follows the active LDD theme instead of using fixed neon-green accents.</span></div>
+    <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
     <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer (work in progress), Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
@@ -2139,7 +2158,7 @@ function lddShowUpdateGate(release){
     document.getElementById("ldd-update-gate")?.remove();
     const current=chrome.runtime.getManifest().version;
     const latest=String(release?.version||"").replace(/^v/i,"");
-    const notes=String(release?.body||release?.name||"").trim();
+    const notes=lddChangelogText(4)||String(release?.body||release?.name||"").trim();
     const ov=document.createElement("div");
     ov.id="ldd-update-gate";
     ov.innerHTML=`<div class="ldd-update-gate-card" role="dialog" aria-modal="true" aria-label="LDD Tools Update Available">
@@ -3982,85 +4001,154 @@ function lddBindRenamerPage(o){
   var root=(typeof lddAppRoot!=='undefined'&&lddAppRoot?lddAppRoot:document).querySelector('#ldd-rn-root')||document.body;
   var st=lddRnStateInit();
   st.idx=0;st.busy=false;
-  st.rules={prefix:'',suffix:'',num:false,numStart:1,numStep:1,numPad:2,numPos:'after',numSep:' '};
+  st.rules={prefix:'',suffix:'',custom:'',num:false,numStart:1,numStep:1,numPad:2,numPos:'after',numSep:' '};
   var $=function(id){return root.querySelector('#'+id)};
   root.innerHTML=
-  '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;max-width:480px;margin:0 auto;text-align:center">'+
+  '<div style="padding:16px;display:flex;flex-direction:column;gap:12px;max-width:960px;margin:0 auto;text-align:center">'+
   '<div style="font-weight:800;font-size:15px">Renamer</div>'+
   '<div style="font-size:11px;color:#9a9ab0">Automates the native rename (&#8942; &rarr; Rename file &rarr; Update File Name).</div>'+
-  '<button id="ldd-rn-scan" style="padding:8px 16px;border-radius:8px;background:#7c5cff;color:#fff;border:none;cursor:pointer;font-weight:700">Scan designs on page</button>'+
-  '<div id="ldd-rn-stage" hidden style="display:flex;flex-direction:column;gap:10px;align-items:center">'+
-    '<div style="display:flex;align-items:center;justify-content:center;gap:14px;width:100%">'+
-      '<button id="ldd-rn-prev" style="font-size:28px;padding:6px 14px;border-radius:8px;background:#1c1c26;color:#fff;border:1px solid #333;cursor:pointer">&lsaquo;</button>'+
-      '<div style="display:flex;flex-direction:column;gap:6px;align-items:center">'+
-        '<div id="ldd-rn-imgwrap" style="width:230px;height:230px;border-radius:12px;overflow:hidden;background:#1a1a24;display:flex;align-items:center;justify-content:center"></div>'+
-        '<div id="ldd-rn-count" style="font-size:11px;color:#9a9ab0"></div>'+
+  '<button id="ldd-rn-scan" style="padding:8px 16px;border-radius:8px;background:#7c5cff;color:#fff;border:none;cursor:pointer;font-weight:700;align-self:center">Scan designs on page</button>'+
+  '<div id="ldd-rn-stage" hidden style="display:flex;flex-direction:column;gap:10px;align-items:stretch">'+
+    '<div style="display:flex;gap:14px;align-items:flex-start;justify-content:center;flex-wrap:wrap">'+
+      '<div style="display:flex;flex-direction:column;gap:10px;align-items:center;flex:0 0 auto">'+
+        '<div style="display:flex;align-items:center;justify-content:center;gap:14px">'+
+          '<button id="ldd-rn-prev" style="font-size:30px;padding:8px 16px;border-radius:8px;background:#1c1c26;color:#fff;border:1px solid #333;cursor:pointer">&lsaquo;</button>'+
+          '<div style="display:flex;flex-direction:column;gap:6px;align-items:center">'+
+            '<div id="ldd-rn-imgwrap" style="width:340px;height:340px;max-width:58vw;max-height:58vw;border-radius:12px;overflow:hidden;background:#1a1a24;display:flex;align-items:center;justify-content:center"></div>'+
+            '<div id="ldd-rn-count" style="font-size:11px;color:#9a9ab0"></div>'+
+          '</div>'+
+          '<button id="ldd-rn-next" style="font-size:30px;padding:8px 16px;border-radius:8px;background:#1c1c26;color:#fff;border:1px solid #333;cursor:pointer">&rsaquo;</button>'+
+        '</div>'+
+        '<div id="ldd-rn-mark" style="font-size:13px;font-weight:800;min-height:18px"></div>'+
+        '<div style="font-size:12px;color:#9a9ab0;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ldd-rn-cur"></div>'+
+        '<div style="font-size:14px;font-weight:700;color:#c4b5fd;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ldd-rn-new"></div>'+
       '</div>'+
-      '<button id="ldd-rn-next" style="font-size:28px;padding:6px 14px;border-radius:8px;background:#1c1c26;color:#fff;border:1px solid #333;cursor:pointer">&rsaquo;</button>'+
+      '<div style="flex:1 1 280px;min-width:260px;max-width:420px;overflow:auto;border:1px solid #2e2e3f;border-radius:8px;max-height:460px;text-align:left;align-self:stretch">'+
+      '<table style="width:100%;font-size:11.5px;border-collapse:collapse"><thead><tr style="position:sticky;top:0;background:#23232f">'+
+      '<th style="padding:5px 8px;width:28px"><input type="checkbox" id="ldd-rn-checkall"></th>'+
+      '<th style="padding:5px 8px;width:44px"></th><th style="padding:5px 8px;text-align:left">Design</th>'+
+      '<th style="padding:5px 8px;text-align:left">New name</th><th style="padding:5px 8px;width:44px">OK</th>'+
+      '</tr></thead><tbody id="ldd-rn-rows"></tbody></table></div>'+
     '</div>'+
-    '<div id="ldd-rn-mark" style="font-size:13px;font-weight:800;min-height:18px"></div>'+
-    '<div style="font-size:12px;color:#9a9ab0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ldd-rn-cur"></div>'+
-    '<div style="font-size:13px;font-weight:700;color:#c4b5fd;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="ldd-rn-new"></div>'+
-    '<div style="display:flex;gap:8px;justify-content:center;align-items:center;font-size:12px;flex-wrap:wrap">'+
-      '<label>Prefix <input id="ldd-rn-prefix" style="width:90px"></label>'+
-      '<label>Suffix <input id="ldd-rn-suffix" style="width:90px"></label>'+
-      '<label style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="ldd-rn-num"> # from <input id="ldd-rn-nstart" type="number" value="1" style="width:50px"></label>'+
+    '<div style="display:flex;gap:10px;justify-content:center;align-items:center;font-size:14px;flex-wrap:wrap">'+
+      '<label style="display:flex;gap:8px;align-items:center;font-weight:600">Custom name <input id="ldd-rn-custom" placeholder="type a full new name…" style="width:280px;height:42px;font-size:15px;padding:0 12px;border-radius:8px"></label>'+
     '</div>'+
-    '<button id="ldd-rn-apply" style="padding:10px 26px;border-radius:8px;background:#22a06b;color:#fff;border:none;cursor:pointer;font-weight:800;font-size:14px"></button>'+
+    '<div style="display:flex;gap:12px;justify-content:center;align-items:center;font-size:14px;flex-wrap:wrap">'+
+      '<label style="display:flex;gap:6px;align-items:center">Prefix <input id="ldd-rn-prefix" style="width:130px;height:40px;font-size:15px;padding:0 10px;border-radius:8px"></label>'+
+      '<label style="display:flex;gap:6px;align-items:center">Suffix <input id="ldd-rn-suffix" style="width:130px;height:40px;font-size:15px;padding:0 10px;border-radius:8px"></label>'+
+      '<label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="ldd-rn-num" style="width:20px;height:20px"> # from <input id="ldd-rn-nstart" type="number" value="1" style="width:70px;height:40px;font-size:15px;padding:0 10px;border-radius:8px"></label>'+
+    '</div>'+
+    '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'+
+      '<button id="ldd-rn-one" style="padding:10px 20px;border-radius:8px;background:#7c5cff;color:#fff;border:none;cursor:pointer;font-weight:800;font-size:13px">Rename this one</button>'+
+      '<button id="ldd-rn-apply" style="padding:10px 26px;border-radius:8px;background:#22a06b;color:#fff;border:none;cursor:pointer;font-weight:800;font-size:14px"></button>'+
+    '</div>'+
     '<div id="ldd-rn-status" style="font-size:12px;color:#9a9ab0;min-height:16px"></div>'+
   '</div>'+
   '<div id="ldd-rn-errors" hidden style="font-size:12px;color:#ff8a8a;background:#2a1a1a;border:1px solid #5a2a2a;border-radius:6px;padding:8px;max-height:110px;overflow:auto;text-align:left"></div>'+
   '</div>';
-  function cur(){return st.items[st.idx]}
-  function newTitle(item,idx){return lddRnCompute(item.title,st.rules,idx)}
+  function checkedItems(){return st.items.filter(function(x){return st.sel.has(x.id)})}
+  function numSeg(idx){
+    var n=String(st.rules.numStart+idx*st.rules.numStep).padStart(st.rules.numPad,'0');
+    return (st.rules.numSep||'')+n;
+  }
+  function newTitle(item,idx){
+    var r=st.rules;
+    if(r.custom&&r.custom.trim()){
+      var t=r.custom.trim();
+      if(r.num)t=t+numSeg(idx);
+      return t;
+    }
+    return lddRnCompute(item.title,r,idx);
+  }
+  function jobList(){
+    var jobs=checkedItems();
+    return jobs.map(function(x,i){return {item:x,nt:newTitle(x,i)}}).filter(function(j){return j.nt&&j.nt!==j.item.title});
+  }
   function render(){
     var stage=$('ldd-rn-stage');if(!stage)return;
     if(!st.items.length){stage.hidden=true;return}
     stage.hidden=false;
-    var x=cur();if(!x)return;
+    if(st.idx>=st.items.length)st.idx=0;
+    var x=st.items[st.idx];if(!x)return;
     $('ldd-rn-imgwrap').innerHTML=x.thumb?'<img src="'+lddRnEsc(x.thumb)+'" style="width:100%;height:100%;object-fit:cover;display:block">':'<span style="color:#555">no preview</span>';
-    $('ldd-rn-count').textContent=(st.idx+1)+' / '+st.items.length;
+    $('ldd-rn-count').textContent=(st.idx+1)+' / '+st.items.length+(st.sel.has(x.id)?'':' (unchecked)');
     $('ldd-rn-cur').textContent=x.title||'(no name)';
     $('ldd-rn-cur').title=x.title||'';
-    var nt=newTitle(x,st.idx);
+    var ci=checkedItems().indexOf(x);
+    var nt=st.sel.has(x.id)?newTitle(x,Math.max(0,ci)):'\u2014';
     $('ldd-rn-new').textContent='\u2192 '+nt;
     $('ldd-rn-new').title=nt;
-    $('ldd-rn-new').style.color=nt!==x.title?'#c4b5fd':'#9a9ab0';
+    $('ldd-rn-new').style.color=(st.sel.has(x.id)&&nt!==x.title)?'#c4b5fd':'#9a9ab0';
     var mark=$('ldd-rn-mark');
     mark.textContent=x.done?'\u2713 renamed':(x.fail?'\u2717 failed':'');
     mark.style.color=x.done?'#4ade80':(x.fail?'#ff8a8a':'transparent');
-    $('ldd-rn-apply').textContent='Rename all '+st.items.length+' designs';
-    $('ldd-rn-apply').disabled=st.busy;
+    var n=checkedItems().length;
+    $('ldd-rn-apply').textContent='Rename checked ('+n+')';
+    $('ldd-rn-apply').disabled=st.busy;$('ldd-rn-one').disabled=st.busy;
+    renderTable();
+  }
+  function renderTable(){
+    var rows=$('ldd-rn-rows');if(!rows)return;
+    var checked=checkedItems();
+    rows.innerHTML=st.items.map(function(x){
+      var sel=st.sel.has(x.id);
+      var ci=checked.indexOf(x);
+      var nt=sel?newTitle(x,Math.max(0,ci)):'\u2014';
+      var ch=sel&&nt!==x.title;
+      var status=x.done?'<span style="color:#4ade80">\u2713</span>':(x.fail?'<span style="color:#ff8a8a" title="'+lddRnEsc(x.fail)+'">\u2717</span>':'');
+      return '<tr data-id="'+x.id+'" style="border-top:1px solid #2e2e3f;cursor:pointer;opacity:'+(sel?1:0.5)+'">'+
+        '<td style="padding:5px 8px"><input type="checkbox" data-act="sel" '+(sel?'checked':'')+'></td>'+
+        '<td style="padding:5px 8px">'+(x.thumb?'<img src="'+lddRnEsc(x.thumb)+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;display:block" loading="lazy">':'')+'</td>'+
+        '<td style="padding:5px 8px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+lddRnEsc(x.title||'')+'">'+lddRnEsc(x.title||'(no name)')+'</td>'+
+        '<td style="padding:5px 8px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:'+(ch?700:400)+';color:'+(ch?'#c4b5fd':'#9a9ab0')+'" title="'+lddRnEsc(nt)+'">'+lddRnEsc(nt)+'</td>'+
+        '<td style="padding:5px 8px">'+status+'</td></tr>';
+    }).join('');
+    rows.querySelectorAll('tr').forEach(function(tr){
+      tr.addEventListener('click',function(e){
+        if(e.target.matches('input[data-act="sel"]'))return;
+        var id=tr.dataset.id;
+        var ix=st.items.findIndex(function(x){return x.id===id});
+        if(ix>=0){st.idx=ix;render()}
+      });
+    });
+    rows.querySelectorAll('input[data-act="sel"]').forEach(function(cb){
+      cb.addEventListener('click',function(e){e.stopPropagation()});
+      cb.addEventListener('change',function(){
+        var id=cb.closest('tr').dataset.id;
+        if(cb.checked)st.sel.add(id);else st.sel.delete(id);
+        render();
+      });
+    });
+    var ca=$('ldd-rn-checkall');
+    if(ca){ca.checked=st.items.length>0&&st.items.every(function(x){return st.sel.has(x.id)});
+      ca.onclick=function(){st.items.forEach(function(x){if(ca.checked)st.sel.add(x.id);else st.sel.delete(x.id)});render()}}
   }
   function step(d){if(!st.items.length)return;st.idx=(st.idx+d+st.items.length)%st.items.length;render()}
   $('ldd-rn-prev').onclick=function(){step(-1)};
   $('ldd-rn-next').onclick=function(){step(1)};
   document.addEventListener('keydown',function h(e){
     if(!root.isConnected){document.removeEventListener('keydown',h);return}
-    if($('ldd-rn-stage').hidden)return;
+    var sg=$('ldd-rn-stage');if(!sg||sg.hidden)return;
     if(e.key==='ArrowLeft')step(-1);
     if(e.key==='ArrowRight')step(1);
   });
   function readRules(){
     st.rules.prefix=$('ldd-rn-prefix').value;
     st.rules.suffix=$('ldd-rn-suffix').value;
+    st.rules.custom=$('ldd-rn-custom').value;
     st.rules.num=$('ldd-rn-num').checked;
     st.rules.numStart=parseInt($('ldd-rn-nstart').value,10)||1;
     render();
   }
-  ['ldd-rn-prefix','ldd-rn-suffix','ldd-rn-nstart'].forEach(function(id){$(id).addEventListener('input',readRules)});
+  ['ldd-rn-prefix','ldd-rn-suffix','ldd-rn-custom','ldd-rn-nstart'].forEach(function(id){$(id).addEventListener('input',readRules)});
   $('ldd-rn-num').addEventListener('change',readRules);
   $('ldd-rn-scan').onclick=function(){
-    var n=lddRnScan();st.idx=0;st.busy=false;
-    $('ldd-rn-status').textContent=n.length?n.length+' designs found':'No designs found \u2014 are you on the Designs page?';
+    var items=lddRnScan();st.idx=0;st.busy=false;
+    $('ldd-rn-status').textContent=items.length?items.length+' designs found \u2014 uncheck any to skip':'No designs found \u2014 are you on the Designs page?';
     render();
   };
-  $('ldd-rn-apply').onclick=async function(){
-    if(st.busy||!st.items.length)return;
-    var jobs=st.items.map(function(x,i){return {item:x,nt:newTitle(x,i)}}).filter(function(j){return j.nt&&j.nt!==j.item.title});
-    if(!jobs.length){lddRnToast('Nothing to rename \u2014 no names would change',true);return}
-    if(!confirm('Rename '+jobs.length+' design'+(jobs.length===1?'':'s')+'?\n\nFirst: '+(jobs[0].item.title||'(no name)')+'\n   \u2192 '+jobs[0].nt))return;
-    st.busy=true;
+  async function runJobs(jobs){
+    st.busy=true;render();
     var errBox=$('ldd-rn-errors');errBox.hidden=true;errBox.innerHTML='';
     var ok=0,fails=[];
     for(var i=0;i<jobs.length;i++){
@@ -4076,6 +4164,22 @@ function lddBindRenamerPage(o){
     $('ldd-rn-status').textContent='Done: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':'')+'.';
     lddRnToast('Renamer: '+ok+' renamed'+(fails.length?', '+fails.length+' failed':''),fails.length>0);
     if(fails.length){errBox.hidden=false;errBox.innerHTML=fails.map(function(f){return '<div>'+lddRnEsc(f)+'</div>'}).join('')}
+  }
+  $('ldd-rn-one').onclick=async function(){
+    if(st.busy)return;
+    var x=st.items[st.idx];if(!x)return;
+    var ci=checkedItems().indexOf(x);
+    var nt=newTitle(x,Math.max(0,ci));
+    if(!nt||nt===x.title){lddRnToast('Name would not change',true);return}
+    if(!confirm('Rename this design?\n\n'+(x.title||'(no name)')+'\n   \u2192 '+nt))return;
+    runJobs([{item:x,nt:nt}]);
   };
-  render();
+  $('ldd-rn-apply').onclick=async function(){
+    if(st.busy)return;
+    var jobs=jobList();
+    if(!jobs.length){lddRnToast('Nothing to rename \u2014 no checked names would change',true);return}
+    if(!confirm('Rename '+jobs.length+' design'+(jobs.length===1?'':'s')+'?\n\nFirst: '+(jobs[0].item.title||'(no name)')+'\n   \u2192 '+jobs[0].nt))return;
+    runJobs(jobs);
+  };
+  try{$('ldd-rn-scan').click()}catch(e){render()}
 }
