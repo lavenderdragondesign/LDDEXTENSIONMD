@@ -108,13 +108,39 @@
   function findMdScoutResource(){
     for(const open of document.querySelectorAll('button[aria-label^="Open preview of "]')){
       const name=(open.getAttribute('aria-label')||'').replace(/^Open preview of /i,'').trim();
-      if(!/^[^\/\\]{1,180}\.mdscout\.json$/i.test(name))continue;
+      if(!/^[^\/\\]{1,180}\.mdscout(\.json)?$/i.test(name))continue;
       let row=open.parentElement;
       for(let i=0;row&&i<5;i++,row=row.parentElement){
         const download=[...row.querySelectorAll('button[aria-label="Download file"]')].find(visible);
         if(download)return {row,open,download,filename:name};
       }
     }
+    // Fallback: find the .mdscout.json filename as visible text, then locate a
+    // download control nearby. Resilient to ChatGPT renaming aria-labels.
+    try{
+      if(!(document.body?.textContent||'').toLowerCase().match(/\.mdscout(\.json)?/))return null;
+      const walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);
+      let node;const seen=new Set();
+      while(node=walker.nextNode()){
+        const t=node.textContent||'';
+        if(!/\.mdscout(\.json)?/i.test(t))continue;
+        const m=t.match(/([\p{L}\p{N}\-_. ]{1,180}\.mdscout(\.json)?)/iu);
+        const filename=(m&&m[1].trim())||'style.mdscout';
+        let row=node.parentElement;
+        for(let i=0;row&&i<10&&!seen.has(row);i++,row=row.parentElement){
+          seen.add(row);
+          const download=[...row.querySelectorAll('button,[role="button"]')].find(b=>{
+            if(!visible(b))return false;
+            const s=[b.getAttribute('aria-label'),b.getAttribute('title'),b.textContent].filter(Boolean).join(' ').toLowerCase();
+            return s.includes('download');
+          });
+          if(download){
+            const openBtn=[...row.querySelectorAll('button,[role="button"],a[href]')].find(b=>b!==download&&visible(b)&&/preview|open|\.mdscout(\.json)?/i.test([b.getAttribute('aria-label'),b.getAttribute('title'),b.textContent,b.getAttribute('href')].filter(Boolean).join(' ')));
+            return {row,open:openBtn||null,download,filename};
+          }
+        }
+      }
+    }catch{}
     return null;
   }
   function parseStyleFromText(text){
@@ -157,7 +183,7 @@
       if(!await sendWhenReady(readyComposer))throw Error('AI send button did not become available');
       await progress(job,'generating');
       const resource=await waitFor(findMdScoutResource,600000,900);
-      if(!resource)throw Error('Could not find a generated .mdscout.json file within 10 minutes');
+      if(!resource)throw Error('Could not find a generated .mdscout file within 10 minutes');
       await progress(job,'found');
       if(!await lock(job,'download'))throw Error('Download already started');
       await progress(job,'reading');
@@ -175,7 +201,7 @@
         throw Error('Could not read the generated file. Check Downloads, or download it from ChatGPT and drag it into Import Style.');
       }
       await progress(job,'downloading');
-      const saved=await message(job,'LDD_AI_DOWNLOAD_JSON',{data,filename:resource.filename.replace(/\.mdscout\.json$/i,'')});
+      const saved=await message(job,'LDD_AI_DOWNLOAD_JSON',{data,filename:resource.filename.replace(/\.mdscout(\.json)?$/i,'')});
       if(!saved?.ok)throw Error(saved?.error||'Could not download the generated Style File');
       if(job.importMode==='manual'){await finish(job,'manual-ready');return}
       if(!(await message(job,'LDD_AI_RESULT',{data}))?.ok)throw Error('Style downloaded, but Auto Import handoff failed');

@@ -1099,3 +1099,25 @@ html.ldd-theme-master-on body .ldd-credits-box button svg {fill:currentColor!imp
 #ldd-app-page .ldd-tool-card .ldd-enable-disable button{min-height:34px;font-size:11px;letter-spacing:.06em}
 #ldd-app-page .ldd-tool-card .ldd-tool-open{width:100%;min-height:34px;font-size:11px;font-weight:800;letter-spacing:.08em}
 #ldd-app-page .ldd-tool-card .ldd-wip-label{font-size:10px}
+/* v1.8.89 LDD Renamer */
+#ldd-app-page .ldd-renamer-page .ldd-control-card h2{margin:0 0 12px;font-size:16px;color:#fff}
+#ldd-app-page .ldd-rn-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+#ldd-app-page .ldd-rn-row:last-child{margin-bottom:0}
+#ldd-app-page .ldd-rn-hint{color:#8b8e98;font-size:12px}
+#ldd-app-page .ldd-rn-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+#ldd-app-page .ldd-rn-grid label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#aeb1ba;font-weight:600}
+#ldd-app-page .ldd-rn-grid input[type=text],#ldd-app-page .ldd-rn-grid input[type=number],#ldd-app-page .ldd-rn-grid select,#ldd-app-page .ldd-rn-row select,#ldd-app-page .ldd-rn-row input[type=text]{background:#0d0e12;border:1px solid #353741;border-radius:8px;color:#fff;padding:8px 10px;font-size:13px;min-width:0}
+#ldd-app-page .ldd-rn-grid input:focus,#ldd-app-page .ldd-rn-row input:focus,#ldd-app-page .ldd-rn-row select:focus{outline:none;border-color:var(--ldd-accent,#39ff14)}
+#ldd-app-page .ldd-rn-check{flex-direction:row!important;align-items:center;gap:8px!important;justify-content:flex-start;padding-top:18px}
+#ldd-app-page .ldd-rn-check input{width:16px;height:16px;accent-color:var(--ldd-accent,#39ff14)}
+#ldd-app-page .ldd-rn-tablewrap{max-height:320px;overflow:auto;border:1px solid #2a2c33;border-radius:10px;margin:10px 0}
+#ldd-app-page .ldd-rn-table{width:100%;border-collapse:collapse;font-size:13px}
+#ldd-app-page .ldd-rn-table th{position:sticky;top:0;background:#14151b;color:#8b8e98;text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;z-index:1}
+#ldd-app-page .ldd-rn-table td{padding:7px 10px;border-top:1px solid #22242b;color:#d6d8de;vertical-align:middle}
+#ldd-app-page .ldd-rn-table tr.ldd-rn-changed td:last-child{color:#7dff9a}
+#ldd-app-page .ldd-rn-diff{color:var(--ldd-accent,#39ff14);font-size:10px}
+#ldd-app-page .ldd-rn-empty{text-align:center;color:#8b8e98;padding:20px!important}
+#ldd-app-page .ldd-rn-table input[type=checkbox]{width:15px;height:15px;accent-color:var(--ldd-accent,#39ff14)}
+#ldd-app-page .ldd-rn-errors{margin-top:10px;max-height:140px;overflow:auto;background:#1a0d0d;border:1px solid #5b2323;border-radius:8px;padding:10px;font-size:12px;color:#ff9d9d}
+#ldd-app-page .ldd-rn-errors div{padding:3px 0;border-bottom:1px solid #3a1a1a}
+#ldd-app-page #ldd-rn-apply{min-height:40px;padding:0 22px;font-size:13px;font-weight:800}

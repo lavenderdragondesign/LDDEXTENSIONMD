@@ -49,10 +49,13 @@
     },90000);
     if(!ready)throw Error('Could not confirm both Claude attachments');
   }
+  let running=false;
   async function run(){
+    if(running)return;
     const job=(await chrome.storage.local.get('lddAiJob')).lddAiJob;
     if(!job||job.provider!=='claude'||job.status!=='opening')return;
     if(!(await call(job,'LDD_AI_CLAIM',{provider:'claude'}))?.ok)return;
+    running=true;
     try{
       await progress(job,'preparing');
       const edit=await wait(composer,30000);if(!edit)throw Error('Claude composer did not load; check sign-in or verification');
@@ -71,8 +74,6 @@
       if(!send)throw Error('Claude send button did not become available');
       if(!await lock(job,'send'))throw Error('Send already started');send.click();
       await progress(job,'generating');
-      // Claude is manual-only until its generated-file handoff is reliable.
-      // Leave the generated file in Claude for the user to download and import.
       if(job.importMode==='manual'){
         await call(job,'LDD_AI_FINISH',{status:'manual-ready'});
         return;
@@ -105,7 +106,7 @@
     }catch(e){
       const state=(await chrome.storage.local.get('lddAiJob')).lddAiJob;
       await call(job,'LDD_AI_FINISH',{status:['downloading','found','reading'].includes(state?.status)?'fallback':'failed',error:String(e?.message||e)});
-    }
+    }finally{running=false}
   }
   chrome.storage.onChanged.addListener((c,a)=>{if(a==='local'&&c.lddAiJob?.newValue?.status==='opening')setTimeout(run,300)});
   setTimeout(run,800);
