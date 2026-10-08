@@ -967,6 +967,8 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.125",items:["Resizer presets in compact 2-row grid","Compressor/Resizer now offer a cross-link popup when done"]},
+ {v:"1.8.124",items:["Image Resizer now stamps 300 DPI on resized files"]},
  {v:"1.8.123",items:["Fixed missing Image Resizer card + button on Tools page"]},
  {v:"1.8.122",items:["Fixed browse buttons showing U0001F4C2 text instead of folder emoji"]},
  {v:"1.8.121",items:["Image Compressor: removed blocked WASM engine, canvas-only now","Home tools card lists Image Resizer"]},
@@ -2304,11 +2306,26 @@ function lddBindImgCompPage(o){
     proc.disabled=false;proc.innerHTML='\u{1F5DC}\uFE0F Compress &amp; Download';
     const pct=totOrig?Math.round((1-totNew/totOrig)*100):0;
     globalThis.lddToast110(`Done: ${ok}/${files.length} · ${fmt(totOrig)} \u2192 ${fmt(totNew)} (${pct}% smaller)`);
+    lddImgToolCrosslink('Would you like to resize?', 'Go to Resizer', 'imgresize');
     render();
   };
   render();
 }
 
+function lddImgToolCrosslink(msg, btnText, tab){
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML=`<div style="background:#fff;color:#111;border-radius:14px;padding:28px 32px;max-width:360px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4);">
+    <h3 style="margin:0 0 12px;font-size:18px;">${msg}</h3>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+      <button type="button" id="ldd-xlink-go" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">${btnText}</button>
+      <button type="button" id="ldd-xlink-no" style="background:#e5e7eb;color:#111;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">Close</button>
+    </div></div>`;
+  document.body.appendChild(ov);
+  ov.querySelector('#ldd-xlink-no').onclick=()=>ov.remove();
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  ov.querySelector('#ldd-xlink-go').onclick=()=>{ov.remove();try{lddShowTab(tab);}catch(_){}};
+}
 function lddRenderImgResizePage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
   <div class="ldd-page-head"><div><h1>Image Resizer</h1><p>Resize PNG &amp; JPG to exact dimensions — entirely in your browser.</p></div></div>
@@ -2320,7 +2337,7 @@ function lddRenderImgResizePage(o){
       <label><input type="checkbox" id="ldd-ir-aspect" checked> Keep aspect</label>
       <button type="button" id="ldd-ir-clear" class="ldd-page-secondary">Clear</button>
     </div>
-    <div id="ldd-ir-presets" class="ldd-ip-opts-1875" style="margin-top:8px"></div>
+    <div id="ldd-ir-presets" style="margin-top:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px"></div>
   </div>
   <div class="ldd-control-card"><h2>Output</h2>
     <div class="ldd-ip-opts-1875">
@@ -2395,7 +2412,9 @@ function lddBindImgResizePage(o){
         const blob=await new Promise(r=>c.toBlob(r,kind==='jpg'?'image/jpeg':'image/png',kind==='jpg'?quality/100:undefined));
         const ext=kind==='jpg'?'.jpg':'.png';
         const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
-        outputs.push({name:base+'-'+W+'x'+H+ext,data:new Uint8Array(await blob.arrayBuffer()),type:blob.type});
+        let bytes=new Uint8Array(await blob.arrayBuffer());
+        bytes=kind==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
+        outputs.push({name:base+'-'+W+'x'+H+ext,data:bytes,type:blob.type});
         f.newW=W;f.newH=H;
       }catch(err){f.newW=0;}
       render();
@@ -2412,6 +2431,7 @@ function lddBindImgResizePage(o){
     }
     proc.disabled=false;proc.innerHTML='\u{1F5BC}\uFE0F Resize &amp; Download';
     globalThis.lddToast110('Done: '+outputs.length+'/'+files.length+' resized');
+    lddImgToolCrosslink('Would you like to compress?', 'Go to Compressor', 'imgcomp');
     render();
   };
   render();
