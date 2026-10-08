@@ -967,6 +967,16 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.111",items:["Drop zones now stop the file reaching MyDesigns/LDD drag-upload (dropped files no longer upload to Designs)"]},
+ {v:"1.8.110",items:["DPI Changer: fixed preset size cards not rendering (init-order bug)","DPI Changer: bigger text throughout","DPI Changer: DPI radio buttons (72 / 150 / 300) instead of hardcoded 300"]},
+ {v:"1.8.109",items:["New Image Compressor tool: shrink PNG & JPG with MozJPEG + oxipng, entirely in-browser"]},
+ {v:"1.8.108",items:["Changelog now current through this version (standing rule)"]},
+ {v:"1.8.107",items:["DPI Changer batch export: multi-select size cards, custom sizes, size in filename, ZIP for multiple outputs"]},
+ {v:"1.8.106",items:["DPI Changer \u2018Pad to size\u2019 + preset size buttons"]},
+ {v:"1.8.105",items:["DPI Changer: DPI-only fast path (no re-encode, file size preserved)","Mac tip: check DPI in Preview Inspector, not Finder Get Info"]},
+ {v:"1.8.104",items:["Font persistence guard: re-applies font if removed, SPA + 5s self-heal"]},
+ {v:"1.8.103",items:["Renamer auto-scans on open; bigger rule fields"]},
+ {v:"1.8.102",items:["Renamer: table beside carousel, custom-name field","Shared changelog for Home + update screen"]},
  {v:"1.8.101",items:["Renamer: table sits right of the carousel, custom-name field, single-item rename","Release zips now live in the LDD-Tools-latest folder"]},
  {v:"1.8.100",items:["Fixed false \u2018Update Available \u2014 v97\u2019 nag (version scheme normalization)"]},
  {v:"1.8.99",items:["Renamer rebuilt as a simple carousel with big preview","\u2018Drag and drop file\u2019 card filtered out of scans"]},
@@ -1108,6 +1118,7 @@ function lddRenderWorkflowPage(o){
   ${card('&#129302; Scout AI','Style library, Auto Fill, Create Style With AI.',enDis('scoutAIEnabled',o.scoutAIEnabled!==false)+openBtn('ldd-page-open-scout',o.scoutAIEnabled===false))}
   ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
+  ${card('&#128476;&#65039; Image Compressor','Shrink PNG &amp; JPG with MozJPEG + oxipng, in-browser.',openBtn('ldd-open-imgcomp',false))}
  </div>`;
 }
 
@@ -1374,6 +1385,7 @@ function lddPageBody(tab,o){
  if(tab==="theme")return lddRenderThemePage110(o);
  if(tab==="hotkeys")return lddRenderHotkeysPage110(o);
  if(tab==="imageprep")return lddRenderImagePrepPage(o);
+ if(tab==="imgcomp")return lddRenderImgCompPage(o);
  if(tab==="renamer")return lddRenderRenamerPage(o);
  if(tab==="scout")return lddRenderScoutPage(o);
  if(tab==="extras")return lddRenderExtraFeaturesPage(o);
@@ -1550,6 +1562,8 @@ function lddBindAppPage(tab,o){
  if(tab==="workflow"){
    const dpiOpen=lddAppRoot.querySelector("#ldd-open-dpi-changer");
    if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
+   const icOpen=lddAppRoot.querySelector("#ldd-open-imgcomp");
+   if(icOpen)icOpen.onclick=()=>lddShowTab("imgcomp");
    const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
    if(scoutOpen)scoutOpen.onclick=()=>{
      const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
@@ -1561,6 +1575,7 @@ function lddBindAppPage(tab,o){
    if(renOpen)renOpen.onclick=()=>lddShowTab("renamer");
  }
  if(tab==="imageprep"){lddBindImagePrepPage(o);}
+ if(tab==="imgcomp"){lddBindImgCompPage(o);}
  if(tab==="renamer"){lddBindRenamerPage(o);}
  if(tab==="design"){
    lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab(tab==="workflow"?"workflow":"design")}));
@@ -1871,7 +1886,7 @@ const LDD_IP_SIZES=[
 ];
 function lddRenderImagePrepPage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
-  <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Force <b>300 DPI</b> on PNG &amp; JPG, pad to print size, compress for listings. Files never leave your browser.</p></div><div class="ldd-control-card" style="margin-top:8px"><span style="font-size:12px">💡 <b>Mac tip:</b> Finder \u201cGet Info\u201d does not show DPI. Open the file in Preview \u2192 Tools \u2192 Show Inspector (\u2318I) and look for Resolution \u2014 it should read 300 pixels/inch. Matching format + no padding = pixels untouched, only DPI stamped.</span></div></div>
+  <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Stamp <b>your chosen DPI</b> on PNG &amp; JPG, pad to print size, batch-export. Files never leave your browser.</p></div><div class="ldd-control-card" style="margin-top:8px"><span style="font-size:12px">💡 <b>Mac tip:</b> Finder \u201cGet Info\u201d does not show DPI. Open the file in Preview \u2192 Tools \u2192 Show Inspector (\u2318I) and look for Resolution \u2014 it should match the DPI you picked above. Matching format + same size = pixels untouched, only DPI stamped.</span></div></div>
   <div class="ldd-control-card ldd-ip-drop-1875" id="ldd-ip-drop"><div class="ldd-ip-drop-hint">Drop images here or <button type="button" id="ldd-ip-browse">browse files</button></div><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
   <div class="ldd-control-card"><h2>Output sizes <span id="ldd-ip-sizecount" class="ldd-ip-sizebadge"></span></h2>
     <p style="font-size:12px;color:#9a9ab0;margin:0 0 10px">Preset and custom dimensions for batch export. Select one or more.</p>
@@ -1887,6 +1902,7 @@ function lddRenderImagePrepPage(o){
     <div class="ldd-ip-opts-1875">
       <label><input type="radio" name="ldd-ip-format" value="png" checked> PNG <small>(keeps transparency)</small></label>
       <label><input type="radio" name="ldd-ip-format" value="jpg"> JPG <small>(flattens onto white)</small></label>
+      <label>DPI <label style="display:inline"><input type="radio" name="ldd-ip-dpi" value="72"> 72</label> <label style="display:inline"><input type="radio" name="ldd-ip-dpi" value="150"> 150</label> <label style="display:inline"><input type="radio" name="ldd-ip-dpi" value="300" checked> 300</label></label>
       <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ip-quality" min="50" max="100" value="85"> <b id="ldd-ip-quality-v">85</b> <small>(JPG only)</small></label>
       <label>Fit mode <select id="ldd-ip-fit"><option value="contain">Contain (fit inside)</option><option value="cover">Cover (fill &amp; crop)</option></select></label>
     </div>
@@ -1903,6 +1919,7 @@ function lddBindImagePrepPage(o){
     qv=root.querySelector('#ldd-ip-quality-v');
   if(!drop||!proc)return;
   let files=[];
+  const esc0=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   let sizes=LDD_IP_SIZES.map(s=>({w:s.w,h:s.h,label:s.label,custom:false}));
   let selSizes=new Set([0]);
   q.oninput=()=>{qv.textContent=q.value;};
@@ -1911,7 +1928,7 @@ function lddBindImagePrepPage(o){
     sizeGrid.innerHTML=sizes.map((s,i)=>{
       const sel=selSizes.has(i);
       return '<button type="button" class="ldd-ip-size-1875'+(sel?' sel':'')+'" data-i="'+i+'">'+
-        '<b>'+s.w+' × '+s.h+'</b><small>'+esc(s.label||(s.custom?'Custom':''))+'</small>'+
+        '<b>'+s.w+' × '+s.h+'</b><small>'+esc0(s.label||(s.custom?'Custom':''))+'</small>'+
         (sel?'<i>✓</i>':'')+
         (s.custom?'<u data-del="'+i+'" title="Remove">×</u>':'')+'</button>';
     }).join('');
@@ -1937,27 +1954,27 @@ function lddBindImagePrepPage(o){
     renderSizes();
   };
   renderSizes();
-  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   const render=()=>{
     count.textContent=files.length?`(${files.length})`:'';
     list.innerHTML=files.length?files.map((f,i)=>{
       const badge=f.status?` <span class="ldd-ip-${f.status==='OK'?'ok':(f.status==='LOW-RES'?'warn':'err')}">${f.status}</span>`:'';
       const det=f.w?`${f.w}×${f.h}px · ${(f.w/300).toFixed(1)}"×${(f.h/300).toFixed(1)}" @300dpi${badge}`:'pending';
-      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><small>${det}${f.note?' · '+esc(f.note):''}</small><button type="button" data-i="${i}" title="Remove">×</button></div>`;
+      return `<div class="ldd-ip-row-1875"><span>${esc0(f.file.name)}</span><small>${det}${f.note?' · '+esc0(f.note):''}</small><button type="button" data-i="${i}" title="Remove">×</button></div>`;
     }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
     list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
   };
   const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f});}render();};
   root.querySelector('#ldd-ip-browse').onclick=()=>input.click();
   input.onchange=()=>{add([...input.files]);input.value='';};
-  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('drag');}));
-  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('drag');}));
-  drop.addEventListener('drop',e=>add([...e.dataTransfer.files]));
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('drag');}));
+  drop.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();add([...e.dataTransfer.files]);});
   proc.onclick=async()=>{
     if(!files.length){globalThis.lddToast110('Drop some images first');return;}
     const format=root.querySelector('input[name="ldd-ip-format"]:checked').value;
     const quality=+q.value;
     const fit=root.querySelector('#ldd-ip-fit').value||'contain';
+    const dpi=+((root.querySelector('input[name="ldd-ip-dpi"]:checked')||{}).value)||300;
     const targets=[...selSizes].map(i=>sizes[i]).filter(Boolean);
     if(!targets.length){globalThis.lddToast110('Select at least one output size',true);return;}
     proc.disabled=true;proc.textContent='Working…';
@@ -1981,7 +1998,7 @@ function lddBindImagePrepPage(o){
           // fast path: already exactly this size + same format = stamp DPI only
           if(sameFormat&&ow===W&&oh===H){
             bytes=new Uint8Array(await f.file.arrayBuffer());
-            bytes=format==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
+            bytes=format==='jpg'?lddJpegSetDpi1875(bytes,dpi):lddPngSetDpi1875(bytes,dpi);
           }else{
             const c=document.createElement('canvas');c.width=W;c.height=H;
             const ctx=c.getContext('2d');
@@ -1993,7 +2010,7 @@ function lddBindImagePrepPage(o){
             const blob=await new Promise(r=>c.toBlob(r,type,format==='jpg'?quality/100:undefined));
             if(!blob)throw new Error('encode failed');
             bytes=new Uint8Array(await blob.arrayBuffer());
-            bytes=format==='jpg'?lddJpegSetDpi1875(bytes,300):lddPngSetDpi1875(bytes,300);
+            bytes=format==='jpg'?lddJpegSetDpi1875(bytes,dpi):lddPngSetDpi1875(bytes,dpi);
           }
           outputs.push({name:`${base}-${W}x${H}${ext}`,data:bytes,type});
           made++;
@@ -2020,10 +2037,166 @@ function lddBindImagePrepPage(o){
       anchorDl(new Blob([zip],{type:'application/zip'}),'ldd-dpi-changer.zip');
     }
     proc.disabled=false;proc.textContent='⚡ Process & Download';
-    globalThis.lddToast110(`Done: ${ok} file${ok===1?'':'s'} → ${outputs.length} output${outputs.length===1?'':'s'} @300 DPI`);
+    globalThis.lddToast110(`Done: ${ok} file${ok===1?'':'s'} → ${outputs.length} output${outputs.length===1?'':'s'} @${dpi} DPI`);
     render();
   };
   render();
+function lddRenderImgCompPage(o){
+  return `<div class="ldd-page ldd-imageprep-page-1875">
+  <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG with real encoders (MozJPEG + oxipng) — entirely in your browser. <span id="ldd-ic-engine" class="ldd-ic-engine">checking engine…</span></p></div></div>
+  <div class="ldd-control-card ldd-ip-drop-1875" id="ldd-ic-drop"><div class="ldd-ip-drop-hint">Drop images here or <button type="button" id="ldd-ic-browse">browse files</button></div><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
+  <div class="ldd-control-card"><h2>Output</h2>
+    <div class="ldd-ip-opts-1875">
+      <label>Format <select id="ldd-ic-format"><option value="auto">Same as input</option><option value="jpg">JPG</option><option value="png">PNG</option></select></label>
+      <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ic-quality" min="50" max="100" value="80"> <b id="ldd-ic-quality-v">80</b> <small>(JPG only)</small></label>
+    </div>
+    <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ic-process" class="ldd-ip-go-1875">\u{1F5DC}\uFE0F Compress &amp; Download</button></div>
+  </div>
+  <div class="ldd-control-card"><h2>Files <span id="ldd-ic-count"></span></h2><div id="ldd-ic-list" class="ldd-ip-list-1875"><p class="ldd-ip-empty">No images yet.</p></div></div>
+  </div>`;
+}
+function lddBindImgCompPage(o){
+  const root=lddAppRoot;if(!root)return;
+  const drop=root.querySelector('#ldd-ic-drop'),input=root.querySelector('#ldd-ic-files'),
+    list=root.querySelector('#ldd-ic-list'),count=root.querySelector('#ldd-ic-count'),
+    proc=root.querySelector('#ldd-ic-process'),q=root.querySelector('#ldd-ic-quality'),
+    qv=root.querySelector('#ldd-ic-quality-v'),eng=root.querySelector('#ldd-ic-engine');
+  if(!drop||!proc)return;
+  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const fmt=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+  let files=[];
+  q.oninput=()=>{qv.textContent=q.value;};
+  // ---------- WASM engine ----------
+  let worker=null,reqId=0;const pending={};
+  const wasmCache={};
+  const wasmUrl=k=>'core/imgcomp/'+(k==='jpg'?'jpeg/codec/enc/mozjpeg_enc.wasm':'png/codec/pkg/squoosh_png_bg.wasm');
+  async function getWasm(kind){
+    if(wasmCache[kind]==='fail')return null;
+    if(!wasmCache[kind]){
+      try{
+        const r=await fetch(chrome.runtime.getURL(wasmUrl(kind)));
+        if(!r.ok)throw new Error('http '+r.status);
+        wasmCache[kind]=await r.arrayBuffer();
+      }catch(e){wasmCache[kind]='fail';return null;}
+    }
+    return wasmCache[kind];
+  }
+  function getWorker(){
+    if(!worker){
+      worker=new Worker(chrome.runtime.getURL('core/imgcomp/worker.js'),{type:'module'});
+      worker.onmessage=e=>{const d=e.data,p=pending[d.id];if(p){delete pending[d.id];p(d);}};
+      worker.onerror=()=>{Object.keys(pending).forEach(id=>{pending[id]({ok:false,error:'worker failed'});delete pending[id];});};
+    }
+    return worker;
+  }
+  function wasmEncode(kind,pixels,width,height,quality,wasmBuf,timeoutMs){
+    return new Promise(resolve=>{
+      const id=++reqId;
+      const to=setTimeout(()=>{if(pending[id]){delete pending[id];resolve({ok:false,error:'timeout'});}},timeoutMs||90000);
+      pending[id]=d=>{clearTimeout(to);resolve(d);};
+      try{
+        getWorker().postMessage({id,kind,wasm:wasmBuf.slice(0),pixels:pixels.buffer,width,height,quality},[pixels.buffer]);
+      }catch(e){clearTimeout(to);delete pending[id];resolve({ok:false,error:String(e)});}
+    });
+  }
+  // engine ping: real 1x1 encode through the full chain
+  (async()=>{
+    try{
+      const wb=await getWasm('jpg');
+      if(!wb)throw new Error('wasm fetch failed');
+      const r=await wasmEncode('jpg',new Uint8ClampedArray([200,50,50,255]),1,1,80,wb,15000);
+      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>10){
+        eng.textContent='\u26A1 WASM engine (MozJPEG + oxipng)';eng.className='ldd-ic-engine on';
+      }else throw new Error((r&&r.error)||'self-test failed');
+    }catch(e){eng.textContent='canvas fallback (WASM blocked)';eng.className='ldd-ic-engine off';}
+  })();
+  function canvasEncode(canvas,kind,quality){
+    return new Promise((res,rej)=>{
+      canvas.toBlob(b=>b?res(b):rej(new Error('canvas encode failed')),
+        kind==='jpg'?'image/jpeg':'image/png',kind==='jpg'?quality/100:undefined);
+    });
+  }
+  async function compressFile(f,format,quality){
+    const bmp=await createImageBitmap(f.file);
+    const W=bmp.width,H=bmp.height;
+    const c=document.createElement('canvas');c.width=W;c.height=H;
+    const ctx=c.getContext('2d');
+    const inIsPng=/\.png$/i.test(f.file.name||'')||(f.file.type||'').toLowerCase()==='image/png';
+    const kind=format==='auto'?(inIsPng?'png':'jpg'):format;
+    if(kind==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
+    ctx.drawImage(bmp,0,0);
+    if(bmp.close)bmp.close();
+    const px=new Uint8ClampedArray(ctx.getImageData(0,0,W,H).data);
+    const ext=kind==='jpg'?'.jpg':'.png';
+    const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
+    const wb=await getWasm(kind);
+    if(wb){
+      const r=await wasmEncode(kind,px,W,H,quality,wb);
+      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>0)
+        return {name:base+ext,data:new Uint8Array(r.bytes),type:kind==='jpg'?'image/jpeg':'image/png'};
+      f.note='WASM failed ('+((r&&r.error)||'?')+'), used canvas';
+    }
+    const blob=await canvasEncode(c,kind,quality);
+    return {name:base+ext,data:new Uint8Array(await blob.arrayBuffer()),
+      type:kind==='jpg'?'image/jpeg':'image/png',fallback:true};
+  }
+  // ---------- UI ----------
+  const render=()=>{
+    count.textContent=files.length?`(${files.length})`:'';
+    list.innerHTML=files.length?files.map((f,i)=>{
+      let det=fmt(f.file.size);
+      if(f.origSize&&f.newSize){
+        const pct=Math.round((1-f.newSize/f.origSize)*100);
+        det=`${fmt(f.origSize)} \u2192 ${fmt(f.newSize)} <b style="color:#7dff9b">${pct}% smaller</b>`;
+      }
+      const badge=f.status==='OK'?' <span class="ldd-ip-ok">OK</span>'
+        :f.status==='WORKING'?' <span class="ldd-ip-warn">…</span>'
+        :f.status==='ERROR'?' <span class="ldd-ip-err">ERROR</span>':'';
+      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><small>${det}${badge}${f.note?' · '+esc(f.note):''}</small><button type="button" data-i="${i}">\u00d7</button></div>`;
+    }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
+    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
+  };
+  const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f,status:''});}render();};
+  root.querySelector('#ldd-ic-browse').onclick=()=>input.click();
+  input.onchange=()=>{add([...input.files]);input.value='';};
+  ['dragover','dragenter'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.add('drag');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();drop.classList.remove('drag');}));
+  drop.addEventListener('drop',e=>{e.preventDefault();e.stopPropagation();add([...e.dataTransfer.files]);});
+  proc.onclick=async()=>{
+    if(!files.length){globalThis.lddToast110('Drop some images first');return;}
+    const format=root.querySelector('#ldd-ic-format').value;
+    const quality=+q.value;
+    proc.disabled=true;proc.textContent='Compressing…';
+    const outputs=[];let ok=0,totOrig=0,totNew=0;
+    for(const f of files){
+      try{
+        f.status='WORKING';f.note='';render();
+        const out=await compressFile(f,format,quality);
+        outputs.push(out);
+        f.origSize=f.file.size;f.newSize=out.data.length;
+        totOrig+=f.file.size;totNew+=out.data.length;
+        f.status='OK';ok++;
+      }catch(err){f.status='ERROR';f.note=String((err&&err.message)||err);}
+      render();
+    }
+    const anchorDl=(blob,name)=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');
+      a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+    };
+    if(outputs.length===1){
+      anchorDl(new Blob([outputs[0].data],{type:outputs[0].type}),outputs[0].name);
+    }else if(outputs.length>1){
+      anchorDl(new Blob([lddZipStore1875(outputs)],{type:'application/zip'}),'ldd-compressed.zip');
+    }
+    proc.disabled=false;proc.innerHTML='\u{1F5DC}\uFE0F Compress &amp; Download';
+    const pct=totOrig?Math.round((1-totNew/totOrig)*100):0;
+    globalThis.lddToast110(`Done: ${ok}/${files.length} · ${fmt(totOrig)} \u2192 ${fmt(totNew)} (${pct}% smaller)`);
+    render();
+  };
+  render();
+}
 }
 
 

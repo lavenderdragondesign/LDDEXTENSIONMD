@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LDD Tools",
-  "version": "1.8.107",
+  "version": "1.8.111",
   "description": "LDD Tools for MyDesigns \u2014 Power User workflow tools, native DnD upload, Scout AI, hotkeys, themes, fonts, performance controls, and optional utilities.",
   "permissions": [
     "downloads",
@@ -98,7 +98,8 @@
         "assets/icons/icon48.png",
         "scout/pong-worker.js",
         "scout/icons/icon48.png",
-        "assets/toast-dragon.png"
+        "assets/toast-dragon.png",
+        "core/imgcomp/*"
       ],
       "matches": [
         "https://mydesigns.io/*"
@@ -113,5 +114,8 @@
     "32": "assets/icons/icon32.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   }
 }
