@@ -967,6 +967,8 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.123",items:["Fixed missing Image Resizer card + button on Tools page"]},
+ {v:"1.8.122",items:["Fixed browse buttons showing U0001F4C2 text instead of folder emoji"]},
  {v:"1.8.121",items:["Image Compressor: removed blocked WASM engine, canvas-only now","Home tools card lists Image Resizer"]},
  {v:"1.8.120",items:["NEW: separate Image Resizer tool (exact dimensions, presets, keep aspect) alongside DPI Changer"]},
  {v:"1.8.119",items:["Image Compressor is now Image Resizer: resize to print size (presets + custom W/H, keep aspect) then compress"]},
@@ -1128,6 +1130,7 @@ function lddRenderWorkflowPage(o){
   ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
   ${card('&#128476;&#65039; Image Compressor','Shrink PNG &amp; JPG file sizes, in-browser.',openBtn('ldd-open-imgcomp',false))}
+  ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
  </div>`;
 }
 
@@ -1591,6 +1594,8 @@ function lddBindAppPage(tab,o){
    if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
    const icOpen=lddAppRoot.querySelector("#ldd-open-imgcomp");
    if(icOpen)icOpen.onclick=()=>{try{lddShowTab("imgcomp");}catch(err){globalThis.lddToast110("Compressor failed to open: "+String((err&&err.message)||err),true);}};
+   const irOpen=lddAppRoot.querySelector("#ldd-open-imgresize");
+   if(irOpen)irOpen.onclick=()=>{try{lddShowTab("imgresize");}catch(err){globalThis.lddToast110("Resizer failed to open: "+String((err&&err.message)||err),true);}};
    const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
    if(scoutOpen)scoutOpen.onclick=()=>{
      const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
@@ -1916,7 +1921,7 @@ const LDD_IP_SIZES=[
 function lddRenderImagePrepPage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
   <div class="ldd-page-head"><div><h1>DPI Changer</h1><p>Stamp <b>your chosen DPI</b> on PNG &amp; JPG, pad to print size, batch-export. Files never leave your browser.</p></div><div class="ldd-control-card" style="margin-top:8px"><span style="font-size:12px">💡 <b>Mac tip:</b> Finder \u201cGet Info\u201d does not show DPI. Open the file in Preview \u2192 Tools \u2192 Show Inspector (\u2318I) and look for Resolution \u2014 it should match the DPI you picked above. Matching format + same size = pixels untouched, only DPI stamped.</span></div></div>
-  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ip-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
+  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ip-browse" class="ldd-ip-go-1875" style="font-size:16px">📂 Browse files</button><input type="file" id="ldd-ip-files" accept="image/*" multiple hidden></div>
   <div class="ldd-control-card"><h2>Output sizes <span id="ldd-ip-sizecount" class="ldd-ip-sizebadge"></span></h2>
     <p style="font-size:12px;color:#9a9ab0;margin:0 0 10px">Preset and custom dimensions for batch export. Select one or more.</p>
     <div class="ldd-ip-sizes-1875" id="ldd-ip-sizes"></div>
@@ -2198,7 +2203,7 @@ function lddWireThemeControls(root,o){
 function lddRenderImgCompPage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
   <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG file sizes — entirely in your browser.</p></div></div>
-  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ic-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
+  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ic-browse" class="ldd-ip-go-1875" style="font-size:16px">📂 Browse files</button><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
   <div class="ldd-control-card"><h2>Output</h2>
     <div class="ldd-ip-opts-1875">
       <label>Format <select id="ldd-ic-format"><option value="auto">Same as input</option><option value="jpg">JPG</option><option value="png">PNG</option></select></label>
@@ -2307,7 +2312,7 @@ function lddBindImgCompPage(o){
 function lddRenderImgResizePage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
   <div class="ldd-page-head"><div><h1>Image Resizer</h1><p>Resize PNG &amp; JPG to exact dimensions — entirely in your browser.</p></div></div>
-  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ir-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ir-files" accept="image/png,image/jpeg" multiple hidden></div>
+  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ir-browse" class="ldd-ip-go-1875" style="font-size:16px">📂 Browse files</button><input type="file" id="ldd-ir-files" accept="image/png,image/jpeg" multiple hidden></div>
   <div class="ldd-control-card"><h2>Dimensions</h2>
     <div class="ldd-ip-opts-1875">
       <label>Width <input type="number" id="ldd-ir-w" min="1" max="12000" placeholder="px" style="width:90px"></label>
