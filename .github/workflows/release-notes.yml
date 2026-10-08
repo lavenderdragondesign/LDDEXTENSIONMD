@@ -1,0 +1,95 @@
+name: Auto tag + release notes
+
+# When you publish a release (upload the zip, any tag), this workflow:
+#  1. downloads the attached zip
+#  2. reads the real version from manifest.json
+#  3. renames the tag to vX.Y.Z and the title to "LDD Tools vX.Y.Z"
+#  4. fills the description from LDD_CHANGELOG inside the zip
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  normalize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Normalize tag and fill release notes from the uploaded zip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ github.event.release.id }}
+          REPO: ${{ github.repository }}
+        run: python3 - <<'EOF'
+          import json, os, re, tempfile, urllib.request, zipfile
+
+          repo = os.environ['REPO']
+          rid = os.environ['RELEASE_ID']
+          token = os.environ['GH_TOKEN']
+          api = f'https://api.github.com/repos/{repo}/releases/{rid}'
+          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+
+          def gh(url, data=None, method=None):
+              req = urllib.request.Request(
+                  url, data=data,
+                  headers={**headers, 'Content-Type': 'application/json'},
+                  method=method)
+              with urllib.request.urlopen(req) as r:
+                  return json.load(r)
+
+          rel = gh(api)
+          z = next((a for a in rel.get('assets', [])
+                    if a['name'].lower().endswith('.zip')), None)
+          if not z:
+              print('no zip asset on this release, nothing to do')
+              raise SystemExit(0)
+
+          tmp = tempfile.mkdtemp()
+          zp = os.path.join(tmp, 'ext.zip')
+          req = urllib.request.Request(
+              z['browser_download_url'],
+              headers={'Authorization': f'Bearer {token}',
+                       'Accept': 'application/octet-stream'})
+          with urllib.request.urlopen(req) as r, open(zp, 'wb') as f:
+              f.write(r.read())
+          with zipfile.ZipFile(zp) as zf:
+              zf.extractall(tmp)
+
+          man = json.load(open(os.path.join(tmp, 'manifest.json')))
+          ver = str(man['version']).strip()  # e.g. 1.8.109
+
+          js = open(os.path.join(tmp, 'core', 'content.js'),
+                    encoding='utf-8', errors='replace').read()
+          entries = []
+          m = re.search(r'const LDD_CHANGELOG=\[(.*?)\];', js, re.S)
+          if m:
+              for vm in re.finditer(r'\{v:"([^"]+)",items:\[(.*?)\]\}',
+                                    m.group(1), re.S):
+                  v, items_raw = vm.groups()
+                  items = re.findall(r'"((?:[^"\\]|\\.)*)"', items_raw)
+                  items = [re.sub(r'\\u([0-9a-fA-F]{4})',
+                                  lambda mm: chr(int(mm.group(1), 16)), i
+                                  ).replace('\\"', '"')
+                           for i in items]
+                  entries.append((v, items))
+
+          lines = ["## What's new", '']
+          for v, items in entries[:10]:
+              lines.append(f'**v{v}**')
+              lines += [f'- {it}' for it in items]
+              lines.append('')
+          body = '\n'.join(lines).strip()
+
+          patch = {'tag_name': f'v{ver}',
+                   'name': f'LDD Tools v{ver}',
+                   'body': body}
+          try:
+              gh(api, data=json.dumps(patch).encode(), method='PATCH')
+              print('release normalized to', patch['tag_name'])
+          except Exception as e:
+              print('tag rename failed, updating name/body only:', e)
+              del patch['tag_name']
+              gh(api, data=json.dumps(patch).encode(), method='PATCH')
+              print('name/body updated')
+          EOF
