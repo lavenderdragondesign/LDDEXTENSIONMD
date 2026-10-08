@@ -967,6 +967,9 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.121",items:["Image Compressor: removed blocked WASM engine, canvas-only now","Home tools card lists Image Resizer"]},
+ {v:"1.8.120",items:["NEW: separate Image Resizer tool (exact dimensions, presets, keep aspect) alongside DPI Changer"]},
+ {v:"1.8.119",items:["Image Compressor is now Image Resizer: resize to print size (presets + custom W/H, keep aspect) then compress"]},
  {v:"1.8.118",items:["Image Compressor: never outputs a bigger file (keeps original if already optimal)","Image Compressor: drag-and-drop removed, browse button only"]},
  {v:"1.8.117",items:["Image Compressor: engine status now logs the specific WASM failure to console"]},
  {v:"1.8.116",items:["Fixed Image Compressor not opening (functions were trapped inside DPI Changer code)"]},
@@ -1016,7 +1019,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Compressor, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Compressor, Image Resizer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1124,7 +1127,7 @@ function lddRenderWorkflowPage(o){
   ${card('&#129302; Scout AI','Style library, Auto Fill, Create Style With AI.',enDis('scoutAIEnabled',o.scoutAIEnabled!==false)+openBtn('ldd-page-open-scout',o.scoutAIEnabled===false))}
   ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
-  ${card('&#128476;&#65039; Image Compressor','Shrink PNG &amp; JPG with MozJPEG + oxipng, in-browser.',openBtn('ldd-open-imgcomp',false))}
+  ${card('&#128476;&#65039; Image Compressor','Shrink PNG &amp; JPG file sizes, in-browser.',openBtn('ldd-open-imgcomp',false))}
  </div>`;
 }
 
@@ -1392,6 +1395,7 @@ function lddPageBody(tab,o){
  if(tab==="hotkeys")return lddRenderHotkeysPage110(o);
  if(tab==="imageprep")return lddRenderImagePrepPage(o);
  if(tab==="imgcomp")return lddRenderImgCompPage(o);
+ if(tab==="imgresize")return lddRenderImgResizePage(o);
  if(tab==="renamer")return lddRenderRenamerPage(o);
  if(tab==="scout")return lddRenderScoutPage(o);
  if(tab==="extras")return lddRenderExtraFeaturesPage(o);
@@ -1599,6 +1603,7 @@ function lddBindAppPage(tab,o){
  }
  if(tab==="imageprep"){lddBindImagePrepPage(o);}
  if(tab==="imgcomp"){lddBindImgCompPage(o);}
+ if(tab==="imgresize"){lddBindImgResizePage(o);}
  if(tab==="renamer"){lddBindRenamerPage(o);}
  if(tab==="design"){
    lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab(tab==="workflow"?"workflow":"design")}));
@@ -2192,7 +2197,7 @@ function lddWireThemeControls(root,o){
 
 function lddRenderImgCompPage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
-  <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG with real encoders (MozJPEG + oxipng) — entirely in your browser. <span id="ldd-ic-engine" class="ldd-ic-engine">checking engine…</span></p></div></div>
+  <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG file sizes — entirely in your browser.</p></div></div>
   <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ic-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
   <div class="ldd-control-card"><h2>Output</h2>
     <div class="ldd-ip-opts-1875">
@@ -2209,56 +2214,12 @@ function lddBindImgCompPage(o){
   const input=root.querySelector('#ldd-ic-files'),
     list=root.querySelector('#ldd-ic-list'),count=root.querySelector('#ldd-ic-count'),
     proc=root.querySelector('#ldd-ic-process'),q=root.querySelector('#ldd-ic-quality'),
-    qv=root.querySelector('#ldd-ic-quality-v'),eng=root.querySelector('#ldd-ic-engine');
+    qv=root.querySelector('#ldd-ic-quality-v');
   if(!proc)return;
   const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
   const fmt=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
   let files=[];
   q.oninput=()=>{qv.textContent=q.value;};
-  // ---------- WASM engine ----------
-  let worker=null,reqId=0;const pending={};
-  const wasmCache={};
-  const wasmUrl=k=>'core/imgcomp/'+(k==='jpg'?'jpeg/codec/enc/mozjpeg_enc.wasm':'png/codec/pkg/squoosh_png_bg.wasm');
-  async function getWasm(kind){
-    if(wasmCache[kind]==='fail')return null;
-    if(!wasmCache[kind]){
-      try{
-        const r=await fetch(chrome.runtime.getURL(wasmUrl(kind)));
-        if(!r.ok)throw new Error('http '+r.status);
-        wasmCache[kind]=await r.arrayBuffer();
-      }catch(e){wasmCache[kind]='fail';return null;}
-    }
-    return wasmCache[kind];
-  }
-  function getWorker(){
-    if(!worker){
-      worker=new Worker(chrome.runtime.getURL('core/imgcomp/worker.js'),{type:'module'});
-      worker.onmessage=e=>{const d=e.data,p=pending[d.id];if(p){delete pending[d.id];p(d);}};
-      worker.onerror=()=>{Object.keys(pending).forEach(id=>{pending[id]({ok:false,error:'worker failed'});delete pending[id];});};
-    }
-    return worker;
-  }
-  function wasmEncode(kind,pixels,width,height,quality,wasmBuf,timeoutMs){
-    return new Promise(resolve=>{
-      const id=++reqId;
-      const to=setTimeout(()=>{if(pending[id]){delete pending[id];resolve({ok:false,error:'timeout'});}},timeoutMs||90000);
-      pending[id]=d=>{clearTimeout(to);resolve(d);};
-      try{
-        getWorker().postMessage({id,kind,wasm:wasmBuf.slice(0),pixels:pixels.buffer,width,height,quality},[pixels.buffer]);
-      }catch(e){clearTimeout(to);delete pending[id];resolve({ok:false,error:String(e)});}
-    });
-  }
-  // engine ping: real 1x1 encode through the full chain
-  (async()=>{
-    try{
-      const wb=await getWasm('jpg');
-      if(!wb)throw new Error('wasm fetch failed');
-      const r=await wasmEncode('jpg',new Uint8ClampedArray([200,50,50,255]),1,1,80,wb,15000);
-      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>10){
-        eng.textContent='\u26A1 WASM engine (MozJPEG + oxipng)';eng.className='ldd-ic-engine on';
-      }else throw new Error((r&&r.error)||'self-test failed');
-    }catch(e){eng.textContent='canvas fallback (WASM blocked)';eng.className='ldd-ic-engine off';eng.title=String((e&&e.message)||e);try{console.warn('[LDD imgcomp] WASM engine failed:',(e&&e.message)||e);}catch(_){}}
-  })();
   function canvasEncode(canvas,kind,quality){
     return new Promise((res,rej)=>{
       canvas.toBlob(b=>b?res(b):rej(new Error('canvas encode failed')),
@@ -2278,20 +2239,6 @@ function lddBindImgCompPage(o){
     const px=new Uint8ClampedArray(ctx.getImageData(0,0,W,H).data);
     const ext=kind==='jpg'?'.jpg':'.png';
     const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
-    const wb=await getWasm(kind);
-    if(wb){
-      const r=await wasmEncode(kind,px,W,H,quality,wb);
-      if(r&&r.ok&&r.bytes&&r.bytes.byteLength>0){
-        const wdata=new Uint8Array(r.bytes);
-        if(wdata.length>=f.file.size){
-          const orig=new Uint8Array(await f.file.arrayBuffer());
-          f.note='already optimal — kept original';
-          return {name:f.file.name,data:orig,type:f.file.type||(kind==='jpg'?'image/jpeg':'image/png'),kept:true};
-        }
-        return {name:base+ext,data:wdata,type:kind==='jpg'?'image/jpeg':'image/png'};
-      }
-      f.note='WASM failed ('+((r&&r.error)||'?')+'), used canvas';
-    }
     const blob=await canvasEncode(c,kind,quality);
     const cdata=new Uint8Array(await blob.arrayBuffer());
     if(cdata.length>=f.file.size){
@@ -2352,6 +2299,114 @@ function lddBindImgCompPage(o){
     proc.disabled=false;proc.innerHTML='\u{1F5DC}\uFE0F Compress &amp; Download';
     const pct=totOrig?Math.round((1-totNew/totOrig)*100):0;
     globalThis.lddToast110(`Done: ${ok}/${files.length} · ${fmt(totOrig)} \u2192 ${fmt(totNew)} (${pct}% smaller)`);
+    render();
+  };
+  render();
+}
+
+function lddRenderImgResizePage(o){
+  return `<div class="ldd-page ldd-imageprep-page-1875">
+  <div class="ldd-page-head"><div><h1>Image Resizer</h1><p>Resize PNG &amp; JPG to exact dimensions — entirely in your browser.</p></div></div>
+  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ir-browse" class="ldd-ip-go-1875" style="font-size:16px">\U0001F4C2 Browse files</button><input type="file" id="ldd-ir-files" accept="image/png,image/jpeg" multiple hidden></div>
+  <div class="ldd-control-card"><h2>Dimensions</h2>
+    <div class="ldd-ip-opts-1875">
+      <label>Width <input type="number" id="ldd-ir-w" min="1" max="12000" placeholder="px" style="width:90px"></label>
+      <label>Height <input type="number" id="ldd-ir-h" min="1" max="12000" placeholder="px" style="width:90px"></label>
+      <label><input type="checkbox" id="ldd-ir-aspect" checked> Keep aspect</label>
+      <button type="button" id="ldd-ir-clear" class="ldd-page-secondary">Clear</button>
+    </div>
+    <div id="ldd-ir-presets" class="ldd-ip-opts-1875" style="margin-top:8px"></div>
+  </div>
+  <div class="ldd-control-card"><h2>Output</h2>
+    <div class="ldd-ip-opts-1875">
+      <label>Format <select id="ldd-ir-format"><option value="auto">Same as input</option><option value="jpg">JPG</option><option value="png">PNG</option></select></label>
+      <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ir-quality" min="50" max="100" value="92"> <b id="ldd-ir-quality-v">92</b> <small>(JPG only)</small></label>
+    </div>
+    <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ir-process" class="ldd-ip-go-1875">\u{1F5BC}\uFE0F Resize &amp; Download</button></div>
+  </div>
+  <div class="ldd-control-card"><h2>Files <span id="ldd-ir-count"></span></h2><div id="ldd-ir-list" class="ldd-ip-list-1875"><p class="ldd-ip-empty">No images yet.</p></div></div>
+  </div>`;
+}
+function lddBindImgResizePage(o){
+  const root=lddAppRoot.querySelector('.ldd-app-body');
+  if(!root)return;
+  const input=root.querySelector('#ldd-ir-files'),
+    list=root.querySelector('#ldd-ir-list'),count=root.querySelector('#ldd-ir-count'),
+    proc=root.querySelector('#ldd-ir-process'),q=root.querySelector('#ldd-ir-quality'),
+    qv=root.querySelector('#ldd-ir-quality-v');
+  if(!proc)return;
+  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const fmt=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
+  let files=[];
+  q.oninput=()=>{qv.textContent=q.value;};
+  const rzW=root.querySelector('#ldd-ir-w'),rzH=root.querySelector('#ldd-ir-h'),
+    rzA=root.querySelector('#ldd-ir-aspect'),rzP=root.querySelector('#ldd-ir-presets');
+  rzP.innerHTML=LDD_IP_SIZES.map((s,i)=>`<button type="button" data-rzp="${i}" class="ldd-page-secondary" style="font-size:12px">${s.label}<br><small>${s.w}x${s.h}</small></button>`).join('');
+  rzP.querySelectorAll('[data-rzp]').forEach(b=>b.onclick=()=>{const s=LDD_IP_SIZES[+b.dataset.rzp];rzW.value=s.w;rzH.value=s.h;});
+  root.querySelector('#ldd-ir-clear').onclick=()=>{rzW.value='';rzH.value='';};
+  const syncAspect=which=>{
+    if(!rzA.checked||!files.length)return;
+    const img=new Image();
+    img.onload=()=>{const r=img.naturalWidth/img.naturalHeight;
+      if(which==='w'&&rzW.value)rzH.value=Math.round(rzW.value/r);
+      if(which==='h'&&rzH.value)rzW.value=Math.round(rzH.value*r);};
+    img.src=URL.createObjectURL(files[0].file);
+  };
+  rzW.onchange=()=>syncAspect('w');rzH.onchange=()=>syncAspect('h');
+  const render=()=>{
+    count.textContent=files.length?`(${files.length})`:'';
+    list.innerHTML=files.length?files.map((f,i)=>{
+      let det=fmt(f.file.size);
+      if(f.newW&&f.newH)det+=` \u2192 ${f.newW}x${f.newH}`;
+      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><span>${det}</span><button type="button" data-i="${i}" class="ldd-page-secondary">x</button></div>`;
+    }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
+    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
+  };
+  const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f});}render();};
+  root.querySelector('#ldd-ir-browse').onclick=()=>input.click();
+  input.onchange=()=>{add([...input.files]);input.value='';};
+  proc.onclick=async()=>{
+    if(!files.length){globalThis.lddToast110('Add some images first');return;}
+    const tW=parseInt((rzW.value||'').trim(),10),tH=parseInt((rzH.value||'').trim(),10);
+    if(!(tW>0)&&!(tH>0)){globalThis.lddToast110('Set a width or height first');return;}
+    const format=root.querySelector('#ldd-ir-format').value;
+    const quality=+q.value;
+    proc.disabled=true;proc.textContent='Resizing\u2026';
+    const outputs=[];
+    for(const f of files){
+      try{
+        const bmp=await createImageBitmap(f.file);
+        let W=bmp.width,H=bmp.height;
+        if(tW>0&&tH>0){W=tW;H=tH;}
+        else if(tW>0){W=tW;H=Math.round(tW*bmp.height/bmp.width);}
+        else{H=tH;W=Math.round(tH*bmp.width/bmp.height);}
+        const inIsPng=/\.png$/i.test(f.file.name||'')||(f.file.type||'').toLowerCase()==='image/png';
+        const kind=format==='auto'?(inIsPng?'png':'jpg'):format;
+        const c=document.createElement('canvas');c.width=W;c.height=H;
+        const ctx=c.getContext('2d');
+        if(kind==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
+        ctx.drawImage(bmp,0,0,W,H);
+        if(bmp.close)bmp.close();
+        const blob=await new Promise(r=>c.toBlob(r,kind==='jpg'?'image/jpeg':'image/png',kind==='jpg'?quality/100:undefined));
+        const ext=kind==='jpg'?'.jpg':'.png';
+        const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
+        outputs.push({name:base+'-'+W+'x'+H+ext,data:new Uint8Array(await blob.arrayBuffer()),type:blob.type});
+        f.newW=W;f.newH=H;
+      }catch(err){f.newW=0;}
+      render();
+    }
+    const anchorDl=(blob,name)=>{
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),60000);
+    };
+    if(outputs.length===1){
+      anchorDl(new Blob([outputs[0].data],{type:outputs[0].type}),outputs[0].name);
+    }else if(outputs.length>1){
+      anchorDl(new Blob([lddZipStore1875(outputs)],{type:'application/zip'}),'ldd-resized.zip');
+    }
+    proc.disabled=false;proc.innerHTML='\u{1F5BC}\uFE0F Resize &amp; Download';
+    globalThis.lddToast110('Done: '+outputs.length+'/'+files.length+' resized');
     render();
   };
   render();
