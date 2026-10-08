@@ -967,6 +967,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.126",items:["Removed Image Compressor tool per Pete"]},
  {v:"1.8.125",items:["Resizer presets in compact 2-row grid","Compressor/Resizer now offer a cross-link popup when done"]},
  {v:"1.8.124",items:["Image Resizer now stamps 300 DPI on resized files"]},
  {v:"1.8.123",items:["Fixed missing Image Resizer card + button on Tools page"]},
@@ -1023,7 +1024,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Compressor, Image Resizer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1131,7 +1132,6 @@ function lddRenderWorkflowPage(o){
   ${card('&#129302; Scout AI','Style library, Auto Fill, Create Style With AI.',enDis('scoutAIEnabled',o.scoutAIEnabled!==false)+openBtn('ldd-page-open-scout',o.scoutAIEnabled===false))}
   ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
-  ${card('&#128476;&#65039; Image Compressor','Shrink PNG &amp; JPG file sizes, in-browser.',openBtn('ldd-open-imgcomp',false))}
   ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
  </div>`;
 }
@@ -1399,7 +1399,6 @@ function lddPageBody(tab,o){
  if(tab==="theme")return lddRenderThemePage110(o);
  if(tab==="hotkeys")return lddRenderHotkeysPage110(o);
  if(tab==="imageprep")return lddRenderImagePrepPage(o);
- if(tab==="imgcomp")return lddRenderImgCompPage(o);
  if(tab==="imgresize")return lddRenderImgResizePage(o);
  if(tab==="renamer")return lddRenderRenamerPage(o);
  if(tab==="scout")return lddRenderScoutPage(o);
@@ -1594,8 +1593,6 @@ function lddBindAppPage(tab,o){
  if(tab==="workflow"){
    const dpiOpen=lddAppRoot.querySelector("#ldd-open-dpi-changer");
    if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
-   const icOpen=lddAppRoot.querySelector("#ldd-open-imgcomp");
-   if(icOpen)icOpen.onclick=()=>{try{lddShowTab("imgcomp");}catch(err){globalThis.lddToast110("Compressor failed to open: "+String((err&&err.message)||err),true);}};
    const irOpen=lddAppRoot.querySelector("#ldd-open-imgresize");
    if(irOpen)irOpen.onclick=()=>{try{lddShowTab("imgresize");}catch(err){globalThis.lddToast110("Resizer failed to open: "+String((err&&err.message)||err),true);}};
    const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
@@ -1609,7 +1606,6 @@ function lddBindAppPage(tab,o){
    if(renOpen)renOpen.onclick=()=>lddShowTab("renamer");
  }
  if(tab==="imageprep"){lddBindImagePrepPage(o);}
- if(tab==="imgcomp"){lddBindImgCompPage(o);}
  if(tab==="imgresize"){lddBindImgResizePage(o);}
  if(tab==="renamer"){lddBindRenamerPage(o);}
  if(tab==="design"){
@@ -2202,130 +2198,10 @@ function lddWireThemeControls(root,o){
   bind("ldd-page-themeGlow","themeGlow",()=>lddSafeGet(LDD_DEFAULTS,n=>lddApplyTheme(n)));
 }
 
-function lddRenderImgCompPage(o){
-  return `<div class="ldd-page ldd-imageprep-page-1875">
-  <div class="ldd-page-head"><div><h1>Image Compressor</h1><p>Shrink PNG &amp; JPG file sizes — entirely in your browser.</p></div></div>
-  <div class="ldd-control-card" style="text-align:center;padding:22px"><button type="button" id="ldd-ic-browse" class="ldd-ip-go-1875" style="font-size:16px">📂 Browse files</button><input type="file" id="ldd-ic-files" accept="image/png,image/jpeg" multiple hidden></div>
-  <div class="ldd-control-card"><h2>Output</h2>
-    <div class="ldd-ip-opts-1875">
-      <label>Format <select id="ldd-ic-format"><option value="auto">Same as input</option><option value="jpg">JPG</option><option value="png">PNG</option></select></label>
-      <label class="ldd-ip-qrow-1875">Quality <input type="range" id="ldd-ic-quality" min="50" max="100" value="80"> <b id="ldd-ic-quality-v">80</b> <small>(JPG only)</small></label>
-    </div>
-    <div class="ldd-ip-actions-1875"><button type="button" id="ldd-ic-process" class="ldd-ip-go-1875">\u{1F5DC}\uFE0F Compress &amp; Download</button></div>
-  </div>
-  <div class="ldd-control-card"><h2>Files <span id="ldd-ic-count"></span></h2><div id="ldd-ic-list" class="ldd-ip-list-1875"><p class="ldd-ip-empty">No images yet.</p></div></div>
-  </div>`;
-}
-function lddBindImgCompPage(o){
-  const root=lddAppRoot;if(!root)return;
-  const input=root.querySelector('#ldd-ic-files'),
-    list=root.querySelector('#ldd-ic-list'),count=root.querySelector('#ldd-ic-count'),
-    proc=root.querySelector('#ldd-ic-process'),q=root.querySelector('#ldd-ic-quality'),
-    qv=root.querySelector('#ldd-ic-quality-v');
-  if(!proc)return;
-  const esc=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
-  const fmt=n=>n>=1048576?(n/1048576).toFixed(1)+'MB':Math.max(1,Math.round(n/1024))+'KB';
-  let files=[];
-  q.oninput=()=>{qv.textContent=q.value;};
-  function canvasEncode(canvas,kind,quality){
-    return new Promise((res,rej)=>{
-      canvas.toBlob(b=>b?res(b):rej(new Error('canvas encode failed')),
-        kind==='jpg'?'image/jpeg':'image/png',kind==='jpg'?quality/100:undefined);
-    });
-  }
-  async function compressFile(f,format,quality){
-    const bmp=await createImageBitmap(f.file);
-    const W=bmp.width,H=bmp.height;
-    const c=document.createElement('canvas');c.width=W;c.height=H;
-    const ctx=c.getContext('2d');
-    const inIsPng=/\.png$/i.test(f.file.name||'')||(f.file.type||'').toLowerCase()==='image/png';
-    const kind=format==='auto'?(inIsPng?'png':'jpg'):format;
-    if(kind==='jpg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);}
-    ctx.drawImage(bmp,0,0);
-    if(bmp.close)bmp.close();
-    const px=new Uint8ClampedArray(ctx.getImageData(0,0,W,H).data);
-    const ext=kind==='jpg'?'.jpg':'.png';
-    const base=(f.file.name||'image').replace(/\.[^.]+$/,'');
-    const blob=await canvasEncode(c,kind,quality);
-    const cdata=new Uint8Array(await blob.arrayBuffer());
-    if(cdata.length>=f.file.size){
-      const orig=new Uint8Array(await f.file.arrayBuffer());
-      f.note='already optimal — kept original';
-      return {name:f.file.name,data:orig,type:f.file.type||(kind==='jpg'?'image/jpeg':'image/png'),kept:true};
-    }
-    return {name:base+ext,data:cdata,
-      type:kind==='jpg'?'image/jpeg':'image/png',fallback:true};
-  }
-  // ---------- UI ----------
-  const render=()=>{
-    count.textContent=files.length?`(${files.length})`:'';
-    list.innerHTML=files.length?files.map((f,i)=>{
-      let det=fmt(f.file.size);
-      if(f.origSize&&f.newSize){
-        const pct=Math.round((1-f.newSize/f.origSize)*100);
-        det=`${fmt(f.origSize)} \u2192 ${fmt(f.newSize)} <b style="color:#7dff9b">${pct}% smaller</b>`;
-      }
-      const badge=f.status==='OK'?' <span class="ldd-ip-ok">OK</span>'
-        :f.status==='WORKING'?' <span class="ldd-ip-warn">…</span>'
-        :f.status==='ERROR'?' <span class="ldd-ip-err">ERROR</span>':'';
-      return `<div class="ldd-ip-row-1875"><span>${esc(f.file.name)}</span><small>${det}${badge}${f.note?' · '+esc(f.note):''}</small><button type="button" data-i="${i}">\u00d7</button></div>`;
-    }).join(''):'<p class="ldd-ip-empty">No images yet.</p>';
-    list.querySelectorAll('button[data-i]').forEach(b=>b.onclick=()=>{files.splice(+b.dataset.i,1);render();});
-  };
-  const add=fl=>{for(const f of fl){if(f.type.startsWith('image/')&&!files.some(x=>x.file===f))files.push({file:f,status:''});}render();};
-  root.querySelector('#ldd-ic-browse').onclick=()=>input.click();
-  input.onchange=()=>{add([...input.files]);input.value='';};
-  proc.onclick=async()=>{
-    if(!files.length){globalThis.lddToast110('Drop some images first');return;}
-    const format=root.querySelector('#ldd-ic-format').value;
-    const quality=+q.value;
-    proc.disabled=true;proc.textContent='Compressing…';
-    const outputs=[];let ok=0,totOrig=0,totNew=0;
-    for(const f of files){
-      try{
-        f.status='WORKING';f.note='';render();
-        const out=await compressFile(f,format,quality);
-        outputs.push(out);
-        f.origSize=f.file.size;f.newSize=out.data.length;
-        totOrig+=f.file.size;totNew+=out.data.length;
-        f.status='OK';ok++;
-      }catch(err){f.status='ERROR';f.note=String((err&&err.message)||err);}
-      render();
-    }
-    const anchorDl=(blob,name)=>{
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(url),60000);
-    };
-    if(outputs.length===1){
-      anchorDl(new Blob([outputs[0].data],{type:outputs[0].type}),outputs[0].name);
-    }else if(outputs.length>1){
-      anchorDl(new Blob([lddZipStore1875(outputs)],{type:'application/zip'}),'ldd-compressed.zip');
-    }
-    proc.disabled=false;proc.innerHTML='\u{1F5DC}\uFE0F Compress &amp; Download';
-    const pct=totOrig?Math.round((1-totNew/totOrig)*100):0;
-    globalThis.lddToast110(`Done: ${ok}/${files.length} · ${fmt(totOrig)} \u2192 ${fmt(totNew)} (${pct}% smaller)`);
-    lddImgToolCrosslink('Would you like to resize?', 'Go to Resizer', 'imgresize');
-    render();
-  };
-  render();
-}
 
-function lddImgToolCrosslink(msg, btnText, tab){
-  const ov=document.createElement('div');
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
-  ov.innerHTML=`<div style="background:#fff;color:#111;border-radius:14px;padding:28px 32px;max-width:360px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.4);">
-    <h3 style="margin:0 0 12px;font-size:18px;">${msg}</h3>
-    <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
-      <button type="button" id="ldd-xlink-go" style="background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">${btnText}</button>
-      <button type="button" id="ldd-xlink-no" style="background:#e5e7eb;color:#111;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;">Close</button>
-    </div></div>`;
-  document.body.appendChild(ov);
-  ov.querySelector('#ldd-xlink-no').onclick=()=>ov.remove();
-  ov.onclick=e=>{if(e.target===ov)ov.remove();};
-  ov.querySelector('#ldd-xlink-go').onclick=()=>{ov.remove();try{lddShowTab(tab);}catch(_){}};
-}
+
+
+
 function lddRenderImgResizePage(o){
   return `<div class="ldd-page ldd-imageprep-page-1875">
   <div class="ldd-page-head"><div><h1>Image Resizer</h1><p>Resize PNG &amp; JPG to exact dimensions — entirely in your browser.</p></div></div>
@@ -2431,7 +2307,6 @@ function lddBindImgResizePage(o){
     }
     proc.disabled=false;proc.innerHTML='\u{1F5BC}\uFE0F Resize &amp; Download';
     globalThis.lddToast110('Done: '+outputs.length+'/'+files.length+' resized');
-    lddImgToolCrosslink('Would you like to compress?', 'Go to Compressor', 'imgcomp');
     render();
   };
   render();
