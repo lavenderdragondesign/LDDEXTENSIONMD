@@ -13,6 +13,7 @@ globalThis.lddToast110 = function(msg,force=false,type="info"){
    const icon=type==="error"?"!":type==="success"?"✓":"◆";
    const dragon=document.createElement("img");
    dragon.className="ldd-toast-dragon"; dragon.alt="LDD";
+   dragon.onerror=()=>{dragon.hidden=true};
    try{dragon.src=chrome.runtime.getURL("assets/toast-dragon.png")}catch(_){dragon.hidden=true}
    const body=document.createElement("span");body.className="ldd-toast-body";
    const badge=document.createElement("span");badge.className="ldd-toast-icon";badge.textContent=icon;
@@ -967,6 +968,13 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.135",items:["Toast: dragon logo hides instead of showing broken image if it fails to load","Toggle toasts now show the setting name instead of the internal key"]},
+ {v:"1.8.134",items:["Fixed doubled tooltips on the Performance page (removed the old tooltip system)"]},
+ {v:"1.8.133",items:["Fixed performance-page tooltip overflowing past the right edge"]},
+ {v:"1.8.132",items:["Removed Pinterest Poster"]},
+ {v:"1.8.131",items:["Image Resizer: preset size button text enlarged to h2 size"]},
+ {v:"1.8.130",items:["About page: added Data Security & API Keys liability card"]},
+ {v:"1.8.127",items:["Finished removing Image Compressor: deleted leftover engine files and manifest entry"]},
  {v:"1.8.126",items:["Removed Image Compressor tool per Pete"]},
  {v:"1.8.125",items:["Resizer presets in compact 2-row grid","Compressor/Resizer now offer a cross-link popup when done"]},
  {v:"1.8.124",items:["Image Resizer now stamps 300 DPI on resized files"]},
@@ -1388,6 +1396,7 @@ function lddRenderAboutPage(){
   <div class="ldd-control-card"><h2>Use at Your Own Risk</h2><span>LDD Tools changes, enhances, and automates parts of the MyDesigns interface. Save important work before running automation, bulk actions, or aggressive performance features, and review important actions before publishing or making permanent changes.</span></div>
   <div class="ldd-control-card"><h2>Safety, Performance Modes &amp; TinyMD</h2><span>LDD Tools improves your local MyDesigns workflow and interface experience. <b>Your designs, products, listings, uploads, stores, and MyDesigns account data remain yours and are not deleted by LDD Tools.</b></span><span>Safe, Medium, Extreme, Power User, and TinyMD adjust LDD/local interface performance behavior. More aggressive modes may reduce animations, previews, effects, background activity, or other nonessential interface behavior while enabled.</span></div>
   <div class="ldd-control-card"><h2>Disclaimer &amp; Liability</h2><span>LDD Tools is provided as-is without guarantees of compatibility, availability, or uninterrupted operation. Because both LDD Tools and MyDesigns can change, unexpected bugs or interrupted workflows are possible. Lavender Dragon Design and Andrea are not liable for lost work, interrupted workflows, data loss, account issues, site changes, or other damages arising from use of the extension. You remain responsible for reviewing actions before publishing or making permanent changes.</span></div>
+  <div class="ldd-control-card"><h2>Data Security &amp; Your API Keys</h2><span>Some LDD Tools features may ask for your own API keys, client secrets, or OAuth tokens. These are <b>stored only in your browser's local extension storage</b> — they are never sent to Lavender Dragon Design or any third party, and are only transmitted directly to the service's own API (e.g. that service\u2019s own API) when you use the feature.</span><span><b>You are solely responsible for your API keys and accounts.</b> That includes keeping your keys and secrets private, staying within each service's terms and rate limits, and any actions, posts, charges, or consequences resulting from use of your keys — whether triggered by you or by LDD Tools acting on your instructions. If a key may be compromised, revoke and regenerate it in that service's developer dashboard immediately.</span><span>LDD Tools does not collect, track, or sell your personal data. Analytics, if any, stay local to your browser.</span></div>
   <div class="ldd-control-card"><h2>Independent Tool</h2><span>LDD Tools is an independent utility created for MyDesigns users. It is not affiliated with, endorsed by, or sponsored by MyDesigns.</span></div>
   <div class="ldd-control-card ldd-support-card"><h2>Support, Bugs &amp; More Tools</h2><b>Made with ❤️ by Andrea</b><span>If you find a bug, something stops working after a MyDesigns update, or you have an idea for LDD Tools, please report it instead of assuming your account is broken.</span><span><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">Etsy Shop</a> · <a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a> · <a href="https://lddtools.lol" target="_blank" rel="noopener noreferrer">More Tools — LDDTools.lol</a></span></div>
  </div>`;
@@ -1697,7 +1706,7 @@ function lddBindAppPage(tab,o){
    el.onchange=()=>{
      const key=el.dataset.setting, value=el.checked;
      lddStorageSet(key,value);
-     const nice=(el.closest("label")?.querySelector("b")?.textContent||el.closest(".ldd-control-card")?.querySelector("b")?.textContent||key).trim();
+     const nice=(el.closest("label")?.querySelector("b")?.textContent||el.closest(".ldd-setting-card")?.querySelector("b")?.textContent||el.closest(".ldd-control-card")?.querySelector("b")?.textContent||key).trim();
      globalThis.lddToast110(`${nice} ${value?"Enabled":"Disabled"}`);
      if(key==="themeGlow")document.dispatchEvent(new CustomEvent("ldd-neon-command",{detail:{action:"glow",value}}));
      if(key==="themeTweaker"||key==="themeEnabled")setTimeout(()=>lddSafeGet(LDD_DEFAULTS,lddApplyTheme),0);
@@ -1772,7 +1781,6 @@ function lddBindAppPage(tab,o){
     if((name==="extreme"||name==="power")&&!confirm(`${name==="power"?"Power User":"Extreme"} uses aggressive performance settings. Apply it?`))return;
     lddSafeSet({...presets[name],perfSelectedMode:name},()=>lddShowTab("performance"));
    });
-   lddWirePerfTips();
  }
  const sbw=lddAppRoot.querySelector("#ldd-scrollbar-width");
  if(sbw){ sbw.oninput=()=>{ const v=Number(sbw.value); lddAppRoot.querySelector("#ldd-scrollbar-width-label").textContent=v+"px"; lddSafeSet({scrollbarWidth:v},()=>lddSafeGet(LDD_DEFAULTS,lddApplyUIEnhancements)); }; }
@@ -2311,6 +2319,7 @@ function lddBindImgResizePage(o){
   };
   render();
 }
+
 
 function lddShowTab(tab="dashboard"){
  lddSafeGet(LDD_DEFAULTS,_mode=>{
@@ -3213,16 +3222,6 @@ function lddCleanFontPageLeaks(){
  });
 }
 
-function lddWirePerfTips(){
- document.querySelectorAll("#ldd-app-page .ldd-perf-help").forEach(el=>{
-  el.onmouseenter=()=>{
-   let t=document.getElementById("ldd-perf-tip");if(!t){t=document.createElement("div");t.id="ldd-perf-tip";document.body.appendChild(t)}
-   t.textContent=el.dataset.tip||"";t.hidden=false;
-   const r=el.getBoundingClientRect();t.style.left=Math.max(8,Math.min(innerWidth-338,r.left+r.width/2-160))+"px";t.style.top=(r.top-8)+"px";t.style.transform="translateY(-100%)";
-  };
-  el.onmouseleave=()=>{const t=document.getElementById("ldd-perf-tip");if(t)t.hidden=true};
- });
-}
 function lddPerformanceWarning(){
  return new Promise(resolve=>{
   const ov=document.createElement("div");ov.id="ldd-perf-warning";
