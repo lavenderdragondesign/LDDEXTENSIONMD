@@ -235,11 +235,25 @@ async function lddPlRenderGrid(force){
       lddPlSaveToVault(f);
     });
     grid.querySelectorAll("[data-pl-thumb]").forEach(cv=>{try{lddPlThumbObs.observe(cv);}catch(_){lddPlRenderThumb(cv);}});
-    grid.querySelectorAll("[data-pl-dl]").forEach(b=>b.onclick=()=>{
+    grid.querySelectorAll("[data-pl-dl]").forEach(b=>b.onclick=async()=>{
       const f=(lddPlUI.list||[])[+b.dataset.plDl];if(!f||!f.url)return;
-      try{chrome.downloads.download({url:f.url,filename:f.file});}
-      catch(_){const a=document.createElement("a");a.href=f.url;a.download=f.file;a.click();}
       lddVtToast("Downloading "+f.file);
+      try{
+        if(chrome.downloads&&chrome.downloads.download){
+          await chrome.downloads.download({url:f.url,filename:f.file});
+          return;
+        }
+        throw new Error("no dl api");
+      }catch(_){
+        try{
+          const r=await fetch(f.url,{cache:"no-store"});
+          const blob=new Blob([await r.arrayBuffer()],{type:"application/pdf"});
+          const bu=URL.createObjectURL(blob);
+          const a=document.createElement("a");a.href=bu;a.download=f.file;
+          document.body.appendChild(a);a.click();a.remove();
+          setTimeout(()=>{try{URL.revokeObjectURL(bu);}catch(_){}},8000);
+        }catch(_2){lddVtToast("Download failed",true);}
+      }
     });
   }catch(err){
     cnt.textContent="";
@@ -358,8 +372,10 @@ function lddPlOpenViewer(f,blobUrl){
     if(e.key==="Escape"&&document.getElementById("ldd-pl-viewer-ov")){close();document.removeEventListener("keydown",esc);}
   });
   ov.querySelector("#ldd-plv-dl").onclick=()=>{
-    try{chrome.downloads.download({url:f.url,filename:f.file,saveAs:false});}
-    catch(_){lddVtToast("Download failed",true);}
+    const a=document.createElement("a");
+    a.href=blobUrl;a.download=f.file;
+    document.body.appendChild(a);a.click();a.remove();
+    lddVtToast("Downloading "+f.file);
   };
 }
 function lddBindPdfLibraryPage(o){

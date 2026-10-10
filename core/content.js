@@ -976,6 +976,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.204",items:["FIXED: Download failed — downloads now use the fetched file directly"]},
  {v:"1.8.203",items:["FIXED: PDF viewer now opens inside the LDD Tools window, on top"]},
  {v:"1.8.202",items:["NEW: Save to Vault button on library cards (Lucide icons, text buttons)"]},
  {v:"1.8.201",items:["CHANGED: Read live opens the PDF in an in-extension viewer (Chrome\u2019s PDF engine, \u2715 to close)"]},
