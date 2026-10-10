@@ -138,8 +138,9 @@ function lddRenderPromptVaultPage(o){
     <button class="ldd-vt-btn primary" id="ldd-pv-new">+ New Prompt</button>
     <button class="ldd-vt-btn ghost" id="ldd-pv-selmode">☐ Select</button>
     <button class="ldd-vt-btn ghost" id="ldd-pv-export" title="Export your vault as JSON to share with other LDD Tools users">Export</button>
-    <button class="ldd-vt-btn ghost" id="ldd-pv-import" title="Import a JSON backup or a prompt-pack PDF — the PDF becomes its own folder">Import PDF / JSON</button>
-    <input type="file" id="ldd-pv-importfile" accept=".json,.pdf,application/json,application/pdf" style="display:none">
+    <button class="ldd-vt-btn ghost" id="ldd-pv-import" title="Import a JSON backup, prompt-pack PDF, or TXT file — becomes its own folder">Import</button>
+    <button class="ldd-vt-btn ghost" id="ldd-pv-paste" title="Paste prompt text directly — numbered or plain paragraphs">📋 Paste</button>
+    <input type="file" id="ldd-pv-importfile" accept=".json,.pdf,.txt,application/json,application/pdf,text/plain" style="display:none">
   </div>
   <div class="ldd-vt-layout">
     <aside class="ldd-vt-side"><h4>Library</h4><div id="ldd-pv-folders"></div>
@@ -423,9 +424,12 @@ function lddBindPromptVaultPage(o){
   };
   const imp=root.querySelector("#ldd-pv-importfile");
   root.querySelector("#ldd-pv-import").onclick=()=>imp.click();
+  const pasteBtn=root.querySelector("#ldd-pv-paste");
+  if(pasteBtn)pasteBtn.onclick=()=>lddPvPasteModal();
   imp.onchange=()=>{
     const f=imp.files[0];imp.value="";if(!f)return;
     if(/\.pdf$/i.test(f.name)){lddPvImportPdf(f);return;}
+    if(/\.txt$/i.test(f.name)||/^text\/plain/.test(f.type)){lddPvImportTxt(f);return;}
     const r=new FileReader();
     r.onload=async()=>{
       try{
@@ -769,17 +773,46 @@ async function lddPvImportPdf(file){
     const pages=await lddPvExtractPdfText(buf);
     const found=lddPvParsePdfPrompts(pages);
     if(!found.length)throw new Error("No prompts found in this PDF");
-    const folderName=lddPvPdfFolderName(file.name);
-    const folder={id:lddVtUid("pvf"),name:folderName,order:lddPv.folders.length,createdAt:Date.now()};
-    lddPv.folders.push(folder);
-    const now=Date.now();
-    found.forEach((p,i)=>lddPv.prompts.push({id:lddVtUid("pvp"),title:p.title.slice(0,140),body:p.body.slice(0,12000),negative:"",tags:p.tags.slice(0,8),category:p.category,folderId:folder.id,isFavorite:false,createdAt:now-i,updatedAt:now-i}));
-    await lddPvSave();
-    lddPvUI.folder=folder.id;lddPvUI.query="";
-    {const _q=(lddVtRoot()||document).querySelector("#ldd-pv-q");if(_q)_q.value="";}
-    lddPvRefresh();
-    lddVtToast(`Imported ${found.length} prompts → “${folderName}”`);
+    await lddPvImportParsed(found,lddPvPdfFolderName(file.name));
   }catch(err){lddVtToast("PDF import failed: "+err.message,true);}
+}
+async function lddPvImportParsed(found,folderName){
+  const folder={id:lddVtUid("pvf"),name:String(folderName||"Import").slice(0,60),order:lddPv.folders.length,createdAt:Date.now()};
+  lddPv.folders.push(folder);
+  const now=Date.now();
+  found.forEach((p,i)=>lddPv.prompts.push({id:lddVtUid("pvp"),title:p.title.slice(0,140),body:p.body.slice(0,12000),negative:"",tags:p.tags.slice(0,8),category:p.category,folderId:folder.id,isFavorite:false,createdAt:now-i,updatedAt:now-i}));
+  await lddPvSave();
+  lddPvUI.folder=folder.id;lddPvUI.query="";lddPvUI.page=1;
+  const q=(lddVtRoot()||document).querySelector("#ldd-pv-q");if(q)q.value="";
+  lddPvRefresh();
+  lddVtToast(`Imported ${found.length} prompts → “${folder.name}”`);
+}
+async function lddPvImportTxt(file){
+  lddVtToast("Reading text file…");
+  try{
+    const text=await file.text();
+    const found=lddPvParsePdfPrompts([text]);
+    if(!found.length)throw new Error("No prompts found in this file");
+    await lddPvImportParsed(found,lddPvPdfFolderName(file.name));
+  }catch(err){lddVtToast("Text import failed: "+err.message,true);}
+}
+function lddPvPasteModal(){
+  const ov=lddPvModal(`
+    <h2>📋 Paste prompts</h2>
+    <p style="font-size:.82rem;color:var(--ldd-muted);margin:0 0 10px">Paste numbered or plain-paragraph prompt text — each entry becomes its own prompt in a new folder.</p>
+    <div class="frow"><label>Folder name</label><input id="ldd-pv-p-name" class="ldd-vt-input" value="Pasted Prompts" maxlength="60"></div>
+    <div class="frow"><label>Prompt text</label><textarea id="ldd-pv-p-text" class="ldd-vt-input" rows="12" style="resize:vertical;font-family:inherit" placeholder="1. A cozy pumpkin...&#10;2. A spooky black cat...&#10;&#10;or plain paragraphs separated by blank lines"></textarea></div>
+    <div class="mrow"><button class="ldd-vt-btn ghost" id="ldd-pv-p-cancel">Cancel</button><button class="ldd-vt-btn primary" id="ldd-pv-p-go">Import</button></div>`,true);
+  ov.querySelector("#ldd-pv-p-cancel").onclick=()=>ov.remove();
+  ov.querySelector("#ldd-pv-p-go").onclick=async()=>{
+    const text=ov.querySelector("#ldd-pv-p-text").value.trim();
+    const name=ov.querySelector("#ldd-pv-p-name").value.trim()||"Pasted Prompts";
+    if(!text){lddVtToast("Paste some text first",true);return;}
+    const found=lddPvParsePdfPrompts([text]);
+    if(!found.length){lddVtToast("No prompts found in that text",true);return;}
+    ov.remove();
+    await lddPvImportParsed(found,name);
+  };
 }
 
 /* ============================================================
