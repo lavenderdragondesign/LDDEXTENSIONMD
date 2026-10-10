@@ -56,6 +56,7 @@ function lddRenderPdfLibraryPage(o){
       <span style="flex:1"></span>
       <button class="ldd-vt-btn ghost sm" id="ldd-pl-view" title="Toggle list/grid view">☰ List</button>
     </div>
+    <div id="ldd-pl-folders" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center"></div>
     <div class="ldd-vt-stats"><span id="ldd-pl-count"></span></div>
     <div class="ldd-vt-grid" id="ldd-pl-grid" style="grid-template-columns:repeat(4,1fr);gap:10px"></div>
   </div>`;
@@ -76,6 +77,56 @@ function lddPlToggleFav(sha){
   const i=lddPlFavs.indexOf(sha);
   if(i<0)lddPlFavs.push(sha);else lddPlFavs.splice(i,1);
   lddPlSaveFavs();
+}
+const LDD_PL_FOLDERS_KEY="lddPdfLibFolders";
+const LDD_PL_FILEFOLDER_KEY="lddPdfLibFileFolder";
+let lddPlFolders=[];
+let lddPlFileFolder={};
+let lddPlActiveFolder="all";
+async function lddPlLoadFolders(){
+  try{
+    const d=await chrome.storage.local.get([LDD_PL_FOLDERS_KEY,LDD_PL_FILEFOLDER_KEY]);
+    lddPlFolders=d[LDD_PL_FOLDERS_KEY]||[];
+    lddPlFileFolder=d[LDD_PL_FILEFOLDER_KEY]||{};
+  }catch(_){}
+}
+function lddPlSaveFolders(){return chrome.storage.local.set({[LDD_PL_FOLDERS_KEY]:lddPlFolders,[LDD_PL_FILEFOLDER_KEY]:lddPlFileFolder}).catch(()=>{});}
+function lddPlRenderFolderPills(root,allFiles){
+  const el=root.querySelector("#ldd-pl-folders");if(!el)return;
+  const inFolder=sha=>lddPlFileFolder[sha];
+  const counts={unfiled:0};
+  lddPlFolders.forEach(fl=>counts[fl.id]=0);
+  (allFiles||[]).forEach(f=>{const fid=inFolder(f.sha);if(fid&&counts[fid]!==undefined)counts[fid]++;else counts.unfiled++;});
+  const pill=(id,label,count)=>`<button class="ldd-vt-btn ${lddPlActiveFolder===id?"primary":"ghost"} sm" data-pl-f="${id}">${label}${count!==undefined?` <span style="opacity:.65">${count}</span>`:""}</button>`;
+  el.innerHTML=pill("all","📚 All",(allFiles||[]).length)
+    +pill("unfiled","Unfiled",counts.unfiled)
+    +lddPlFolders.map(fl=>`<span style="display:inline-flex;gap:2px;align-items:center">${pill(fl.id,"📁 "+lddVtEsc(fl.name),counts[fl.id])}<button class="ldd-vt-btn ghost sm" data-pl-fdel="${fl.id}" title="Delete folder" style="padding:2px 7px">×</button></span>`).join("")
+    +`<button class="ldd-vt-btn ghost sm" data-pl-fnew>+ New folder</button>`;
+  el.querySelectorAll("[data-pl-f]").forEach(b=>b.onclick=()=>{lddPlActiveFolder=b.dataset.plF;lddPlRenderGrid(false);});
+  el.querySelectorAll("[data-pl-fdel]").forEach(b=>b.onclick=e=>{
+    e.stopPropagation();
+    const fid=b.dataset.plFdel;
+    const fl=lddPlFolders.find(x=>x.id===fid);
+    if(!confirm(`Delete folder "${fl?fl.name:fid}"? PDFs become Unfiled.`))return;
+    lddPlFolders=lddPlFolders.filter(x=>x.id!==fid);
+    Object.keys(lddPlFileFolder).forEach(sha=>{if(lddPlFileFolder[sha]===fid)delete lddPlFileFolder[sha];});
+    if(lddPlActiveFolder===fid)lddPlActiveFolder="all";
+    lddPlSaveFolders();lddPlRenderGrid(false);
+  });
+  const nb=el.querySelector("[data-pl-fnew]");
+  if(nb)nb.onclick=()=>{
+    const name=prompt("Folder name:");if(!name||!name.trim())return;
+    const fl={id:"plf"+Date.now().toString(36),name:name.trim().slice(0,40)};
+    lddPlFolders.push(fl);lddPlActiveFolder=fl.id;
+    lddPlSaveFolders();lddPlRenderGrid(false);
+  };
+}
+function lddPlFolderSelect(sha){
+  const cur=lddPlFileFolder[sha]||"";
+  return `<select data-pl-move="${sha}" class="ldd-vt-input" style="font-size:.72rem;padding:3px 6px;max-width:100%" title="Move to folder">
+    <option value="">📁 Unfiled</option>
+    ${lddPlFolders.map(fl=>`<option value="${fl.id}"${cur===fl.id?" selected":""}>📁 ${lddVtEsc(fl.name)}</option>`).join("")}
+  </select>`;
 }
 const LDD_PL_SEEN_KEY="lddPdfLibSeen";
 let lddPlSeen=null; // null = first run (baseline silently); else {sha: firstSeenTs}
@@ -137,18 +188,76 @@ function lddPlCloseWhatsNew(ov,fresh){
   ov.remove();
 }
 let lddPlThumbObs=null;
-async function lddPlRenderThumb(cv){
+const LDD_PL_THUMB_DB="lddPdfLibThumbs";
+let lddPlThumbDb=null;
+function lddPlThumbDbOpen(){
+  return new Promise((res,rej)=>{
+    if(lddPlThumbDb)return res(lddPlThumbDb);
+    try{
+      const rq=indexedDB.open(LDD_PL_THUMB_DB,1);
+      rq.onupgradeneeded=()=>{try{rq.result.createObjectStore("thumbs");}catch(_){}};
+      rq.onsuccess=()=>{lddPlThumbDb=rq.result;res(rq.result);};
+      rq.onerror=()=>rej(rq.error||new Error("idb"));
+    }catch(e){rej(e);}
+  });
+}
+async function lddPlThumbGet(sha){
+  try{
+    const db=await lddPlThumbDbOpen();
+    return await new Promise(res=>{
+      try{
+        const rq=db.transaction("thumbs","readonly").objectStore("thumbs").get(sha);
+        rq.onsuccess=()=>res(rq.result||null);
+        rq.onerror=()=>res(null);
+      }catch(_){res(null);}
+    });
+  }catch(_){return null;}
+}
+function lddPlThumbSet(sha,dataUrl){
+  lddPlThumbDbOpen().then(db=>{
+    try{db.transaction("thumbs","readwrite").objectStore("thumbs").put(dataUrl,sha);}catch(_){}
+  }).catch(()=>{});
+}
+// render queue: max 2 concurrent PDF parses
+let lddPlThumbActive=0;
+const lddPlThumbQueue=[];
+function lddPlThumbPump(){
+  while(lddPlThumbActive<2&&lddPlThumbQueue.length){
+    const job=lddPlThumbQueue.shift();
+    lddPlThumbActive++;
+    job().finally(()=>{lddPlThumbActive--;lddPlThumbPump();});
+  }
+}
+function lddPlRenderThumb(cv){
   const f=(lddPlUI.list||[])[+cv.dataset.plThumb];if(!f||!f.url||cv.dataset.plDone)return;
   cv.dataset.plDone="1";
-  try{
-    await lddPlEnsurePdfJs();
-    const doc=await pdfjsLib.getDocument({url:f.url,rangeChunkSize:65536}).promise;
-    const page=await doc.getPage(1);
-    const vp=page.getViewport({scale:0.45});
-    cv.width=vp.width;cv.height=vp.height;
-    await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
-    try{await doc.destroy();}catch(_){}
-  }catch(_){cv.style.display="none";}
+  lddPlThumbQueue.push(async()=>{
+    // 1. try cache
+    try{
+      const cached=await lddPlThumbGet(f.sha);
+      if(cached){
+        await new Promise(res=>{
+          const img=new Image();
+          img.onload=()=>{try{cv.width=img.width;cv.height=img.height;cv.getContext("2d").drawImage(img,0,0);}catch(_){}res();};
+          img.onerror=()=>res();
+          img.src=cached;
+        });
+        if(cv.width>10)return;
+      }
+    }catch(_){}
+    // 2. render fresh
+    try{
+      await lddPlEnsurePdfJs();
+      const doc=await pdfjsLib.getDocument({url:f.url,rangeChunkSize:65536}).promise;
+      const page=await doc.getPage(1);
+      const vp=page.getViewport({scale:0.35});
+      cv.width=vp.width;cv.height=vp.height;
+      await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise;
+      try{await doc.destroy();}catch(_){}
+      try{lddPlThumbSet(f.sha,cv.toDataURL("image/jpeg",0.72));}catch(_){}
+    }catch(_){cv.style.display="none";}
+  });
+  lddPlThumbPump();
 }
 async function lddPlRenderGrid(force){
   const root=lddVtRoot()||document;
@@ -170,20 +279,28 @@ async function lddPlRenderGrid(force){
       if(fb!==fa)return fb-fa;
       return ((lddPlSeen&&lddPlSeen[b.sha])||0)-((lddPlSeen&&lddPlSeen[a.sha])||0);
     });
+    // extension-level folder filter
+    const af=lddPlActiveFolder;
+    let folderFiles=files;
+    if(af==="unfiled")folderFiles=files.filter(f=>!lddPlFileFolder[f.sha]);
+    else if(af!=="all")folderFiles=files.filter(f=>lddPlFileFolder[f.sha]===af);
     const q=((lddPlUI.query)||"").trim().toLowerCase();
-    if(q)files=files.filter(f=>(f.name+" "+f.file).toLowerCase().includes(q));
-    lddPlUI.list=files;
-    cnt.textContent=`${files.length} PDF${files.length===1?"":"s"} · ${lddVtEsc(lddPlSettings.owner+"/"+lddPlSettings.repo)}`;
+    if(q)folderFiles=folderFiles.filter(f=>(f.name+" "+f.file).toLowerCase().includes(q));
+    lddPlUI.list=folderFiles;
+    lddPlUI.allFiles=files;
+    cnt.textContent=`${folderFiles.length} PDF${folderFiles.length===1?"":"s"} · ${lddVtEsc(lddPlSettings.owner+"/"+lddPlSettings.repo)}`;
+    lddPlRenderFolderPills(root,files);
     if(lddPlThumbObs){try{lddPlThumbObs.disconnect();}catch(_){}}
     lddPlThumbObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){lddPlThumbObs.unobserve(e.target);lddPlRenderThumb(e.target);}});},{rootMargin:"300px"});
     const isList=lddPlUI.view==="list";
     grid.style.gridTemplateColumns=isList?"1fr":"repeat(4,1fr)";
     const starBtn=(f)=>`<button class="ldd-vt-iconbtn${lddPlFavs.includes(f.sha)?" on":""}" data-pl-fav="${f.sha}" title="Favorite" style="${isList?"":"position:absolute;top:8px;right:8px;z-index:2;background:rgba(0,0,0,.45);border-radius:8px;"}">★</button>`;
-    grid.innerHTML=files.length?(isList
+    grid.innerHTML=folderFiles.length?(isList
       ? `<div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1">`+files.map((f,i)=>`
         <div style="display:flex;gap:10px;align-items:center;padding:8px 12px;border:1px solid var(--ldd-border);border-radius:10px;background:var(--ldd-panel)">
           ${starBtn(f)}
           <span style="font-size:.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${lddVtEsc(f.name)}</span>
+          <span style="min-width:110px;max-width:150px">${lddPlFolderSelect(f.sha)}</span>
           ${f.size?`<span class="ldd-vt-tag">${lddPlFmtSize(f.size)}</span>`:""}
           <button class="ldd-vt-btn primary sm" data-pl-read="${i}">Read live</button>
           <button class="ldd-vt-btn ghost sm" data-pl-prompts="${i}">⧉ Prompts</button>
@@ -195,6 +312,7 @@ async function lddPlRenderGrid(force){
         ${starBtn(f)}
         <canvas data-pl-thumb="${i}" width="320" height="180" style="width:100%;height:auto;border-radius:6px;background:var(--ldd-bg);display:block"></canvas>
         <h3 style="font-size:.82rem;margin:8px 0 4px;line-height:1.3">📄 ${lddVtEsc(f.name)}</h3>
+        <div style="margin-bottom:6px">${lddPlFolderSelect(f.sha)}</div>
         ${f.size?`<div class="meta" style="margin-bottom:6px"><span class="ldd-vt-tag">${lddPlFmtSize(f.size)}</span></div>`:""}
         <div class="actions" style="gap:6px;flex-wrap:wrap">
           <button class="ldd-vt-btn primary sm" data-pl-read="${i}">Read live</button>
@@ -203,7 +321,7 @@ async function lddPlRenderGrid(force){
           <button class="ldd-vt-btn ghost sm" data-pl-dl="${i}">${LDD_LUCIDE_DL}Download</button>
         </div>
       </div>`).join(""))
-      :`<div class="ldd-vt-empty"><h3>No PDFs found</h3><p>Drop .pdf files in the repo${lddPlSettings.path?" / "+lddVtEsc(lddPlSettings.path):""} and hit ↻.</p></div>`;
+      :`<div class="ldd-vt-empty"><h3>No PDFs found</h3><p>${lddPlActiveFolder!=="all"?"Nothing in this folder yet.":`Drop .pdf files in the repo${lddPlSettings.path?" / "+lddVtEsc(lddPlSettings.path):""} and hit ↻.`}</p></div>`;
     const openLive=async f=>{
       if(!f||!f.url)return;
       const old=document.getElementById("ldd-pl-viewer-ov");
@@ -226,6 +344,11 @@ async function lddPlRenderGrid(force){
       cv.onclick=()=>openLive((lddPlUI.list||[])[+cv.dataset.plThumb]);
     });
     grid.querySelectorAll("[data-pl-fav]").forEach(b=>b.onclick=e=>{e.stopPropagation();lddPlToggleFav(b.dataset.plFav);lddPlRenderGrid(false);});
+    grid.querySelectorAll("[data-pl-move]").forEach(sel=>sel.onchange=()=>{
+      const sha=sel.dataset.plMove;
+      if(sel.value)lddPlFileFolder[sha]=sel.value;else delete lddPlFileFolder[sha];
+      lddPlSaveFolders();lddPlRenderGrid(false);
+    });
     grid.querySelectorAll("[data-pl-prompts]").forEach(b=>b.onclick=()=>{
       const f=(lddPlUI.list||[])[+b.dataset.plPrompts];if(!f)return;
       lddPlPromptPicker(f);
@@ -361,6 +484,7 @@ function lddPlOpenViewer(f,blobUrl){
   ov.innerHTML=`
     <div style="display:flex;gap:8px;align-items:center;padding:10px 14px;background:var(--ldd-panel);border-bottom:1px solid var(--ldd-border);flex-shrink:0">
       <strong style="flex:1;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${lddVtEsc(f.name)}</strong>
+      <button class="ldd-vt-btn ghost sm" id="ldd-plv-prompts">⧉ Prompts</button>
       <button class="ldd-vt-btn ghost sm" id="ldd-plv-dl">⬇ Download</button>
       <button class="ldd-vt-btn sm" id="ldd-plv-close">✕ Close</button>
     </div>
@@ -368,6 +492,7 @@ function lddPlOpenViewer(f,blobUrl){
   host.appendChild(ov);
   const close=()=>{ov.remove();try{URL.revokeObjectURL(blobUrl);}catch(_){}};
   ov.querySelector("#ldd-plv-close").onclick=close;
+  ov.querySelector("#ldd-plv-prompts").onclick=()=>lddPlPromptPicker(f);
   document.addEventListener("keydown",function esc(e){
     if(e.key==="Escape"&&document.getElementById("ldd-pl-viewer-ov")){close();document.removeEventListener("keydown",esc);}
   });
@@ -379,7 +504,7 @@ function lddPlOpenViewer(f,blobUrl){
   };
 }
 function lddBindPdfLibraryPage(o){
-  Promise.all([lddPlLoadSettings(),lddPlLoadFavs()]).then(()=>{
+  Promise.all([lddPlLoadSettings(),lddPlLoadFavs(),lddPlLoadFolders()]).then(()=>{
     const root=lddVtRoot();
     const rf=root.querySelector("#ldd-pl-refresh");
     if(rf)rf.onclick=()=>lddPlRenderGrid(true);
