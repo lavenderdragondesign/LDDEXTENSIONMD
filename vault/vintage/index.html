@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <link rel="icon" type="image/png" href="./icon128.png" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LavenderDragonDesign's Low-Key Vintage Image Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <script type="module" src="./assets/index-EZeMcatb.js"></script>
+    <link rel="stylesheet" href="./assets/index-T5axdXy7.css">
+    <link rel="stylesheet" href="../ldd-vault-themes.css">
+    <link rel="stylesheet" href="./vintage-theme.css">
+      <script src="../theme-preapply.js"></script>
+  </head>
+  <body>
+  <style>
+    .ldd-back-hub {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 999998;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #25163f;
+      border: 1px solid rgba(155, 127, 232, 0.35);
+      box-shadow: 0 10px 28px rgba(31, 24, 48, 0.18);
+      font-family: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 0.96rem;
+      font-weight: 800;
+      line-height: 1;
+      text-decoration: none;
+      backdrop-filter: blur(10px);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .ldd-back-hub:hover {
+      transform: translateY(-1px);
+      background: #ffffff;
+      box-shadow: 0 14px 34px rgba(31, 24, 48, 0.24);
+    }
+
+    .ldd-back-hub:focus-visible {
+      outline: 3px solid rgba(155, 127, 232, 0.55);
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 640px) {
+      .ldd-back-hub {
+        top: 12px;
+        left: 12px;
+        padding: 9px 13px;
+        font-size: 0.9rem;
+      }
+    }
+  </style>
+  <a class="ldd-back-hub" href="../index.html" aria-label="Back to Vault">← Back to Vault</a>
+
+    <div id="root"></div>
+  <style>
+  .ldd-beta-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(10, 8, 18, 0.72);
+    backdrop-filter: blur(8px);
+  }
+
+  .ldd-beta-card {
+    width: min(640px, 100%);
+    background: #ffffff;
+    color: #1f1830;
+    border-radius: 24px;
+    padding: 34px 34px 28px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+    border: 1px solid rgba(155, 127, 232, 0.22);
+    font-family: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    text-align: center;
+  }
+
+  .ldd-beta-logo {
+    display: block;
+    width: 84px;
+    height: 84px;
+    object-fit: contain;
+    margin: 0 auto 14px;
+  }
+
+  .ldd-beta-card h2 {
+    margin: 0 0 14px;
+    color: #25163f;
+    font-size: clamp(1.65rem, 3vw, 2.35rem);
+    line-height: 1.18;
+    font-weight: 800;
+  }
+
+  .ldd-beta-card .ldd-beta-version {
+    margin: -6px 0 14px;
+    color: #7a5ed1;
+    font-size: clamp(1.25rem, 2.3vw, 1.55rem);
+    line-height: 1.15;
+    font-weight: 800;
+  }
+
+  .ldd-beta-card .ldd-beta-release {
+    margin: 0 auto 16px;
+    max-width: 500px;
+    color: #5d4c75;
+    font-size: clamp(1.12rem, 2.1vw, 1.36rem);
+    line-height: 1.3;
+    font-weight: 750;
+  }
+
+  .ldd-beta-card .ldd-beta-message {
+    margin: 0 auto 18px;
+    max-width: 500px;
+    font-size: clamp(1.25rem, 2.4vw, 1.62rem);
+    line-height: 1.28;
+    color: #34264f;
+    font-weight: 700;
+  }
+
+  .ldd-beta-hints {
+    margin: 0 auto 20px;
+    max-width: 520px;
+    text-align: left;
+    color: #5f5276;
+  }
+
+  .ldd-beta-card .ldd-beta-hint-title {
+    margin: 0 0 10px;
+    text-align: center;
+    color: #7a5ed1;
+    font-size: clamp(1.25rem, 2.3vw, 1.5rem);
+    line-height: 1.2;
+    font-weight: 850;
+  }
+
+  .ldd-beta-hints ul {
+    margin: 0;
+    padding-left: 22px;
+  }
+
+  .ldd-beta-hints li {
+    margin: 0 0 8px;
+    font-size: 1.12rem;
+    line-height: 1.45;
+  }
+
+  .ldd-beta-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 14px 18px;
+  }
+
+  .ldd-beta-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #47375f;
+    font-size: 1.08rem;
+    user-select: none;
+  }
+
+  .ldd-beta-check input {
+    width: 18px;
+    height: 18px;
+    accent-color: #9b7fe8;
+  }
+
+  .ldd-beta-close {
+    border: 0;
+    border-radius: 999px;
+    padding: 11px 22px;
+    background: linear-gradient(135deg, #9b7fe8, #6b4fba);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.08rem;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(107, 79, 186, 0.28);
+  }
+
+  .ldd-beta-close:hover {
+    filter: brightness(1.06);
+  }
+
+  .ldd-beta-card .ldd-beta-made-by {
+    margin: 18px auto 0;
+    max-width: 460px;
+    font-size: clamp(1.12rem, 2vw, 1.35rem);
+    line-height: 1.22;
+    color: #7a5ed1;
+    font-weight: 800;
+  }
+
+  .ldd-beta-overlay[hidden] {
+    display: none !important;
+  }
+</style>
+<script src="./beta-notice.js"></script>
+  
+  <div id="ldd-vintage-dock" role="navigation" aria-label="Vault sections">
+    <button type="button" id="ldd-vd-vault">← Vault</button>
+    <button type="button" class="is-active">Vintage</button>
+    <button type="button" id="ldd-vd-theme" title="Vault theme" aria-label="Vault theme">◈</button>
+  </div>
+  <div id="ldd-vintage-theme-pop"><h4>Vault Theme</h4><div class="ldd-vt-grid" id="ldd-vt-grid"></div></div>
+  <script src="./vintage-dock.js"></script>
+  </body>
+</html>

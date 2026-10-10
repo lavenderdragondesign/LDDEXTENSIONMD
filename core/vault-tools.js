@@ -185,18 +185,75 @@ function lddPvRenderLists(){
     await lddPvSave();lddPvRefresh();
   });
 }
+function lddPvPagerHTML(pages){
+  const per=lddPvUI.perPage||24;
+  if(pages<=1)return "";
+  return `<div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px;flex-wrap:wrap">
+    <button class="ldd-vt-btn ghost sm" id="ldd-pv-prev"${lddPvUI.page<=1?" disabled":""}>« Prev</button>
+    <span style="font-size:.82rem;color:var(--ldd-muted)">Page ${lddPvUI.page} of ${pages}</span>
+    <button class="ldd-vt-btn ghost sm" id="ldd-pv-next"${lddPvUI.page>=pages?" disabled":""}>Next »</button>
+    <select id="ldd-pv-perpage" class="ldd-vt-select" style="width:auto;padding:.3rem .5rem;font-size:.78rem">${[12,24,48,96].map(n=>`<option value="${n}"${per===n?" selected":""}>${n}/page</option>`).join("")}</select></div>`;
+}
+function lddPvBindPager(grid){
+  lddPvBindPager(grid);
+}
 function lddPvRenderGrid(){
   const root=lddVtRoot()||document;
   const grid=root.querySelector("#ldd-pv-grid"),cnt=root.querySelector("#ldd-pv-count");
   if(!grid)return;
   if(lddPvUI.folder==="trash"){
-    cnt.textContent=`${lddPv.trashed.length} in trash`;
-    grid.innerHTML=lddPv.trashed.length?lddPv.trashed.map(p=>`
-      <div class="ldd-vt-card"><h3>${lddVtEsc(p.title)}</h3><div class="prev">${lddVtEsc(String(p.body||"").slice(0,140))}</div>
+    let tlist=lddPv.trashed.slice();
+    const tq=lddPvUI.query.trim().toLowerCase();
+    if(tq)tlist=tlist.filter(p=>((p.title||"")+" "+(p.body||"")+" "+(p.tags||[]).join(" ")).toLowerCase().includes(tq));
+    const per=lddPvUI.perPage||24,pages=Math.max(1,Math.ceil(tlist.length/per));
+    if(lddPvUI.page>pages)lddPvUI.page=pages;
+    if(lddPvUI.page<1)lddPvUI.page=1;
+    const shown=tlist.slice((lddPvUI.page-1)*per,lddPvUI.page*per);
+    cnt.textContent=`${tlist.length} in trash${pages>1?` — page ${lddPvUI.page}/${pages}`:""}`;
+    const tsel=lddPvUI.selectMode;
+    let tselbar="";
+    if(tsel)tselbar=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <button class="ldd-vt-btn ghost sm" id="ldd-pv-tselpage">Select page</button>
+      <button class="ldd-vt-btn ghost sm" id="ldd-pv-tselall">Select all ${tlist.length}</button>
+      <span style="display:flex;gap:4px;align-items:center;font-size:.78rem;color:var(--ldd-muted)"><input id="ldd-pv-trfrom" type="number" min="1" max="${tlist.length}" placeholder="#" class="ldd-vt-input" style="width:64px;padding:.3rem .5rem;font-size:.78rem"> to <input id="ldd-pv-trto" type="number" min="1" max="${tlist.length}" placeholder="#" class="ldd-vt-input" style="width:64px;padding:.3rem .5rem;font-size:.78rem"> <button class="ldd-vt-btn ghost sm" id="ldd-pv-trgo">Select</button></span>
+      <button class="ldd-vt-btn danger sm" id="ldd-pv-tseldel"${lddPvUI.selected.size?"":" disabled"}>Delete forever (${lddPvUI.selected.size})</button>
+      <button class="ldd-vt-btn ghost sm" id="ldd-pv-tselcancel">Cancel</button></div>`;
+    grid.innerHTML=tselbar+(tlist.length?shown.map(p=>`
+      <div class="ldd-vt-card">
+      ${tsel?`<input type="checkbox" class="ldd-pv-selcb" data-pv-tsel="${p.id}"${lddPvUI.selected.has(p.id)?" checked":""} title="Select">`:""}
+      <h3>${lddVtEsc(p.title)}</h3><div class="prev">${lddVtEsc(String(p.body||"").slice(0,140))}</div>
       <div class="actions"><button class="ldd-vt-iconbtn" data-pv-restore="${p.id}" title="Restore">↩ Restore</button><button class="ldd-vt-iconbtn" data-pv-delperm="${p.id}" title="Delete forever" style="color:#fda4af">Delete</button></div></div>`).join("")
-      :`<div class="ldd-vt-empty"><h3>Trash is empty</h3><p>Deleted prompts land here.</p></div>`;
+      :`<div class="ldd-vt-empty"><h3>Trash is empty</h3><p>Deleted prompts land here.</p></div>`)+lddPvPagerHTML(pages);
     grid.querySelectorAll("[data-pv-restore]").forEach(b=>b.onclick=async()=>{const i=lddPv.trashed.findIndex(x=>x.id===b.dataset.pvRestore);if(i<0)return;const[p]=lddPv.trashed.splice(i,1);lddPv.prompts.push(p);await lddPvSave();lddPvRefresh();});
     grid.querySelectorAll("[data-pv-delperm]").forEach(b=>b.onclick=async()=>{if(!confirm("Delete forever?"))return;lddPv.trashed=lddPv.trashed.filter(x=>x.id!==b.dataset.pvDelperm);await lddPvSave();lddPvRefresh();});
+    grid.querySelectorAll("[data-pv-tsel]").forEach(cb=>cb.onchange=()=>{
+      if(cb.checked)lddPvUI.selected.add(cb.dataset.pvTsel);else lddPvUI.selected.delete(cb.dataset.pvTsel);
+      const del=grid.querySelector("#ldd-pv-tseldel");
+      if(del){del.textContent=`Delete forever (${lddPvUI.selected.size})`;del.disabled=!lddPvUI.selected.size;}
+    });
+    const tSelPage=grid.querySelector("#ldd-pv-tselpage");
+    if(tSelPage)tSelPage.onclick=()=>{shown.forEach(p=>lddPvUI.selected.add(p.id));lddPvRenderGrid();};
+    const tSelAll=grid.querySelector("#ldd-pv-tselall");
+    if(tSelAll)tSelAll.onclick=()=>{tlist.forEach(p=>lddPvUI.selected.add(p.id));lddPvRenderGrid();};
+    const tRGo=grid.querySelector("#ldd-pv-trgo");
+    if(tRGo)tRGo.onclick=()=>{
+      let a=+grid.querySelector("#ldd-pv-trfrom").value||0,b=+grid.querySelector("#ldd-pv-trto").value||0;
+      if(!a&&!b)return;if(!a)a=b;if(!b)b=a;if(a>b)[a,b]=[b,a];
+      a=Math.max(1,Math.min(a,tlist.length));b=Math.max(1,Math.min(b,tlist.length));
+      for(let i=a-1;i<b;i++)lddPvUI.selected.add(tlist[i].id);
+      lddPvRenderGrid();lddVtToast(`Selected ${b-a+1}`);
+    };
+    const tSelDel=grid.querySelector("#ldd-pv-tseldel");
+    if(tSelDel)tSelDel.onclick=async()=>{
+      if(!lddPvUI.selected.size)return;
+      if(!confirm(`Delete ${lddPvUI.selected.size} prompt${lddPvUI.selected.size===1?"":"s"} FOREVER? This cannot be undone.`))return;
+      const ids=lddPvUI.selected;
+      lddPv.trashed=lddPv.trashed.filter(p=>!ids.has(p.id));
+      await lddPvSave();lddPvExitSelect();lddVtToast("Deleted forever");
+    };
+    const tSelCancel=grid.querySelector("#ldd-pv-tselcancel");
+    if(tSelCancel)tSelCancel.onclick=()=>lddPvExitSelect();
+    lddPvBindPager(grid);
     return;
   }
   const list=lddPvVisible();
@@ -213,12 +270,7 @@ function lddPvRenderGrid(){
     <span style="display:flex;gap:4px;align-items:center;font-size:.78rem;color:var(--ldd-muted)"><input id="ldd-pv-rfrom" type="number" min="1" max="${list.length}" placeholder="#" class="ldd-vt-input" style="width:64px;padding:.3rem .5rem;font-size:.78rem"> to <input id="ldd-pv-rto" type="number" min="1" max="${list.length}" placeholder="#" class="ldd-vt-input" style="width:64px;padding:.3rem .5rem;font-size:.78rem"> <button class="ldd-vt-btn ghost sm" id="ldd-pv-rgo">Select</button></span>
     <button class="ldd-vt-btn danger sm" id="ldd-pv-seldel"${lddPvUI.selected.size?"":" disabled"}>Delete (${lddPvUI.selected.size})</button>
     <button class="ldd-vt-btn ghost sm" id="ldd-pv-selcancel">Cancel</button></div>`;
-  let pager="";
-  if(pages>1)pager=`<div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px;flex-wrap:wrap">
-    <button class="ldd-vt-btn ghost sm" id="ldd-pv-prev"${lddPvUI.page<=1?" disabled":""}>« Prev</button>
-    <span style="font-size:.82rem;color:var(--ldd-muted)">Page ${lddPvUI.page} of ${pages}</span>
-    <button class="ldd-vt-btn ghost sm" id="ldd-pv-next"${lddPvUI.page>=pages?" disabled":""}>Next »</button>
-    <select id="ldd-pv-perpage" class="ldd-vt-select" style="width:auto;padding:.3rem .5rem;font-size:.78rem">${[12,24,48,96].map(n=>`<option value="${n}"${per===n?" selected":""}>${n}/page</option>`).join("")}</select></div>`;
+  let pager=lddPvPagerHTML(pages);
   grid.innerHTML=selbar+(shown.length?shown.map(p=>`
     <div class="ldd-vt-card">
       ${sel?`<input type="checkbox" class="ldd-pv-selcb" data-pv-sel="${p.id}"${lddPvUI.selected.has(p.id)?" checked":""} title="Select">`:""}

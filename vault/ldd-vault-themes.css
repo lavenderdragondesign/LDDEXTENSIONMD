@@ -1,0 +1,83 @@
+/* ============================================================
+   LDD Creative Vault — theme engine.
+   Mirrors the LDD Tools extension's One-Click Themes:
+   html[data-vault-theme="<id>"] sets the design tokens,
+   and both vault UIs are styled from these tokens.
+   ============================================================ */
+
+/* ---- shared token defaults (overridden per theme) ---- */
+html{
+  --v-bg:#000000; --v-panel:#090b0d; --v-panel-2:#10141a;
+  --v-inset:#05070a; --v-text:#ffffff; --v-muted:#9aa4b2; --v-faint:#5d6773;
+  --v-border:#29313d; --v-hover:#141a22; --v-selected:#16241d;
+  --v-accent:#39ff14; --v-accent-2:#00eaff; --v-accent-3:#ff2bd6;
+  --v-accent-4:#9d4dff; --v-accent-5:#ffe600;
+  --v-on-accent:#000000; --v-glow:rgba(57,255,20,.30);
+  --v-radius:14px;
+  --v-display:"Bricolage Grotesque",Inter,system-ui,sans-serif;
+  --v-body:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+
+/* ---- Neon Rainbow (extension default) ---- */
+html[data-vault-theme="neon-rainbow"]{
+  --v-accent:#39ff14; --v-accent-2:#00eaff; --v-accent-3:#ff2bd6;
+  --v-accent-4:#9d4dff; --v-accent-5:#ffe600;
+  --v-on-accent:#000000; --v-glow:rgba(57,255,20,.30);
+}
+/* ---- Matrix ---- */
+html[data-vault-theme="matrix"]{
+  --v-accent:#39ff14; --v-accent-2:#00ff88; --v-accent-3:#b6ff00;
+  --v-accent-4:#00c853; --v-accent-5:#d7ff00;
+  --v-on-accent:#000000; --v-glow:rgba(57,255,20,.30);
+}
+/* ---- Cyberpunk ---- */
+html[data-vault-theme="cyberpunk"]{
+  --v-accent:#00f5ff; --v-accent-2:#ff2bd6; --v-accent-3:#9d4dff;
+  --v-accent-4:#ffe600; --v-accent-5:#39ff14;
+  --v-on-accent:#000000; --v-glow:rgba(0,245,255,.30);
+}
+/* ---- Electric Blue ---- */
+html[data-vault-theme="electric-blue"]{
+  --v-accent:#2684ff; --v-accent-2:#00eaff; --v-accent-3:#7df9ff;
+  --v-accent-4:#8aa4ff; --v-accent-5:#4dffea;
+  --v-on-accent:#ffffff; --v-glow:rgba(38,132,255,.32);
+}
+/* ---- Hot Pink ---- */
+html[data-vault-theme="hot-pink"]{
+  --v-accent:#ff2bd6; --v-accent-2:#ff4fa3; --v-accent-3:#c43cff;
+  --v-accent-4:#7c3cff; --v-accent-5:#ff7ad9;
+  --v-on-accent:#ffffff; --v-glow:rgba(255,43,214,.32);
+}
+/* ---- Purple Haze ---- */
+html[data-vault-theme="purple-haze"]{
+  --v-accent:#9d4dff; --v-accent-2:#7c3cff; --v-accent-3:#c084fc;
+  --v-accent-4:#e879f9; --v-accent-5:#a78bfa;
+  --v-on-accent:#ffffff; --v-glow:rgba(157,77,255,.32);
+}
+/* ---- Neon Fire ---- */
+html[data-vault-theme="fire"]{
+  --v-accent:#ff5a1f; --v-accent-2:#ff1744; --v-accent-3:#ff9f0a;
+  --v-accent-4:#ffe600; --v-accent-5:#ff3d00;
+  --v-on-accent:#ffffff; --v-glow:rgba(255,90,31,.32);
+}
+/* ---- Neon Ice ---- */
+html[data-vault-theme="ice"]{
+  --v-accent:#00eaff; --v-accent-2:#7df9ff; --v-accent-3:#00b8ff;
+  --v-accent-4:#6ee7ff; --v-accent-5:#4dffea;
+  --v-on-accent:#000000; --v-glow:rgba(0,234,255,.30);
+}
+/* ---- Midnight ---- */
+html[data-vault-theme="midnight"]{
+  --v-accent:#5b7cff; --v-accent-2:#7c3cff; --v-accent-3:#00d9ff;
+  --v-accent-4:#a78bfa; --v-accent-5:#39ffcc;
+  --v-on-accent:#ffffff; --v-glow:rgba(91,124,255,.32);
+}
+/* ---- Native (light, original MyDesigns colors) ---- */
+html[data-vault-theme="native"]{
+  --v-bg:#f4f6fb; --v-panel:#ffffff; --v-panel-2:#f1f4fa;
+  --v-inset:#eef1f7; --v-text:#111827; --v-muted:#64748b; --v-faint:#9aa4b2;
+  --v-border:rgba(148,163,184,.28); --v-hover:#eef2f7; --v-selected:#e0e9ff;
+  --v-accent:#3b82f6; --v-accent-2:#60a5fa; --v-accent-3:#2563eb;
+  --v-accent-4:#93c5fd; --v-accent-5:#1d4ed8;
+  --v-on-accent:#ffffff; --v-glow:rgba(59,130,246,.25);
+}
