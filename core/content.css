@@ -1032,7 +1032,7 @@ html.ldd-theme-master-on body .ldd-credits-box button svg {fill:currentColor!imp
 #ldd-update-gate .ldd-update-gate-card{
   width:min(720px,calc(100vw - 24px))!important;
   max-height:calc(100vh - 24px)!important;
-  overflow:hidden!important;
+  overflow-y:auto!important;
   padding:18px 20px!important;
 }
 #ldd-update-gate h2{margin:4px 44px 2px 0!important;font-size:24px!important;}

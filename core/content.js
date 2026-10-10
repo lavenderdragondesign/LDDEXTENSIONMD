@@ -976,6 +976,30 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.203",items:["FIXED: PDF viewer now opens inside the LDD Tools window, on top"]},
+ {v:"1.8.202",items:["NEW: Save to Vault button on library cards (Lucide icons, text buttons)"]},
+ {v:"1.8.201",items:["CHANGED: Read live opens the PDF in an in-extension viewer (Chrome\u2019s PDF engine, \u2715 to close)"]},
+ {v:"1.8.200",items:["FIXED: Read live was downloading instead of opening — PDFs now open in Chrome\u2019s viewer"]},
+ {v:"1.8.199",items:["IMPROVED: Prompt Pack PDF Library tiles are smaller — 4 across, compact cards"]},
+ {v:"1.8.198",items:["NEW: \u29c9 Prompts on library cards — copy one, copy all, X-to-Y range, or \U0001f4be Save all to Prompt Vault"]},
+ {v:"1.8.197",items:["CHANGED: Read live opens the PDF in the same tab (back button returns to the library)"]},
+ {v:"1.8.196",items:["CHANGED: Read live now opens in Chrome\u2019s PDF viewer (select/copy/search work) — click a preview or Read live"]},
+ {v:"1.8.195",items:["NEW: PDF reader \u29c9 Copy prompt — pick a single prompt on the page to copy (not the whole page)"]},
+ {v:"1.8.194",items:["FIXED: PDF reader page is full width again (no more scrunched text)"]},
+ {v:"1.8.193",items:["REMOVED: Prompt Pack PDF Library settings row — repo is built in now"]},
+ {v:"1.8.192",items:["NEW: Prompt Pack PDF Library favorites (★ sorts to top) + list/grid view toggle"]},
+ {v:"1.8.191",items:["IMPROVED: PDF reader — narrower page, \u29c9 Copy text button (page text to clipboard)","CHANGED: Prompt Pack PDF Library sorts newest PDFs first"]},
+ {v:"1.8.190",items:["IMPROVED: what\u2019s-new popup — single PDF gets a preview card, multiple PDFs get a plain list"]},
+ {v:"1.8.189",items:["NEW: Prompt Pack PDF Library pops up what\u2019s new — new PDFs get a popup with preview + name"]},
+ {v:"1.8.188",items:["FIXED: Prompt Pack PDF Library now picks up new PDFs every time you open it — no extension reload needed"]},
+ {v:"1.8.187",items:["IMPROVED: Prompt Pack PDF Library — lazy-loading previews (fast with 40+ PDFs) + search"]},
+ {v:"1.8.186",items:["NEW: Prompt Pack PDF Library cards show a tiny preview of each PDF\u2019s first-page banner"]},
+ {v:"1.8.185",items:["NEW: Prompt Pack PDF Library — read live or download (PDFs hosted on GitHub, not in the ZIP)"]},
+ {v:"1.8.184",items:["NEW: PDF Library — Pete\u2019s prompt PDFs hosted on GitHub, read live in the extension or download (not bundled in the ZIP)"]},
+ {v:"1.8.183",items:["Minor maintenance update"]},
+ {v:"1.8.182",items:["CHANGED: Prompt Vault grid is now 2 columns"]},
+ {v:"1.8.181",items:["FIXED: update screen bottom was cut off — it scrolls properly now"]},
+ {v:"1.8.180",items:["CHANGED: update screen Download button now shows the version number"]},
  {v:"1.8.179",items:["CHANGED: update screen Download / Skip buttons moved to the top next to the ×"]},
  {v:"1.8.178",items:["FIXED: “Extension context invalidated” after updating now tells you to refresh the page instead of failing silently"]},
  {v:"1.8.177",items:["NEW: TXT file import + 📋 Paste — paste prompt text directly (numbered or plain paragraphs), each import becomes its own folder"]},
@@ -1078,7 +1102,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Prompt Vault, Image Vault, Favorites, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Prompt Vault, Image Vault, Favorites, Prompt Pack PDF Library, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1188,6 +1212,7 @@ function lddRenderWorkflowPage(o){
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
   ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
   ${card('&#11088; Favorites Manager','Starred presets & products — view, open, remove, all in one place.',enDis('favEnabled',o.favEnabled!==false)+openBtn('ldd-open-favorites',false))}
+  ${card('&#128218; Prompt Pack PDF Library','Read live or download.',openBtn('ldd-open-pdflibrary',false))}
   ${card('&#128193; Prompt Vault','Prompt library — folders, favorites, JSON import/export.',openBtn('ldd-open-promptvault',false))}
   ${card('&#128247; Image Vault','Local image library — folders, tags, ZIP download.',openBtn('ldd-open-imagevault',false))}
  </div>`;
@@ -1459,6 +1484,7 @@ function lddPageBody(tab,o){
  if(tab==="imageprep")return lddRenderImagePrepPage(o);
  if(tab==="imgresize")return lddRenderImgResizePage(o);
  if(tab==="renamer")return lddRenderRenamerPage(o);  if(tab==="promptvault")return lddRenderPromptVaultPage(o);  if(tab==="imagevault")return lddRenderImageVaultPage(o);  if(tab==="favorites")return lddRenderFavoritesPage(o);
+ if(tab==="pdflibrary")return lddRenderPdfLibraryPage(o);
  if(tab==="scout")return lddRenderScoutPage(o);
  if(tab==="extras")return lddRenderExtraFeaturesPage(o);
  if(tab==="performance")return lddRenderPerformancePage(o);
@@ -1668,7 +1694,10 @@ function lddBindAppPage(tab,o){
    if(ivOpen2)ivOpen2.onclick=()=>lddShowTab("imagevault");
    const fvOpen=lddAppRoot.querySelector("#ldd-open-favorites");
    if(fvOpen)fvOpen.onclick=()=>lddShowTab("favorites");
+   const plOpen=lddAppRoot.querySelector("#ldd-open-pdflibrary");
+   if(plOpen)plOpen.onclick=()=>lddShowTab("pdflibrary");
  }
+ if(tab==="pdflibrary"){try{lddBindPdfLibraryPage(o);}catch(e){console.warn(e);}}
  if(tab==="promptvault"){lddPvLoad().then(()=>{try{if(lddAppRoot&&document.getElementById("ldd-app-page"))lddBindPromptVaultPage(o);}catch(e){console.warn(e);}});}
  if(tab==="imageprep"){lddBindImagePrepPage(o);}
  if(tab==="imgresize"){lddBindImgResizePage(o);}
@@ -2503,7 +2532,7 @@ function lddShowUpdateGate(release){
     ov.id="ldd-update-gate";
     ov.innerHTML=`<div class="ldd-update-gate-card" role="dialog" aria-modal="true" aria-label="LDD Tools Update Available">
       <button type="button" class="ldd-update-gate-x" aria-label="Close">×</button>
-      <div class="ldd-update-gate-actions ldd-update-gate-actions-top"><button type="button" data-download>⬇ DOWNLOAD UPDATE</button><button type="button" data-open>OPEN LDD TOOLS ANYWAY</button></div>
+      <div class="ldd-update-gate-actions ldd-update-gate-actions-top"><button type="button" data-download>⬇ DOWNLOAD v${latest}</button><button type="button" data-open>OPEN LDD TOOLS ANYWAY</button></div>
       <div class="ldd-update-gate-kicker">LDD TOOLS UPDATE</div>
       <h2>🔥 Update Available — v${latest}</h2>
       <p class="ldd-update-gate-version">Installed <b>v${current}</b> &nbsp;→&nbsp; Latest <b>v${latest}</b></p>

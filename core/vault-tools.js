@@ -43,7 +43,8 @@ function lddVtInjectCss(){
   .ldd-vt-fbtn.active{background:var(--ldd-selected);color:var(--ldd-text);border-color:var(--ldd-accent)}
   .ldd-vt-fbtn .cnt{font-size:.72rem;opacity:.75;background:var(--ldd-hover);border-radius:99px;padding:.1rem .5rem}
   .ldd-vt-fbtn.active .cnt{background:var(--ldd-accent);color:#fff;opacity:1}
-  .ldd-vt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+  .ldd-vt-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:640px){.ldd-vt-grid{grid-template-columns:1fr}}
   .ldd-vt-card{background:var(--ldd-panel);border:1px solid var(--ldd-border);border-radius:var(--ldd-radius);padding:14px;display:flex;flex-direction:column;gap:8px;transition:.15s ease;min-width:0;position:relative}
   .ldd-pv-selcb{position:absolute;top:10px;right:10px;width:20px;height:20px;accent-color:var(--ldd-accent);cursor:pointer;z-index:2;margin:0}
   .ldd-vt-card:has(.ldd-pv-selcb) h3{padding-right:30px}
