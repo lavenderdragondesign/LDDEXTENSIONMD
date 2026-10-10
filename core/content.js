@@ -976,6 +976,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.219",items:["NEW: prompt picker uses the filename number as the target count — keeps the N longest when extras slip through"]},
  {v:"1.8.218",items:["FIXED: prompt parser skips intro instructions, table of contents, and other front matter — only real prompts"]},
  {v:"1.8.217",items:["FIXED: PDF prompt parser no longer picks up intro pages, color palettes, or other non-prompt content"]},
  {v:"1.8.216",items:["CHANGED: single \u26a1 queues without auto-opening ChatGPT (bulk Queue all/range still auto-opens)"]},

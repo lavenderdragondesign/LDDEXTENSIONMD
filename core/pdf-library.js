@@ -434,7 +434,18 @@ async function lddPlPdfPrompts(f){
     pages.push(t);
   }
   try{await doc.destroy();}catch(_){}
-  return (typeof lddPvParsePdfPrompts==="function")?lddPvParsePdfPrompts(pages):[];
+  let prompts=(typeof lddPvParsePdfPrompts==="function")?lddPvParsePdfPrompts(pages):[];
+  // filename carries the prompt count (e.g. "250_Custom_Pet_Portrait_Prompts");
+  // if we found more, keep the N longest — real prompts have the longest bodies
+  const m=String(f&&f.name||"").match(/(\d{2,4})/);
+  if(m){
+    const expected=parseInt(m[1],10);
+    if(prompts.length>expected&&expected>0){
+      prompts=prompts.slice().sort((a,b)=>b.body.length-a.body.length).slice(0,expected)
+        .sort((a,b)=>prompts.indexOf(a)-prompts.indexOf(b));
+    }
+  }
+  return prompts;
 }
 async function lddPlSaveToVault(f){
   lddVtToast("Reading "+f.name+"…");
