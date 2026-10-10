@@ -1210,3 +1210,10 @@ html.ldd-theme-master-on body .ldd-credits-box button svg {fill:currentColor!imp
 .ldd-presetfav-link{background:transparent;border:0;color:#7ec8ff;font-size:13px;cursor:pointer;padding:0;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;text-decoration:none;font-family:inherit}
 .ldd-presetfav-link:hover{text-decoration:underline}
 .ldd-presetfav-flash{outline:2px solid #f5c542 !important;outline-offset:2px;transition:outline-color .3s}
+
+/* pulsing NEW badge */
+.ldd-newbadge{display:inline-block;font-size:.62rem;font-weight:700;letter-spacing:.06em;
+  background:#ff3b5c;color:#fff;border-radius:999px;padding:2px 8px;margin-left:6px;
+  vertical-align:2px;}
+.ldd-newbadge.pulse{animation:ldd-newpulse 1.4s ease-in-out 2;}
+@keyframes ldd-newpulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.12);opacity:.75;}}

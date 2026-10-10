@@ -172,7 +172,10 @@ function lddPlWhatsNew(files){
   if(lddPlSeen===null){lddPlSeen={};files.forEach(f=>lddPlSeen[f.sha]=0);lddPlSaveSeen();return;}
   const fresh=files.filter(f=>!(f.sha in lddPlSeen));
   fresh.forEach(f=>lddPlSeen[f.sha]=now);
-  if(fresh.length){lddPlSaveSeen();lddPlShowWhatsNew(fresh);}
+  if(fresh.length){
+    lddPlSaveSeen();
+    lddPlShowWhatsNew(fresh);
+  }
 }
 function lddPlShowWhatsNew(fresh){
   const ov=document.createElement("div");
@@ -447,6 +450,18 @@ async function lddPlSaveToVault(f){
     return 0;
   }
 }
+const LDD_PQ_STATE_KEY="lddPromptQueueState_v132";
+async function lddPlSendToQueue(text,openChat){
+  const d=await chrome.storage.local.get(LDD_PQ_STATE_KEY).catch(()=>({}));
+  const state=d[LDD_PQ_STATE_KEY]||{};
+  const prompts=String(text||"").split(/^\s*---+\s*$/m).map(x=>x.trim()).filter(Boolean);
+  await chrome.storage.local.set({[LDD_PQ_STATE_KEY]:{...state,raw:String(text||"").trim(),prompts,index:0,completed:[],failed:[],running:false,paused:false,collapsed:false,lddPQAutoOpen:true}}).catch(()=>{});
+  if(openChat!==false){
+    try{window.open("https://chatgpt.com/","_blank","noopener");}
+    catch(_){try{chrome.tabs.create({url:"https://chatgpt.com/"});}catch(_){}}
+  }
+  return prompts.length;
+}
 async function lddPlPromptPicker(f){
   const ov=document.createElement("div");
   ov.className="ldd-vt-modal-ov";
@@ -466,11 +481,13 @@ async function lddPlPromptPicker(f){
     <p style="font-size:.85rem;color:var(--ldd-muted);margin:0 0 10px">${prompts.length} prompts — click Copy on any row, or:</p>
     <div class="mrow" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <button class="ldd-vt-btn primary sm" id="ldd-pp-copyall">Copy all ${prompts.length}</button>
+      <button class="ldd-vt-btn primary sm" id="ldd-pp-queueall">⚡ Queue all</button>
       <span style="display:flex;gap:6px;align-items:center">
         <input class="ldd-vt-input" id="ldd-pp-x" placeholder="X" style="width:52px" inputmode="numeric">
         <span style="color:var(--ldd-muted);font-size:.82rem">to</span>
         <input class="ldd-vt-input" id="ldd-pp-y" placeholder="Y" style="width:52px" inputmode="numeric">
         <button class="ldd-vt-btn sm" id="ldd-pp-copyrange">Copy</button>
+        <button class="ldd-vt-btn sm" id="ldd-pp-queuerange">⚡ Queue</button>
       </span>
       <button class="ldd-vt-btn ghost sm" id="ldd-pp-save">💾 Save all to Prompt Vault</button>
     </div>
@@ -478,7 +495,13 @@ async function lddPlPromptPicker(f){
     <div id="ldd-pp-list" style="display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto"></div>
     <div class="mrow" style="margin-top:10px"><button class="ldd-vt-btn ghost" id="ldd-pp-close">Close</button></div>`;
   const listEl=modal.querySelector("#ldd-pp-list");
-  const fullText=p=>`${p.title}\n\n${p.body}`;
+  const fullText=p=>{
+    const b=String(p.body||"").trim(),t=String(p.title||"").trim();
+    if(!t)return b;
+    const bNoNum=b.replace(/^\d{1,3}\.\s*/,"");
+    if(bNoNum.toLowerCase().startsWith(t.toLowerCase().slice(0,30)))return b;
+    return t+"\n\n"+b;
+  };
   const renderList=filter=>{
     const q=(filter||"").toLowerCase();
     const items=prompts.map((p,i)=>({p,i})).filter(({p})=>!q||(p.title+" "+p.body).toLowerCase().includes(q));
@@ -488,10 +511,17 @@ async function lddPlPromptPicker(f){
         <span style="flex:1;min-width:0"><strong style="font-size:.83rem">${lddVtEsc(p.title)}</strong>
         <div class="prev">${lddVtEsc(p.body.slice(0,110))}${p.body.length>110?"…":""}</div></span>
         <button class="ldd-vt-btn ghost sm" data-pp-copy="${i}">Copy</button>
+        <button class="ldd-vt-btn ghost sm" data-pp-queue="${i}" title="Copy + send to Prompt Queue">⚡</button>
       </div>`).join("")||`<div class="ldd-vt-empty">No matches</div>`;
     listEl.querySelectorAll("[data-pp-copy]").forEach(b=>b.onclick=()=>{
       const pr=prompts[+b.dataset.ppCopy];if(!pr)return;
       lddPvCopyText(fullText(pr),"Prompt copied");
+    });
+    listEl.querySelectorAll("[data-pp-queue]").forEach(b=>b.onclick=async()=>{
+      const pr=prompts[+b.dataset.ppQueue];if(!pr)return;
+      lddPvCopyText(fullText(pr));
+      const n=await lddPlSendToQueue(fullText(pr),false);
+      lddVtToast(`Queued (${n} in Prompt Queue) — open ChatGPT to run`);
     });
   };
   renderList("");
@@ -500,11 +530,26 @@ async function lddPlPromptPicker(f){
   modal.querySelector("#ldd-pp-copyall").onclick=()=>{
     lddPvCopyText(prompts.map(fullText).join("\n\n---\n\n"),`${prompts.length} prompts copied`);
   };
+  modal.querySelector("#ldd-pp-queueall").onclick=async()=>{
+    const all=prompts.map(fullText).join("\n\n---\n\n");
+    lddPvCopyText(all);
+    const n=await lddPlSendToQueue(all);
+    lddVtToast(`${prompts.length} sent to Prompt Queue (${n} total)`);
+  };
   modal.querySelector("#ldd-pp-copyrange").onclick=()=>{
     const x=parseInt(modal.querySelector("#ldd-pp-x").value,10),
           y=parseInt(modal.querySelector("#ldd-pp-y").value,10);
     if(!x||!y||x<1||y>prompts.length||x>y){lddVtToast(`Enter X to Y (1–${prompts.length})`,true);return;}
     lddPvCopyText(prompts.slice(x-1,y).map(fullText).join("\n\n---\n\n"),`Prompts ${x}–${y} copied`);
+  };
+  modal.querySelector("#ldd-pp-queuerange").onclick=async()=>{
+    const x=parseInt(modal.querySelector("#ldd-pp-x").value,10),
+          y=parseInt(modal.querySelector("#ldd-pp-y").value,10);
+    if(!x||!y||x<1||y>prompts.length||x>y){lddVtToast(`Enter X to Y (1–${prompts.length})`,true);return;}
+    const sel=prompts.slice(x-1,y).map(fullText).join("\n\n---\n\n");
+    lddPvCopyText(sel);
+    const n=await lddPlSendToQueue(sel);
+    lddVtToast(`Prompts ${x}–${y} queued (${n} total)`);
   };
   modal.querySelector("#ldd-pp-save").onclick=async()=>{
     ov.remove();
@@ -539,7 +584,34 @@ function lddPlOpenViewer(f,blobUrl){
     lddVtToast("Downloading "+f.file);
   };
 }
+async function lddPlUpdateToolsBadge(){
+  const badge=document.querySelector("#ldd-pl-newbadge");
+  try{
+    await lddPlLoadSettings();
+    if(!lddPlConfigured())return;
+    await lddPlLoadSeen();
+    const files=await lddPlFetchList(true);
+    const hasNew=lddPlSeen!==null&&files.some(f=>!(f.sha in lddPlSeen));
+    const d=await chrome.storage.local.get(["lddPdfLibHasNew","lddPdfLibBadgePulsed"]).catch(()=>({}));
+    if(hasNew&&!d.lddPdfLibHasNew){
+      await chrome.storage.local.set({lddPdfLibHasNew:true,lddPdfLibBadgePulsed:false}).catch(()=>{});
+    }else if(!hasNew&&d.lddPdfLibHasNew){
+      await chrome.storage.local.set({lddPdfLibHasNew:false}).catch(()=>{});
+    }
+    if(!badge)return;
+    const st=await chrome.storage.local.get(["lddPdfLibHasNew","lddPdfLibBadgePulsed"]).catch(()=>({}));
+    if(st.lddPdfLibHasNew){
+      badge.style.display="inline-block";
+      if(!st.lddPdfLibBadgePulsed){
+        badge.classList.add("pulse");
+        chrome.storage.local.set({lddPdfLibBadgePulsed:true}).catch(()=>{});
+      }
+    }else{badge.style.display="none";badge.classList.remove("pulse");}
+  }catch(_){}
+}
 function lddBindPdfLibraryPage(o){
+  try{chrome.storage.local.set({lddPdfLibHasNew:false,lddPdfLibBadgePulsed:false}).catch(()=>{});}catch(_){}
+  try{const b=document.querySelector("#ldd-pl-newbadge");if(b)b.style.display="none";}catch(_){}
   Promise.all([lddPlLoadSettings(),lddPlLoadFavs(),lddPlLoadFolders(),lddPlLoadViews()]).then(()=>{
     const root=lddVtRoot();
     const rf=root.querySelector("#ldd-pl-refresh");

@@ -976,6 +976,16 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.218",items:["FIXED: prompt parser skips intro instructions, table of contents, and other front matter — only real prompts"]},
+ {v:"1.8.217",items:["FIXED: PDF prompt parser no longer picks up intro pages, color palettes, or other non-prompt content"]},
+ {v:"1.8.216",items:["CHANGED: single \u26a1 queues without auto-opening ChatGPT (bulk Queue all/range still auto-opens)"]},
+ {v:"1.8.215",items:["FIXED: queue copy no longer duplicates the title","CHANGED: Send to Queue erases previous, pastes fresh, auto-detects, and auto-opens the queue panel"]},
+ {v:"1.8.214",items:["CHANGED: Send to Prompt Queue now auto-opens ChatGPT in a new tab"]},
+ {v:"1.8.213",items:["NEW: \u26a1 Send to Prompt Queue from the \u29c9 Prompts picker — copies + queues in one click, no manual paste"]},
+ {v:"1.8.212",items:["CHANGED: Tools badge now reads \"NEW PDF AVAILABLE\""]},
+ {v:"1.8.211",items:["FIXED: NEW badge now checks for new PDFs when Tools opens (was only checking inside the library)"]},
+ {v:"1.8.210",items:["CHANGED: NEW badge pulses once, then stays static until you open the library"]},
+ {v:"1.8.209",items:["NEW: pulsing NEW badge on the Prompt Pack PDF Library Tools card when new PDFs land"]},
  {v:"1.8.208",items:["FIXED: PDF Library search was rendering the unfiltered list","NEW: Sort by — Newest, Most viewed, Most/Fewest prompts (count from filename)"]},
  {v:"1.8.207",items:["PERF: PDF Library thumbnails are cached (render once) + render queue — no more lag"]},
  {v:"1.8.206",items:["NEW: Prompt Pack PDF Library folders — organize at the extension level (All/Unfiled/+ New)","NEW: \u29c9 Prompts button in the live viewer (copy one/all/X-to-Y, save to vault)"]},
@@ -1217,7 +1227,7 @@ function lddRenderWorkflowPage(o){
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
   ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
   ${card('&#11088; Favorites Manager','Starred presets & products — view, open, remove, all in one place.',enDis('favEnabled',o.favEnabled!==false)+openBtn('ldd-open-favorites',false))}
-  ${card('&#128218; Prompt Pack PDF Library','Read live or download.',openBtn('ldd-open-pdflibrary',false))}
+  ${card('&#128218; Prompt Pack PDF Library <span id="ldd-pl-newbadge" class="ldd-newbadge" style="display:none">NEW PDF AVAILABLE</span>','Read live or download.',openBtn('ldd-open-pdflibrary',false))}
   ${card('&#128193; Prompt Vault','Prompt library — folders, favorites, JSON import/export.',openBtn('ldd-open-promptvault',false))}
   ${card('&#128247; Image Vault','Local image library — folders, tags, ZIP download.',openBtn('ldd-open-imagevault',false))}
  </div>`;
@@ -1701,6 +1711,7 @@ function lddBindAppPage(tab,o){
    if(fvOpen)fvOpen.onclick=()=>lddShowTab("favorites");
    const plOpen=lddAppRoot.querySelector("#ldd-open-pdflibrary");
    if(plOpen)plOpen.onclick=()=>lddShowTab("pdflibrary");
+   try{if(typeof lddPlUpdateToolsBadge==="function")lddPlUpdateToolsBadge();}catch(_){}
  }
  if(tab==="pdflibrary"){try{lddBindPdfLibraryPage(o);}catch(e){console.warn(e);}}
  if(tab==="promptvault"){lddPvLoad().then(()=>{try{if(lddAppRoot&&document.getElementById("ldd-app-page"))lddBindPromptVaultPage(o);}catch(e){console.warn(e);}});}
