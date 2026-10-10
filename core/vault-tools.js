@@ -138,7 +138,7 @@ function lddRenderPromptVaultPage(o){
     <button class="ldd-vt-btn primary" id="ldd-pv-new">+ New Prompt</button>
     <button class="ldd-vt-btn ghost" id="ldd-pv-selmode">☐ Select</button>
     <button class="ldd-vt-btn ghost" id="ldd-pv-export" title="Export your vault as JSON to share with other LDD Tools users">Export</button>
-    <button class="ldd-vt-btn ghost" id="ldd-pv-import" title="Import a JSON backup or a numbered prompt-pack PDF — the PDF becomes its own folder">Import PDF / JSON</button>
+    <button class="ldd-vt-btn ghost" id="ldd-pv-import" title="Import a JSON backup or a prompt-pack PDF — the PDF becomes its own folder">Import PDF / JSON</button>
     <input type="file" id="ldd-pv-importfile" accept=".json,.pdf,application/json,application/pdf" style="display:none">
   </div>
   <div class="ldd-vt-layout">
@@ -714,6 +714,27 @@ function lddPvParsePdfPrompts(pages){
       prompts.push({title:h.title,body,tags:["pdf-import",secTag].filter(Boolean),category:"Other",section});
     });
   });
+  /* Format C (fallback): unnumbered — one prompt per paragraph block.
+     Only used when no numbered entries were found at all. */
+  if(!prompts.length){
+    const blocks=fullText.split(/\n\s*\n/).map(b=>b.replace(/^[•\-*▪◦–—\s]+/,"").trim())
+      .filter(b=>b.length>=30&&b.length<=2000&&!/^LDD\s*\//i.test(b)&&!/^\d+$/.test(b));
+    if(blocks.length>=5){
+      blocks.forEach(b=>{
+        const lines=b.split("\n").map(x=>x.trim()).filter(Boolean);
+        let title=lines[0]||"";
+        if(lines.length===1&&title.length>90){
+          const sent=title.match(/^(.{25,90}?[.!?])(\s|$)/);
+          title=sent?sent[1]:title.slice(0,90).replace(/\s+\S*$/,"")+"…";
+        }else if(title.length>110){
+          const sent=title.match(/^(.{25,110}?[.!?])(\s|$)/);
+          title=sent?sent[1]:title.slice(0,110).replace(/\s+\S*$/,"");
+        }
+        if(!title)title=b.slice(0,80);
+        prompts.push({title:title.slice(0,140),body:b.slice(0,12000),tags:["pdf-import"],category:"Other",section:""});
+      });
+    }
+  }
   return prompts;
 }
 let lddPvPdfJsReady=null;
@@ -747,7 +768,7 @@ async function lddPvImportPdf(file){
     const buf=await file.arrayBuffer();
     const pages=await lddPvExtractPdfText(buf);
     const found=lddPvParsePdfPrompts(pages);
-    if(!found.length)throw new Error("No numbered prompts found in this PDF");
+    if(!found.length)throw new Error("No prompts found in this PDF");
     const folderName=lddPvPdfFolderName(file.name);
     const folder={id:lddVtUid("pvf"),name:folderName,order:lddPv.folders.length,createdAt:Date.now()};
     lddPv.folders.push(folder);

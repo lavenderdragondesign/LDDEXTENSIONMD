@@ -969,6 +969,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.176",items:["NEW: PDF import handles unnumbered prompt lists — one prompt per paragraph when no numbers found"]},
  {v:"1.8.175",items:["NEW: Trash gets the full Select treatment — checkmarks, Select page/all, X-to-Y range, bulk Delete forever, plus pagination and search"]},
  {v:"1.8.174",items:["NEW: Prompt Vault range select — type X to Y to select prompts by position in Select mode"]},
  {v:"1.8.173",items:["NEW: Prompt Vault “Select page” — selects just the current page in Select mode"]},
