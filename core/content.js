@@ -136,6 +136,7 @@ const LDD_DEFAULTS = {
   homeGreeting:true, homeRevenue:true, homeTopProducts:true, homeTutorials:true,
   analyticsDescription:true, analyticsDateControls:true, analyticsTabs:true, analyticsMetrics:true, analyticsCharts:true, analyticsTables:true,
   navHome:true,
+  favEnabled:true,
   navDesigns:true,
   navProducts:true,
   navScoutAI:true,
@@ -968,6 +969,39 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.174",items:["NEW: Prompt Vault range select — type X to Y to select prompts by position in Select mode"]},
+ {v:"1.8.173",items:["NEW: Prompt Vault “Select page” — selects just the current page in Select mode"]},
+ {v:"1.8.172",items:["CHANGED: deleting a Prompt Vault folder now moves its prompts to Trash instead of All"]},
+ {v:"1.8.171",items:["NEW: Prompt Vault multi-select — ☐ Select mode adds checkmarks to cards, Select all, Delete selected","NEW: Prompt Vault pagination — 12/24/48/96 per page with Prev/Next"]},
+ {v:"1.8.170",items:["FIXED: Prompt Vault & Image Vault flickering on every click — actions now refresh in place instead of rebuilding the whole tab"]},
+ {v:"1.8.169",items:["NEW: Prompt Vault bulk delete — “Delete all N shown” removes every prompt in the current search/folder view (to Trash)"]},
+ {v:"1.8.168",items:["FIXED: PDF import grabbing hex color codes as prompt numbers (e.g. #443229 → “229.”) — now handles 001/TITLE format PDFs, imports all 250"]},
+ {v:"1.8.167",items:["NEW: Favorites Manager tool — all starred presets & products in one place, grouped by category, with open/remove (enable/disable toggle merged into its card)","FIXED: clicking a product favorite could land on the main catalog (bad URL saved from the product dialog)"]},
+ {v:"1.8.166",items:["FIXED: detail-page favorite row duplicating every time you re-favorite"]},
+ {v:"1.8.165",items:["FIXED: favorite stars missing on product detail pages (product opens in a dialog — now detected directly)","FIXED: detail-page favorite row could duplicate after favoriting"]},
+ {v:"1.8.164",items:["FIXED: favorite stars missing on product detail pages (URL detection broadened)"]},
+ {v:"1.8.163",items:["FIXED: favorite stars missing on catalog search pages (page detection broadened)"]},
+ {v:"1.8.162",items:["FIXED: favorites popup could get stuck on screen (double-click orphaned it) + favorites no longer lags the page"]},
+ {v:"1.8.161",items:["FIXED: PDF import worker blocked — pdf.js files are now web-accessible"]},
+ {v:"1.8.160",items:["Prompt Vault: Export JSON renamed to Export — for sharing your vault with other LDD Tools users"]},
+ {v:"1.8.159",items:["FIXED: Prompt Vault PDF import failed (PDF engine now runs directly in the extension)","Prompt Vault: import button renamed to Import PDF / JSON"]},
+ {v:"1.8.158",items:["NEW: Prompt Vault PDF import — import a prompt PDF and it becomes its own folder, one prompt per numbered entry"]},
+ {v:"1.8.157",items:["Fixed transparent Prompt Vault modal (theme variables now carry over)"]},
+ {v:"1.8.156",items:["Prompt Vault: New/Edit modal opens bigger with a taller prompt field"]},
+ {v:"1.8.155",items:["Prompt Vault: New/Edit/View modal is now resizable (drag the corner)"]},
+ {v:"1.8.154",items:["Removed Vintage Lab"]},
+ {v:"1.8.153",items:["Fixed vault tools not loading (script-scope reference error)"]},
+ {v:"1.8.152",items:["NEW: Prompt Vault, Image Vault & Vintage Lab rebuilt natively inside the extension — no more embedded web builds, all 10 One-Click Themes apply"]},
+ {v:"1.8.151",items:["NEW: Prompt Vault, Image Vault & Vintage Lab on the Tools page — the vault apps now open as extension pages, skinned by all 10 One-Click Themes"]},
+ {v:"1.8.150",items:["Removed draggable modals"]},
+ {v:"1.8.148",items:["Removed preset JSON export/import"]},
+ {v:"1.8.142",items:["Favorites list is now clickable — catalog favorites link to their product page, preset favorites jump to the card in the picker"]},
+ {v:"1.8.141",items:["Favorites now work on product detail pages too (star under the product title)","Fixed catalog stars missing on category pages — looser card matching + late-render rescan"]},
+ {v:"1.8.140",items:["Fixed remaining toggle toasts showing internal key names (now reads the card title)"]},
+ {v:"1.8.139",items:["Favorites: on/off toggle on the Tools page","Favorites: info chip on preset picker + catalog — click to see favorites grouped by category"]},
+ {v:"1.8.138",items:["Fixed catalog favorites popup flashing closed instantly"]},
+ {v:"1.8.137",items:["Preset favorites now also work on the product catalog page"]},
+ {v:"1.8.136",items:["NEW: preset favorites — star presets in the Select preset picker, assign categories, favorites pin to top"]},
  {v:"1.8.135",items:["Toast: dragon logo hides instead of showing broken image if it fails to load","Toggle toasts now show the setting name instead of the internal key"]},
  {v:"1.8.134",items:["Fixed doubled tooltips on the Performance page (removed the old tooltip system)"]},
  {v:"1.8.133",items:["Fixed performance-page tooltip overflowing past the right edge"]},
@@ -1032,7 +1066,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Prompt Vault, Image Vault, Favorites, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1141,6 +1175,9 @@ function lddRenderWorkflowPage(o){
   ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
   ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
+  ${card('&#11088; Favorites Manager','Starred presets & products — view, open, remove, all in one place.',enDis('favEnabled',o.favEnabled!==false)+openBtn('ldd-open-favorites',false))}
+  ${card('&#128193; Prompt Vault','Prompt library — folders, favorites, JSON import/export.',openBtn('ldd-open-promptvault',false))}
+  ${card('&#128247; Image Vault','Local image library — folders, tags, ZIP download.',openBtn('ldd-open-imagevault',false))}
  </div>`;
 }
 
@@ -1409,7 +1446,7 @@ function lddPageBody(tab,o){
  if(tab==="hotkeys")return lddRenderHotkeysPage110(o);
  if(tab==="imageprep")return lddRenderImagePrepPage(o);
  if(tab==="imgresize")return lddRenderImgResizePage(o);
- if(tab==="renamer")return lddRenderRenamerPage(o);
+ if(tab==="renamer")return lddRenderRenamerPage(o);  if(tab==="promptvault")return lddRenderPromptVaultPage(o);  if(tab==="imagevault")return lddRenderImageVaultPage(o);  if(tab==="favorites")return lddRenderFavoritesPage(o);
  if(tab==="scout")return lddRenderScoutPage(o);
  if(tab==="extras")return lddRenderExtraFeaturesPage(o);
  if(tab==="performance")return lddRenderPerformancePage(o);
@@ -1613,10 +1650,19 @@ function lddBindAppPage(tab,o){
    if(pqOpen2)pqOpen2.onclick=()=>lddShowTab("promptqueue");
    const renOpen=lddAppRoot.querySelector("#ldd-open-renamer");
    if(renOpen)renOpen.onclick=()=>lddShowTab("renamer");
+   const pvOpen=lddAppRoot.querySelector("#ldd-open-promptvault");
+   if(pvOpen)pvOpen.onclick=()=>lddShowTab("promptvault");
+   const ivOpen2=lddAppRoot.querySelector("#ldd-open-imagevault");
+   if(ivOpen2)ivOpen2.onclick=()=>lddShowTab("imagevault");
+   const fvOpen=lddAppRoot.querySelector("#ldd-open-favorites");
+   if(fvOpen)fvOpen.onclick=()=>lddShowTab("favorites");
  }
+ if(tab==="promptvault"){lddPvLoad().then(()=>{try{if(lddAppRoot&&document.getElementById("ldd-app-page"))lddBindPromptVaultPage(o);}catch(e){console.warn(e);}});}
  if(tab==="imageprep"){lddBindImagePrepPage(o);}
  if(tab==="imgresize"){lddBindImgResizePage(o);}
  if(tab==="renamer"){lddBindRenamerPage(o);}
+ if(tab==="imagevault"){lddBindImageVaultPage(o);}
+ if(tab==="favorites"){lddBindFavoritesPage(o);}
  if(tab==="design"){
    lddAppRoot.querySelectorAll("[data-preview-size]").forEach(btn=>btn.onclick=()=>lddSafeSet({hoverPreviewSize:btn.dataset.previewSize},()=>{document.getElementById("ldd-hover-preview")?.remove();globalThis.lddToast110(`Preview size: ${btn.dataset.previewSize}`);lddShowTab(tab==="workflow"?"workflow":"design")}));
    const delay=lddAppRoot.querySelector("#ldd-preview-delay"); if(delay)delay.oninput=()=>{const v=+delay.value;const out=lddAppRoot.querySelector("#ldd-preview-delay-val");if(out)out.textContent=v+"ms";lddSafeSet({hoverPreviewDelay:v})};
@@ -1720,8 +1766,8 @@ function lddBindAppPage(tab,o){
      const key=group.dataset.twoButtonSetting;
      const value=btn.dataset.settingValue==="true";
      lddStorageSet(key,value);
-     const labels={lddMasterEnabled:"LDD Tools",scoutAIEnabled:"Scout AI Style Creator & Autofiller",dragUpload:"Drag & Drop Upload",toastNotifications:"Toast Notifications"};
-     if(key!=="toastNotifications" || value) globalThis.lddToast110(`${labels[key]||key} ${value?"Enabled":"Disabled"}`);
+     const label=group.closest(".ldd-tool-card")?.querySelector("h3")?.textContent?.trim()||key;
+     if(key!=="toastNotifications" || value) globalThis.lddToast110(`${label} ${value?"Enabled":"Disabled"}`);
      if(key==="scoutAIEnabled"||key==="autoPromptQueueEnabled"||key==="dragUpload")setTimeout(()=>lddShowTab("workflow"),40);
      else if(key==="toastNotifications")setTimeout(()=>lddShowTab("settings"),40);
    });
@@ -4488,3 +4534,342 @@ function lddBindRenamerPage(o){
   };
   try{$('ldd-rn-scan').click()}catch(e){render()}
 }
+
+/* ===== LDD Favorites with Categories (v1.8.141): preset picker + product catalog + product pages ===== */
+(function(){
+  if(window._lddFavInit)return; window._lddFavInit=true;
+  const PRESET_KEY='lddPresetFavs', CATALOG_KEY='lddCatalogFavs';
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+  const store={
+    get:k=>new Promise(r=>{try{chrome.storage.local.get(k,v=>r(v[k]||{}))}catch(e){r({})}}),
+    set:(k,v)=>new Promise(r=>{try{chrome.storage.local.set({[k]:v},r)}catch(e){r()}}),
+  };
+  let favEnabled=true;
+  async function refreshEnabled(){
+    try{chrome.storage.local.get('favEnabled',v=>{favEnabled=v.favEnabled!==false;if(!favEnabled)stripStars();});}catch(e){}
+  }
+  refreshEnabled();
+  try{chrome.storage.onChanged.addListener(ch=>{if(ch.favEnabled){favEnabled=ch.favEnabled.newValue!==false;if(!favEnabled)stripStars();}});}catch(e){}
+  function stripStars(){
+    document.querySelectorAll('.ldd-presetfav-star').forEach(s=>s.remove());
+    document.querySelectorAll('.ldd-presetfav-badge').forEach(b=>b.remove());
+    document.querySelectorAll('[data-ldd-fav-done]').forEach(c=>{delete c.dataset.lddFavDone;c.style.order='';});
+    document.querySelectorAll('.ldd-presetfav-chip,.ldd-presetfav-detailrow').forEach(c=>c.remove());
+    closePopup();
+  }
+  async function allCats(){
+    const a=await store.get(PRESET_KEY), b=await store.get(CATALOG_KEY);
+    return [...new Set([...Object.values(a),...Object.values(b)].map(f=>f.cat).filter(Boolean))].sort();
+  }
+
+  let popup=null, popupGen=0;
+  function closePopup(){ popup=null; popupGen++; document.querySelectorAll('.ldd-presetfav-pop').forEach(p=>p.remove()); }
+  document.addEventListener('click',e=>{ if(popup&&!popup.contains(e.target))closePopup(); },true);
+
+  async function showCatPopup(btn,name,current,skey,onDone,extra){
+    const gen=++popupGen;
+    closePopup(); popupGen=gen;
+    const favs=await store.get(skey);
+    if(gen!==popupGen)return;
+    const cats=await allCats();
+    if(gen!==popupGen)return;
+    popup=document.createElement('div');
+    popup.className='ldd-presetfav-pop';
+    const r=btn.getBoundingClientRect();
+    popup.innerHTML=`<div class="ldd-presetfav-title">${current?'★ '+esc(name):'Add to favorites'}</div>`+
+      (cats.length?cats.map(c=>`<button type="button" data-cat="${esc(c)}" class="${c===current?'sel':''}">${c===current?'★ ':''}${esc(c)}</button>`).join(''):'<div class="ldd-presetfav-empty">No categories yet</div>')+
+      `<div class="ldd-presetfav-new"><input type="text" placeholder="New category…" maxlength="30"><button type="button" data-new="+">Add</button></div>`+
+      (current?`<button type="button" data-unstar="1" class="ldd-presetfav-remove">Remove from favorites</button>`:'');
+    document.body.appendChild(popup);
+    popup.style.left=Math.max(8,Math.min(innerWidth-228,r.left-180))+'px';
+    popup.style.top=Math.min(innerHeight-popup.offsetHeight-8,r.bottom+6)+'px';
+    const done=async()=>{closePopup();onDone();};
+    popup.querySelectorAll('[data-cat]').forEach(b=>b.onclick=async e=>{
+      e.stopPropagation(); favs[name]=Object.assign({cat:b.dataset.cat,at:Date.now()},extra||{});
+      await store.set(skey,favs); done();
+    });
+    const inp=popup.querySelector('input');
+    const addNew=async()=>{const c=inp.value.trim();if(!c)return;
+      favs[name]=Object.assign({cat:c,at:Date.now()},extra||{});await store.set(skey,favs);done();};
+    popup.querySelector('[data-new]').onclick=e=>{e.stopPropagation();addNew();};
+    inp.onkeydown=e=>{if(e.key==='Enter')addNew();e.stopPropagation();};
+    const rm=popup.querySelector('[data-unstar]');
+    if(rm)rm.onclick=async e=>{e.stopPropagation();delete favs[name];await store.set(skey,favs);done();};
+    setTimeout(()=>inp.focus(),50);
+  }
+
+  function jumpToPresetCard(name){
+    closePopup();
+    const drawer=findDrawer(); if(!drawer)return;
+    const card=[...drawer.querySelectorAll('div.rounded-lg[data-ldd-fav-done]')].find(c=>c._lddFavName===name);
+    if(card){
+      card.scrollIntoView({block:'center',behavior:'smooth'});
+      card.classList.remove('ldd-presetfav-flash'); void card.offsetWidth;
+      card.classList.add('ldd-presetfav-flash');
+      setTimeout(()=>card.classList.remove('ldd-presetfav-flash'),1600);
+    }
+  }
+
+  /* ---- favorites info popup (grouped by category) ---- */
+  async function showInfoPopup(btn,skey,title,kind){
+    const gen=++popupGen;
+    closePopup(); popupGen=gen;
+    const favs=await store.get(skey);
+    if(gen!==popupGen)return;
+    const names=Object.keys(favs);
+    popup=document.createElement('div');
+    popup.className='ldd-presetfav-pop ldd-presetfav-info';
+    const r=btn.getBoundingClientRect();
+    const titleBar=`<div class="ldd-presetfav-title">★ ${esc(title)} (${names.length})</div>`;
+    if(!names.length){
+      popup.innerHTML=titleBar+`<div class="ldd-presetfav-empty">No favorites yet — click ☆ on any card.</div>`;
+    }else{
+      const byCat={};
+      names.forEach(n=>{(byCat[favs[n].cat]||(byCat[favs[n].cat]=[])).push(n);});
+      popup.innerHTML=titleBar+
+        Object.keys(byCat).sort().map(c=>
+          `<div class="ldd-presetfav-cathead">${esc(c)}</div>`+
+          byCat[c].sort().map(n=>{
+            const f=favs[n];
+            const label=kind==='catalog'&&f.url
+              ?`<a class="ldd-presetfav-link" href="${esc(f.url)}"><span>${esc(n)}</span></a>`
+              :kind==='preset'
+              ?`<button type="button" class="ldd-presetfav-link" data-jump="${esc(n)}"><span>${esc(n)}</span></button>`
+              :`<span>${esc(n)}</span>`;
+            return `<div class="ldd-presetfav-row">${label}<button type="button" data-rm="${esc(n)}" title="Remove">✕</button></div>`;
+          }).join('')
+        ).join('');
+    }
+    document.body.appendChild(popup);
+    popup.style.left=Math.max(8,Math.min(innerWidth-268,r.left-100))+'px';
+    popup.style.top=Math.min(innerHeight-popup.offsetHeight-8,r.bottom+6)+'px';
+    popup.querySelectorAll('[data-jump]').forEach(b=>b.onclick=e=>{e.stopPropagation();jumpToPresetCard(b.dataset.jump);});
+    popup.querySelectorAll('[data-rm]').forEach(b=>b.onclick=async e=>{
+      e.stopPropagation();
+      const f2=await store.get(skey); delete f2[b.dataset.rm]; await store.set(skey,f2);
+      showInfoPopup(btn,skey,title); refreshAll();
+    });
+  }
+
+  function makeStar(){
+    const star=document.createElement('button');
+    star.type='button';star.className='ldd-presetfav-star';star.title='Favorite';
+    star.innerHTML='<span>☆</span>';
+    return star;
+  }
+  function makeChip(skey,title){
+    const chip=document.createElement('button');
+    chip.type='button';chip.className='ldd-presetfav-chip';chip.title='View favorites';
+    chip.innerHTML='<span>★</span><b></b>';
+    chip.onclick=e=>{e.stopPropagation();showInfoPopup(chip,skey,title,skey===CATALOG_KEY?'catalog':'preset');};
+    return chip;
+  }
+  async function updateChip(chip,skey){
+    const favs=await store.get(skey);
+    chip.querySelector('b').textContent=Object.keys(favs).length;
+  }
+
+  /* ---- Preset picker drawer ---- */
+  function findDrawer(){
+    for(const sp of document.querySelectorAll('span.text-lg.font-medium')){
+      if(sp.textContent.trim()==='Select preset')
+        return sp.closest('div.absolute')||sp.closest('div.flex.flex-col');
+    }
+    return null;
+  }
+  async function applyPresetFavs(){
+    if(!favEnabled)return;
+    const drawer=findDrawer(); if(!drawer)return;
+    const favs=await store.get(PRESET_KEY);
+    if(!drawer.querySelector('.ldd-presetfav-chip')){
+      const tabs=drawer.querySelector('ul.flex');
+      if(tabs){
+        const chip=makeChip(PRESET_KEY,'Preset favorites');
+        const li=document.createElement('li');
+        li.style.cssText='display:flex;align-items:center;margin-left:auto';
+        li.appendChild(chip); tabs.appendChild(li);
+        drawer._lddFavChip=chip;
+      }
+    }
+    if(drawer._lddFavChip)updateChip(drawer._lddFavChip,PRESET_KEY);
+    drawer.querySelectorAll('.truncate.font-medium').forEach(nm=>{
+      if(nm.classList.contains('text-sm'))return;
+      const card=nm.closest('div.rounded-lg');
+      if(!card||card.dataset.lddFavDone)return;
+      card.dataset.lddFavDone='1';
+      const actions=card.querySelector('.flex.shrink-0.items-center.gap-2');
+      if(!actions)return;
+      const star=makeStar();
+      const name=nm.textContent.trim();
+      star.onclick=e=>{e.stopPropagation();e.preventDefault();showCatPopup(star,name,favs[name]?.cat,PRESET_KEY,applyPresetFavs);};
+      actions.insertBefore(star,actions.firstChild);
+      card._lddFavStar=star; card._lddFavName=name;
+    });
+    drawer.querySelectorAll('div.rounded-lg[data-ldd-fav-done]').forEach(card=>{
+      const name=card._lddFavName, star=card._lddFavStar;
+      if(!name||!star)return;
+      const f=favs[name], badge=card.querySelector('.ldd-presetfav-badge');
+      if(f){
+        star.classList.add('on'); star.querySelector('span').textContent='★'; card.style.order='-1';
+        if(badge)badge.textContent=f.cat;
+        else{
+          const nm=card.querySelector('.truncate.font-medium');
+          if(nm&&!nm.classList.contains('text-sm')){
+            const b=document.createElement('span');b.className='ldd-presetfav-badge';b.textContent=f.cat;
+            nm.parentNode.insertBefore(b,nm.nextSibling);
+          }
+        }
+      }else{
+        star.classList.remove('on'); star.querySelector('span').textContent='☆';
+        card.style.order=''; if(badge)badge.remove();
+      }
+    });
+  }
+
+  /* ---- Product catalog: grids (main catalog + category pages) + product detail pages ---- */
+  function lddProductDialogH1(){
+    for(const dlg of document.querySelectorAll('[role="dialog"]')){
+      if(dlg.classList&&dlg.classList.contains('ldd-presetfav-pop'))continue;
+      const t=dlg.textContent||'';
+      if(!/select a print partner|file guidelines/i.test(t))continue;
+      const h1=dlg.querySelector('h1');
+      if(h1&&h1.textContent.trim())return h1;
+    }
+    return null;
+  }
+  function catalogContext(){
+    const url=location.pathname+(location.hash||'');
+    if(/\/products?\/[^/?#]+/.test(url)&&!/product-catalog/i.test(url))return 'detail';
+    if(lddProductDialogH1())return 'detail';
+    if(url.includes('product-catalog'))return 'grid';
+    const h1=document.querySelector('h1');
+    if(h1&&/explore our catalog/i.test(h1.textContent))return 'grid';
+    if(document.querySelector('a[href*="/product/"],a[href*="/products/"]'))return 'grid';
+    return null;
+  }
+  function cardProductName(card){
+    const h3=card.querySelector('h3');
+    if(h3&&h3.textContent.trim())return h3.textContent.trim();
+    const img=card.querySelector('img[alt]');
+    if(img&&img.alt.trim())return img.alt.trim();
+    return '';
+  }
+  async function applyCatalogFavs(){
+    if(!favEnabled)return;
+    const ctx=catalogContext(); if(!ctx)return;
+    const favs=await store.get(CATALOG_KEY);
+
+    if(ctx==='detail'){
+      // single product page: star + badge row under the product h1
+      let h1=lddProductDialogH1();
+      if(!h1)for(const el of document.querySelectorAll('h1')){
+        if(/select a print partner/i.test(el.textContent))continue;
+        if(el.textContent.trim()){h1=el;break;}
+      }
+      if(h1&&!h1.dataset.lddFavDone){
+        const name=h1.textContent.trim();
+        if(name){
+          h1.dataset.lddFavDone='1';
+          document.querySelectorAll('.ldd-presetfav-detailrow').forEach(r=>r.remove());
+          const row=document.createElement('div');
+          row.className='ldd-presetfav-detailrow';
+          const star=makeStar(); star.classList.add('ldd-presetfav-detailstar');
+          const f=favs[name];
+          if(f){star.classList.add('on');star.querySelector('span').textContent='★';}
+          const _durl=location.pathname+(location.hash||"");
+          const _purl=/\/products?\/[^/?#]+/.test(_durl)?location.href:null;
+          star.onclick=e=>{e.stopPropagation();e.preventDefault();showCatPopup(star,name,favs[name]?.cat,CATALOG_KEY,()=>{if(document._lddFavDetailRow)document._lddFavDetailRow.remove();document._lddFavDetailRow=null;delete h1.dataset.lddFavDone;applyCatalogFavs();},{url:_purl});};
+          const badge=document.createElement('span');
+          badge.className='ldd-presetfav-badge ldd-presetfav-detailbadge';
+          if(f)badge.textContent='★ '+f.cat;
+          const chip=makeChip(CATALOG_KEY,'Catalog favorites');
+          chip.style.marginLeft='8px';
+          row.appendChild(star); row.appendChild(badge); row.appendChild(chip);
+          h1.parentNode.insertBefore(row,h1.nextSibling);
+          updateChip(chip,CATALOG_KEY);
+          row._lddFavChip=chip; row._lddFavName=name;
+          document._lddFavDetailRow=row;
+        }
+      }else if(document._lddFavDetailRow&&document._lddFavDetailRow.isConnected){
+        // refresh state on re-run (name may have changed via SPA nav)
+        const row=document._lddFavDetailRow, star=row.querySelector('.ldd-presetfav-star'),
+              badge=row.querySelector('.ldd-presetfav-badge'), chip=row._lddFavChip, name=row._lddFavName;
+        const f=name?favs[name]:null;
+        if(f&&!f.url){const _u2=location.pathname+(location.hash||"");if(/\/products?\/[^/?#]+/.test(_u2)){f.url=location.href;store.set(CATALOG_KEY,favs);}}
+        if(star){
+          star.classList.toggle('on',!!f);
+          star.querySelector('span').textContent=f?'★':'☆';
+          star.onclick=e=>{e.stopPropagation();e.preventDefault();showCatPopup(star,name,favs[name]?.cat,CATALOG_KEY,()=>{delete h1.dataset.lddFavDone;document._lddFavDetailRow=null;applyCatalogFavs();});};
+        }
+        if(badge)badge.textContent=f?('★ '+f.cat):'';
+        if(chip)updateChip(chip,CATALOG_KEY);
+      }
+      return;
+    }
+
+    // grid pages: info chip after the first h1 on the page
+    if(!document.querySelector('.ldd-presetfav-chip')){
+      const h1=document.querySelector('h1');
+      if(h1){
+        const chip=makeChip(CATALOG_KEY,'Catalog favorites');
+        chip.style.margin='8px 0 0 12px'; chip.style.verticalAlign='middle';
+        h1.insertAdjacentElement('afterend',chip);
+        document._lddFavChip=chip;
+      }
+    }
+    if(document._lddFavChip)updateChip(document._lddFavChip,CATALOG_KEY);
+
+    // product cards: any anchor pointing at a product URL
+    document.querySelectorAll('a[href*="/product/"],a[href*="/products/"]').forEach(card=>{
+      if(card.dataset.lddFavDone)return;
+      const name=cardProductName(card);
+      if(!name)return;
+      card.dataset.lddFavDone='1';
+      if(getComputedStyle(card).position==='static')card.style.position='relative';
+      const star=makeStar(); star.classList.add('ldd-presetfav-cardstar');
+      star.onclick=e=>{e.stopPropagation();e.preventDefault();showCatPopup(star,name,favs[name]?.cat,CATALOG_KEY,applyCatalogFavs,{url:card.href});};
+      card.appendChild(star);
+      card._lddFavStar=star; card._lddFavName=name;
+    });
+    document.querySelectorAll('a[href*="/product/"][data-ldd-fav-done],a[href*="/products/"][data-ldd-fav-done]').forEach(card=>{
+      const name=card._lddFavName, star=card._lddFavStar;
+      if(!name||!star)return;
+      const f=favs[name]; let badge=card.querySelector('.ldd-presetfav-badge');
+      if(f){
+        if(!f.url&&card.href){f.url=card.href;store.set(CATALOG_KEY,favs);}
+        star.classList.add('on'); star.querySelector('span').textContent='★'; card.style.order='-1';
+        if(!badge){
+          const nm=card.querySelector('h3');
+          const host=nm?nm.closest('div'):card;
+          badge=document.createElement('span');badge.className='ldd-presetfav-badge';
+          host.appendChild(badge);
+        }
+        badge.textContent='★ '+f.cat;
+      }else{
+        star.classList.remove('on'); star.querySelector('span').textContent='☆';
+        card.style.order=''; if(badge)badge.remove();
+      }
+    });
+  }
+
+  function refreshAll(){ applyPresetFavs(); applyCatalogFavs(); }
+  let queued=false;
+  const LDD_FAV_OWN_SEL='.ldd-presetfav-star,.ldd-presetfav-badge,.ldd-presetfav-chip,.ldd-presetfav-detailrow,.ldd-presetfav-pop';
+  const lddFavIsOwn=n=>n&&n.nodeType===1&&!!n.closest&&!!n.closest(LDD_FAV_OWN_SEL);
+  new MutationObserver(muts=>{
+    if(queued||document.hidden)return;
+    let relevant=false;
+    for(const m of muts){
+      const changed=[...(m.addedNodes||[]),...(m.removedNodes||[])].filter(n=>n.nodeType===1);
+      if(changed.some(n=>!lddFavIsOwn(n))){relevant=true;break;}
+      if(!changed.length&&!lddFavIsOwn(m.target)){relevant=true;break;}
+    }
+    if(!relevant)return;
+    queued=true;
+    setTimeout(()=>{queued=false;if(!document.hidden)refreshAll();},250);
+  }).observe(document.documentElement,{childList:true,subtree:true});
+  // belt-and-braces re-scan for SPA navigations that render late
+  setInterval(()=>{ if(!document.hidden&&favEnabled&&(catalogContext()||findDrawer()))refreshAll(); },3000);
+})();
+
+
