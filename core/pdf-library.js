@@ -51,7 +51,13 @@ function lddRenderPdfLibraryPage(o){
   return `<div class="ldd-page-title"><h2>📚 Prompt Pack PDF Library</h2><p>Read live or download.</p></div>
   <div class="ldd-vt-wrap">
     <div class="ldd-vt-toolbar" style="gap:8px">
-      <input class="ldd-vt-input ldd-vt-search" id="ldd-pl-q" placeholder="Search PDFs…" style="max-width:280px">
+      <input class="ldd-vt-input ldd-vt-search" id="ldd-pl-q" placeholder="Search PDFs…" style="max-width:220px">
+      <select class="ldd-vt-input" id="ldd-pl-sort" style="max-width:150px;font-size:.82rem" title="Sort by">
+        <option value="newest">Newest</option>
+        <option value="viewed">Most viewed</option>
+        <option value="prompts-desc">Most prompts</option>
+        <option value="prompts-asc">Fewest prompts</option>
+      </select>
       <button class="ldd-vt-btn ghost sm" id="ldd-pl-refresh" title="Reload the list from GitHub">↻</button>
       <span style="flex:1"></span>
       <button class="ldd-vt-btn ghost sm" id="ldd-pl-view" title="Toggle list/grid view">☰ List</button>
@@ -61,7 +67,28 @@ function lddRenderPdfLibraryPage(o){
     <div class="ldd-vt-grid" id="ldd-pl-grid" style="grid-template-columns:repeat(4,1fr);gap:10px"></div>
   </div>`;
 }
-let lddPlUI={query:"",view:"grid"};
+let lddPlUI={query:"",view:"grid",sort:"newest"};
+const LDD_PL_VIEWS_KEY="lddPdfLibViews";
+const LDD_PL_SORT_KEY="lddPdfLibSort";
+let lddPlViews={};
+async function lddPlLoadViews(){
+  try{
+    const d=await chrome.storage.local.get([LDD_PL_VIEWS_KEY,LDD_PL_SORT_KEY]);
+    lddPlViews=d[LDD_PL_VIEWS_KEY]||{};
+    if(d[LDD_PL_SORT_KEY])lddPlUI.sort=d[LDD_PL_SORT_KEY];
+  }catch(_){}
+}
+function lddPlSaveViews(){return chrome.storage.local.set({[LDD_PL_VIEWS_KEY]:lddPlViews}).catch(()=>{});}
+function lddPlSaveSort(){return chrome.storage.local.set({[LDD_PL_SORT_KEY]:lddPlUI.sort}).catch(()=>{});}
+function lddPlBumpView(sha){lddPlViews[sha]=(lddPlViews[sha]||0)+1;lddPlSaveViews();}
+function lddPlPromptCount(f){
+  const n=f.file||"";
+  let m=n.match(/^(\d+)[_\s-]/);
+  if(m)return parseInt(m[1],10);
+  m=n.match(/(\d+)[_\s-]*prompts?/i);
+  if(m)return parseInt(m[1],10);
+  return 0;
+}
 const LDD_PL_FAV_KEY="lddPdfLibFavs";
 const LDD_PL_VIEW_KEY="lddPdfLibView";
 let lddPlFavs=[];
@@ -284,6 +311,14 @@ async function lddPlRenderGrid(force){
     let folderFiles=files;
     if(af==="unfiled")folderFiles=files.filter(f=>!lddPlFileFolder[f.sha]);
     else if(af!=="all")folderFiles=files.filter(f=>lddPlFileFolder[f.sha]===af);
+    const sortMode=lddPlUI.sort||"newest";
+    if(sortMode==="viewed")folderFiles.sort((a,b)=>{
+      const va=lddPlViews[a.sha]||0,vb=lddPlViews[b.sha]||0;
+      if(vb!==va)return vb-va;
+      return ((lddPlSeen&&lddPlSeen[b.sha])||0)-((lddPlSeen&&lddPlSeen[a.sha])||0);
+    });
+    else if(sortMode==="prompts-desc")folderFiles.sort((a,b)=>lddPlPromptCount(b)-lddPlPromptCount(a));
+    else if(sortMode==="prompts-asc")folderFiles.sort((a,b)=>lddPlPromptCount(a)-lddPlPromptCount(b));
     const q=((lddPlUI.query)||"").trim().toLowerCase();
     if(q)folderFiles=folderFiles.filter(f=>(f.name+" "+f.file).toLowerCase().includes(q));
     lddPlUI.list=folderFiles;
@@ -296,7 +331,7 @@ async function lddPlRenderGrid(force){
     grid.style.gridTemplateColumns=isList?"1fr":"repeat(4,1fr)";
     const starBtn=(f)=>`<button class="ldd-vt-iconbtn${lddPlFavs.includes(f.sha)?" on":""}" data-pl-fav="${f.sha}" title="Favorite" style="${isList?"":"position:absolute;top:8px;right:8px;z-index:2;background:rgba(0,0,0,.45);border-radius:8px;"}">★</button>`;
     grid.innerHTML=folderFiles.length?(isList
-      ? `<div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1">`+files.map((f,i)=>`
+      ? `<div style="display:flex;flex-direction:column;gap:6px;grid-column:1/-1">`+folderFiles.map((f,i)=>`
         <div style="display:flex;gap:10px;align-items:center;padding:8px 12px;border:1px solid var(--ldd-border);border-radius:10px;background:var(--ldd-panel)">
           ${starBtn(f)}
           <span style="font-size:.88rem;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${lddVtEsc(f.name)}</span>
@@ -307,7 +342,7 @@ async function lddPlRenderGrid(force){
           <button class="ldd-vt-btn ghost sm" data-pl-save="${i}">${LDD_LUCIDE_DB}Save to Vault</button>
           <button class="ldd-vt-btn ghost sm" data-pl-dl="${i}">${LDD_LUCIDE_DL}Download</button>
         </div>`).join("")+`</div>`
-      : files.map((f,i)=>`
+      : folderFiles.map((f,i)=>`
       <div class="ldd-vt-card" style="position:relative;padding:10px">
         ${starBtn(f)}
         <canvas data-pl-thumb="${i}" width="320" height="180" style="width:100%;height:auto;border-radius:6px;background:var(--ldd-bg);display:block"></canvas>
@@ -324,6 +359,7 @@ async function lddPlRenderGrid(force){
       :`<div class="ldd-vt-empty"><h3>No PDFs found</h3><p>${lddPlActiveFolder!=="all"?"Nothing in this folder yet.":`Drop .pdf files in the repo${lddPlSettings.path?" / "+lddVtEsc(lddPlSettings.path):""} and hit ↻.`}</p></div>`;
     const openLive=async f=>{
       if(!f||!f.url)return;
+      try{lddPlBumpView(f.sha);}catch(_){}
       const old=document.getElementById("ldd-pl-viewer-ov");
       if(old)old.remove();
       lddVtToast("Opening "+f.name+"…");
@@ -504,7 +540,7 @@ function lddPlOpenViewer(f,blobUrl){
   };
 }
 function lddBindPdfLibraryPage(o){
-  Promise.all([lddPlLoadSettings(),lddPlLoadFavs(),lddPlLoadFolders()]).then(()=>{
+  Promise.all([lddPlLoadSettings(),lddPlLoadFavs(),lddPlLoadFolders(),lddPlLoadViews()]).then(()=>{
     const root=lddVtRoot();
     const rf=root.querySelector("#ldd-pl-refresh");
     if(rf)rf.onclick=()=>lddPlRenderGrid(true);
@@ -514,6 +550,8 @@ function lddBindPdfLibraryPage(o){
     if(viewBtn)viewBtn.onclick=()=>{lddPlUI.view=lddPlUI.view==="list"?"grid":"list";lddPlSaveView();syncViewBtn();lddPlRenderGrid(false);};
     const pq=root.querySelector("#ldd-pl-q");
     if(pq)pq.addEventListener("input",()=>{lddPlUI.query=pq.value;lddPlRenderGrid(false);});
+    const sortSel=root.querySelector("#ldd-pl-sort");
+    if(sortSel){sortSel.value=lddPlUI.sort||"newest";sortSel.onchange=()=>{lddPlUI.sort=sortSel.value;lddPlSaveSort();lddPlRenderGrid(false);};}
     lddPlRenderGrid(true);
   });
 }
