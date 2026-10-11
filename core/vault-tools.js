@@ -270,6 +270,7 @@ function lddPvRenderGrid(){
     <button class="ldd-vt-btn ghost sm" id="ldd-pv-selpage">Select page</button>
     <button class="ldd-vt-btn ghost sm" id="ldd-pv-selall">Select all ${list.length}</button>
     <span style="display:flex;gap:4px;align-items:center;font-size:.78rem;color:var(--ldd-muted)"><input id="ldd-pv-rfrom" type="number" min="1" max="${list.length}" placeholder="#" class="ldd-vt-input" style="width:64px;padding:.3rem .5rem;font-size:.78rem"> to <input id="ldd-pv-rto" type="number" min="1" max="${list.length}" placeholder="#" class="ldd-vt-input" style="width:64px;padding:.3rem .5rem;font-size:.78rem"> <button class="ldd-vt-btn ghost sm" id="ldd-pv-rgo">Select</button></span>
+    <button class="ldd-vt-btn primary sm" id="ldd-pv-selcopy"${lddPvUI.selected.size?"":" disabled"}>Copy (${lddPvUI.selected.size})</button>
     <button class="ldd-vt-btn danger sm" id="ldd-pv-seldel"${lddPvUI.selected.size?"":" disabled"}>Delete (${lddPvUI.selected.size})</button>
     <button class="ldd-vt-btn ghost sm" id="ldd-pv-selcancel">Cancel</button></div>`;
   let pager=lddPvPagerHTML(pages);
@@ -293,7 +294,17 @@ function lddPvRenderGrid(){
     if(cb.checked)lddPvUI.selected.add(cb.dataset.pvSel);else lddPvUI.selected.delete(cb.dataset.pvSel);
     const del=grid.querySelector("#ldd-pv-seldel");
     if(del){del.textContent=`Delete (${lddPvUI.selected.size})`;del.disabled=!lddPvUI.selected.size;}
+    const cp=grid.querySelector("#ldd-pv-selcopy");
+    if(cp){cp.textContent=`Copy (${lddPvUI.selected.size})`;cp.disabled=!lddPvUI.selected.size;}
   });
+  const selCopy=grid.querySelector("#ldd-pv-selcopy");
+  if(selCopy)selCopy.onclick=()=>{
+    const ids=[...lddPvUI.selected];
+    if(!ids.length)return;
+    const byId={};lddPv.prompts.forEach(p=>byId[p.id]=p);
+    const txt=ids.map(id=>byId[id]).filter(Boolean).map(p=>`${p.title}\n\n${p.body}`.trim()).join("\n\n---\n\n");
+    lddPvCopyText(txt,`${ids.length} prompts copied`);
+  };
   const rGo=grid.querySelector("#ldd-pv-rgo");
   if(rGo)rGo.onclick=()=>{
     let a=+grid.querySelector("#ldd-pv-rfrom").value||0,b=+grid.querySelector("#ldd-pv-rto").value||0;

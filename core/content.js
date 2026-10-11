@@ -976,6 +976,35 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.248",items:["FIXED: header mode display now defaults to Safe (was showing Power User)"]},
+ {v:"1.8.247",items:["REMOVED: StickyDragon (floating sticky notes)"]},
+ {v:"1.8.246",items:["FIXED: StickyDragon notes now wait for the MyDesigns page to load before appearing"]},
+ {v:"1.8.245",items:["FIXED: StickyDragon scribble button crash"]},
+ {v:"1.8.244",items:["NEW: StickyDragon notes manager — list, show/hide, delete all notes"]},
+ {v:"1.8.243",items:["NEW: Scribble mode in StickyDragon — freehand drawing on notes"]},
+ {v:"1.8.242",items:["NEW: Bold, Italic, Underline in StickyDragon notes"]},
+ {v:"1.8.241",items:["FIXED: StickyDragon notes can no longer be dragged off-screen"]},
+ {v:"1.8.240",items:["CHANGED: StickyDragon X hides the note instead of deleting — restore or delete forever from the \U0001F4DD menu"]},
+ {v:"1.8.239",items:["CHANGED: StickyDragon resize uses a small custom handle instead of the browser corner"]},
+ {v:"1.8.238",items:["FIXED: StickyDragon no longer loses cursor while typing","RESTORED: resize on StickyDragon notes","NEW: pushpin on StickyDragon notes"]},
+ {v:"1.8.237",items:["NEW: font size controls (A-/A+) on StickyDragon notes"]},
+ {v:"1.8.236",items:["REMOVED: resize corner on StickyDragon notes"]},
+ {v:"1.8.235",items:["RENAMED: Sticky Notes is now StickyDragon"]},
+ {v:"1.8.234",items:["NEW: Sticky Notes — floating draggable notes on any MyDesigns page, even outside the Tools tab"]},
+ {v:"1.8.233",items:["NEW: yellow H2 note at top of PDF Library"]},
+ {v:"1.8.232",items:["RENAMED: \u29c9 Prompts button is now \u29c9 Get Prompts"]},
+ {v:"1.8.231",items:["REVERTED: Download back to Copy (clipboard)"]},
+ {v:"1.8.230",items:["CHANGED: Copy button is now Download — saves selected prompts as a .txt file"]},
+ {v:"1.8.229",items:["NEW: \uD83D\uDCBE Save selected to Prompt Vault in \u29c9 Prompts picker"]},
+ {v:"1.8.228",items:["NEW: Copy button in Prompt Vault select mode — copy #X to #Y after selecting"]},
+ {v:"1.8.227",items:["REMOVED: per-row queue button — use checkboxes + Send to ChatGPT"]},
+ {v:"1.8.226",items:["RESTORED: X-to-Y range selector in \u29c9 Prompts picker","RENAMED: Queue button is now \"Send to ChatGPT\""]},
+ {v:"1.8.225",items:["SIMPLIFIED: \u29c9 Prompts picker — removed Copy all/Queue all/X-Y range, just check boxes then Copy/Queue"]},
+ {v:"1.8.224",items:["REVERTED: no hard cap on Prompt Queue — \"I understand\" queues everything"]},
+ {v:"1.8.223",items:["CHANGED: Prompt Queue hard-capped at 10 per batch — bulk queue sends first 10 only"]},
+ {v:"1.8.222",items:["NEW: multi-select in \u29c9 Prompts picker — checkboxes, \"X of Y selected\", Copy/Queue selected"]},
+ {v:"1.8.221",items:["FIXED: queue popup was not appearing (now uses the vault modal)","CHANGED: row button renamed to \"Send queue to ChatGPT\"","NEW: queue popup shows \"X of Y queued\""]},
+ {v:"1.8.220",items:["NEW: Queue all/range warns when over 10 (\"I understand\" to proceed)","NEW: single \u26a1 shows a Send to ChatGPT popup"]},
  {v:"1.8.219",items:["NEW: prompt picker uses the filename number as the target count — keeps the N longest when extras slip through"]},
  {v:"1.8.218",items:["FIXED: prompt parser skips intro instructions, table of contents, and other front matter — only real prompts"]},
  {v:"1.8.217",items:["FIXED: PDF prompt parser no longer picks up intro pages, color palettes, or other non-prompt content"]},
@@ -1105,7 +1134,7 @@ function lddChangelogText(maxV){
 }
 function lddRenderDashboard(o){
   const enabled=Object.values(o).filter(v=>v===true).length;
-  const mode=(o.mode||o.appMode||"Power User");
+  const mode=(o.mode||o.appMode||"Safe");
   const theme=o.themeEnabled ? (o.themePreset||o.themeName||"Custom") : "Native MyDesigns";
   return `
   <div class="ldd-page-hero ldd-info-hero">
@@ -1700,6 +1729,8 @@ function lddBindAppPage(tab,o){
      const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
      if(target)target.click();else globalThis.lddToast110("Scout AI link was not found",true);
    };
+
+
    const pqOpen2=lddAppRoot.querySelector("#ldd-open-prompt-queue");
    if(pqOpen2)pqOpen2.onclick=()=>lddShowTab("promptqueue");
    const renOpen=lddAppRoot.querySelector("#ldd-open-renamer");
@@ -2619,7 +2650,7 @@ function lddRenderAppPage(opts){
   lddAppRoot.id="ldd-app-page";
   lddAppRoot.innerHTML=`
  <aside class="ldd-app-nav">
-   <div class="ldd-app-brand"><span>${lddIconTag(28)}</span><div><b>LDD Tools</b><small>${({safe:"Safe",medium:"Medium",extreme:"Extreme",power:"Power User"})[o.perfSelectedMode]||"Power User"} mode</small></div></div>
+   <div class="ldd-app-brand"><span>${lddIconTag(28)}</span><div><b>LDD Tools</b><small>${({safe:"Safe",medium:"Medium",extreme:"Extreme",power:"Power User"})[o.perfSelectedMode]||"Safe"} mode</small></div></div>
    <button data-tab="dashboard" class="active">⌂ Home</button>
    <button data-tab="workflow">${lddIconTag()} Tools</button>
    <button data-tab="fonts">Fonts</button>

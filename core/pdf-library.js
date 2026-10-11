@@ -48,7 +48,7 @@ async function lddPlFetchList(force){
 /* ---------- Library tab ---------- */
 function lddRenderPdfLibraryPage(o){
   lddVtInjectCss();
-  return `<div class="ldd-page-title"><h2>📚 Prompt Pack PDF Library</h2><p>Read live or download.</p></div>
+  return `<div class="ldd-page-title"><h2>📚 Prompt Pack PDF Library</h2><p>Read live or download.</p><h2 style="color:#ffd60a;font-size:1rem;margin:8px 0 0;font-weight:700;">Read live, copy, or hit \u29c9 Get Prompts</h2></div>
   <div class="ldd-vt-wrap">
     <div class="ldd-vt-toolbar" style="gap:8px">
       <input class="ldd-vt-input ldd-vt-search" id="ldd-pl-q" placeholder="Search PDFs…" style="max-width:220px">
@@ -341,7 +341,7 @@ async function lddPlRenderGrid(force){
           <span style="min-width:110px;max-width:150px">${lddPlFolderSelect(f.sha)}</span>
           ${f.size?`<span class="ldd-vt-tag">${lddPlFmtSize(f.size)}</span>`:""}
           <button class="ldd-vt-btn primary sm" data-pl-read="${i}">Read live</button>
-          <button class="ldd-vt-btn ghost sm" data-pl-prompts="${i}">⧉ Prompts</button>
+          <button class="ldd-vt-btn ghost sm" data-pl-prompts="${i}">⧉ Get Prompts</button>
           <button class="ldd-vt-btn ghost sm" data-pl-save="${i}">${LDD_LUCIDE_DB}Save to Vault</button>
           <button class="ldd-vt-btn ghost sm" data-pl-dl="${i}">${LDD_LUCIDE_DL}Download</button>
         </div>`).join("")+`</div>`
@@ -354,7 +354,7 @@ async function lddPlRenderGrid(force){
         ${f.size?`<div class="meta" style="margin-bottom:6px"><span class="ldd-vt-tag">${lddPlFmtSize(f.size)}</span></div>`:""}
         <div class="actions" style="gap:6px;flex-wrap:wrap">
           <button class="ldd-vt-btn primary sm" data-pl-read="${i}">Read live</button>
-          <button class="ldd-vt-btn ghost sm" data-pl-prompts="${i}">⧉ Prompts</button>
+          <button class="ldd-vt-btn ghost sm" data-pl-prompts="${i}">⧉ Get Prompts</button>
           <button class="ldd-vt-btn ghost sm" data-pl-save="${i}">${LDD_LUCIDE_DB}Save to Vault</button>
           <button class="ldd-vt-btn ghost sm" data-pl-dl="${i}">${LDD_LUCIDE_DL}Download</button>
         </div>
@@ -461,12 +461,52 @@ async function lddPlSaveToVault(f){
     return 0;
   }
 }
+async function lddPlSaveSelectedToVault(prompts,fname){
+  if(typeof lddPvImportParsed!=="function"){lddVtToast("Prompt Vault not available",true);return 0;}
+  await lddPvImportParsed(prompts,fname||"Selected prompts");
+  lddVtToast(`Saved ${prompts.length} prompts to Prompt Vault`);
+  return prompts.length;
+}
 const LDD_PQ_STATE_KEY="lddPromptQueueState_v132";
+function lddPlConfirmQueueAll(count,onYes){
+  const ov=lddPvModal(`
+    <div style="text-align:center;padding:8px 4px;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:10px;">Queue ${count} prompts?</div>
+    <div style="font-size:13px;opacity:.75;margin-bottom:18px;">No more than 10 recommended at a time for best results.</div>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="ldd-vt-btn primary" id="ldd-qm-yes">I understand</button>
+      <button class="ldd-vt-btn" id="ldd-qm-no">Cancel</button>
+    </div></div>`);
+  ov.querySelector("#ldd-qm-yes").onclick=()=>{ov.remove();onYes();};
+  ov.querySelector("#ldd-qm-no").onclick=()=>ov.remove();
+}
+function lddPlSingleQueuePopup(text,idx,total){
+  const ov=lddPvModal(`
+    <div style="text-align:center;padding:8px 4px;">
+    <div style="font-size:15px;font-weight:700;margin-bottom:18px;">Send prompt ${idx} of ${total} to queue?</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="ldd-vt-btn primary" id="ldd-qm-send">Send queue to ChatGPT</button>
+      <button class="ldd-vt-btn" id="ldd-qm-only">Queue only</button>
+      <button class="ldd-vt-btn ghost" id="ldd-qm-cancel">Cancel</button>
+    </div></div>`);
+  ov.querySelector("#ldd-qm-send").onclick=async()=>{
+    ov.remove();lddPvCopyText(text);
+    await lddPlSendToQueue(text,true);
+    lddVtToast(`${idx} of ${total} queued`);
+  };
+  ov.querySelector("#ldd-qm-only").onclick=async()=>{
+    ov.remove();lddPvCopyText(text);
+    await lddPlSendToQueue(text,false);
+    lddVtToast(`${idx} of ${total} queued`);
+  };
+  ov.querySelector("#ldd-qm-cancel").onclick=()=>ov.remove();
+}
 async function lddPlSendToQueue(text,openChat){
   const d=await chrome.storage.local.get(LDD_PQ_STATE_KEY).catch(()=>({}));
   const state=d[LDD_PQ_STATE_KEY]||{};
   const prompts=String(text||"").split(/^\s*---+\s*$/m).map(x=>x.trim()).filter(Boolean);
-  await chrome.storage.local.set({[LDD_PQ_STATE_KEY]:{...state,raw:String(text||"").trim(),prompts,index:0,completed:[],failed:[],running:false,paused:false,collapsed:false,lddPQAutoOpen:true}}).catch(()=>{});
+  const raw=prompts.join("\n\n---\n\n");
+  await chrome.storage.local.set({[LDD_PQ_STATE_KEY]:{...state,raw,prompts,index:0,completed:[],failed:[],running:false,paused:false,collapsed:false,lddPQAutoOpen:true}}).catch(()=>{});
   if(openChat!==false){
     try{window.open("https://chatgpt.com/","_blank","noopener");}
     catch(_){try{chrome.tabs.create({url:"https://chatgpt.com/"});}catch(_){}}
@@ -489,23 +529,29 @@ async function lddPlPromptPicker(f){
   if(!prompts.length){modal.querySelector("p").textContent="No prompts found in this PDF.";return;}
   modal.innerHTML=`
     <h2>⧉ ${lddVtEsc(f.name)}</h2>
-    <p style="font-size:.85rem;color:var(--ldd-muted);margin:0 0 10px">${prompts.length} prompts — click Copy on any row, or:</p>
-    <div class="mrow" style="margin-bottom:10px;flex-wrap:wrap;gap:8px">
-      <button class="ldd-vt-btn primary sm" id="ldd-pp-copyall">Copy all ${prompts.length}</button>
-      <button class="ldd-vt-btn primary sm" id="ldd-pp-queueall">⚡ Queue all</button>
+    <p style="font-size:.85rem;color:var(--ldd-muted);margin:0 0 10px">${prompts.length} prompts — check the ones you want, then:</p>
+    <div class="mrow" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;align-items:center">
+      <span id="ldd-pp-selcount" style="font-size:.82rem;color:var(--ldd-muted)">0 of ${prompts.length} selected</span>
+      <button class="ldd-vt-btn sm" id="ldd-pp-selall">Select all</button>
+      <button class="ldd-vt-btn sm" id="ldd-pp-selnone">Clear</button>
       <span style="display:flex;gap:6px;align-items:center">
         <input class="ldd-vt-input" id="ldd-pp-x" placeholder="X" style="width:52px" inputmode="numeric">
         <span style="color:var(--ldd-muted);font-size:.82rem">to</span>
         <input class="ldd-vt-input" id="ldd-pp-y" placeholder="Y" style="width:52px" inputmode="numeric">
-        <button class="ldd-vt-btn sm" id="ldd-pp-copyrange">Copy</button>
-        <button class="ldd-vt-btn sm" id="ldd-pp-queuerange">⚡ Queue</button>
+        <button class="ldd-vt-btn sm" id="ldd-pp-selrange">Select</button>
       </span>
-      <button class="ldd-vt-btn ghost sm" id="ldd-pp-save">💾 Save all to Prompt Vault</button>
+      <button class="ldd-vt-btn primary sm" id="ldd-pp-copyselected">Copy</button>
+      <button class="ldd-vt-btn primary sm" id="ldd-pp-queueselected">Send to ChatGPT</button>
+      <button class="ldd-vt-btn ghost sm" id="ldd-pp-savesel">💾 Save selected</button>
+      <button class="ldd-vt-btn ghost sm" id="ldd-pp-save">💾 Save all</button>
     </div>
     <input class="ldd-vt-input" id="ldd-pp-q" placeholder="Filter prompts…" style="margin-bottom:8px">
     <div id="ldd-pp-list" style="display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto"></div>
     <div class="mrow" style="margin-top:10px"><button class="ldd-vt-btn ghost" id="ldd-pp-close">Close</button></div>`;
   const listEl=modal.querySelector("#ldd-pp-list");
+  const selected=new Set();
+  const selCountEl=()=>modal.querySelector("#ldd-pp-selcount");
+  const updateSelCount=()=>{const el=selCountEl();if(el)el.textContent=`${selected.size} of ${prompts.length} selected`;};
   const fullText=p=>{
     const b=String(p.body||"").trim(),t=String(p.title||"").trim();
     if(!t)return b;
@@ -518,49 +564,60 @@ async function lddPlPromptPicker(f){
     const items=prompts.map((p,i)=>({p,i})).filter(({p})=>!q||(p.title+" "+p.body).toLowerCase().includes(q));
     listEl.innerHTML=items.map(({p,i})=>`
       <div style="display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--ldd-border);border-radius:8px">
+        <input type="checkbox" data-pp-sel="${i}" ${selected.has(i)?"checked":""} style="accent-color:var(--ldd-accent);width:16px;height:16px;flex-shrink:0">
         <span style="color:var(--ldd-muted);font-size:.78rem;min-width:30px">${i+1}</span>
         <span style="flex:1;min-width:0"><strong style="font-size:.83rem">${lddVtEsc(p.title)}</strong>
         <div class="prev">${lddVtEsc(p.body.slice(0,110))}${p.body.length>110?"…":""}</div></span>
         <button class="ldd-vt-btn ghost sm" data-pp-copy="${i}">Copy</button>
-        <button class="ldd-vt-btn ghost sm" data-pp-queue="${i}" title="Copy + send to Prompt Queue">⚡</button>
       </div>`).join("")||`<div class="ldd-vt-empty">No matches</div>`;
     listEl.querySelectorAll("[data-pp-copy]").forEach(b=>b.onclick=()=>{
       const pr=prompts[+b.dataset.ppCopy];if(!pr)return;
       lddPvCopyText(fullText(pr),"Prompt copied");
     });
-    listEl.querySelectorAll("[data-pp-queue]").forEach(b=>b.onclick=async()=>{
-      const pr=prompts[+b.dataset.ppQueue];if(!pr)return;
-      lddPvCopyText(fullText(pr));
-      const n=await lddPlSendToQueue(fullText(pr),false);
-      lddVtToast(`Queued (${n} in Prompt Queue) — open ChatGPT to run`);
+    listEl.querySelectorAll("[data-pp-sel]").forEach(cb=>cb.onchange=()=>{
+      const i=+cb.dataset.ppSel;
+      if(cb.checked)selected.add(i);else selected.delete(i);
+      updateSelCount();
     });
   };
   renderList("");
   modal.querySelector("#ldd-pp-q").addEventListener("input",e=>renderList(e.target.value));
   modal.querySelector("#ldd-pp-close").onclick=()=>ov.remove();
-  modal.querySelector("#ldd-pp-copyall").onclick=()=>{
-    lddPvCopyText(prompts.map(fullText).join("\n\n---\n\n"),`${prompts.length} prompts copied`);
+  modal.querySelector("#ldd-pp-selall").onclick=()=>{
+    const q=(modal.querySelector("#ldd-pp-q").value||"").toLowerCase();
+    prompts.forEach((p,i)=>{if(!q||(p.title+" "+p.body).toLowerCase().includes(q))selected.add(i);});
+    updateSelCount();renderList(modal.querySelector("#ldd-pp-q").value);
   };
-  modal.querySelector("#ldd-pp-queueall").onclick=async()=>{
-    const all=prompts.map(fullText).join("\n\n---\n\n");
-    lddPvCopyText(all);
-    const n=await lddPlSendToQueue(all);
-    lddVtToast(`${prompts.length} sent to Prompt Queue (${n} total)`);
-  };
-  modal.querySelector("#ldd-pp-copyrange").onclick=()=>{
+  modal.querySelector("#ldd-pp-selnone").onclick=()=>{selected.clear();updateSelCount();renderList(modal.querySelector("#ldd-pp-q").value);};
+  modal.querySelector("#ldd-pp-selrange").onclick=()=>{
     const x=parseInt(modal.querySelector("#ldd-pp-x").value,10),
           y=parseInt(modal.querySelector("#ldd-pp-y").value,10);
     if(!x||!y||x<1||y>prompts.length||x>y){lddVtToast(`Enter X to Y (1–${prompts.length})`,true);return;}
-    lddPvCopyText(prompts.slice(x-1,y).map(fullText).join("\n\n---\n\n"),`Prompts ${x}–${y} copied`);
+    for(let i=x-1;i<y;i++)selected.add(i);
+    updateSelCount();renderList(modal.querySelector("#ldd-pp-q").value);
+    lddVtToast(`${y-x+1} selected`);
   };
-  modal.querySelector("#ldd-pp-queuerange").onclick=async()=>{
-    const x=parseInt(modal.querySelector("#ldd-pp-x").value,10),
-          y=parseInt(modal.querySelector("#ldd-pp-y").value,10);
-    if(!x||!y||x<1||y>prompts.length||x>y){lddVtToast(`Enter X to Y (1–${prompts.length})`,true);return;}
-    const sel=prompts.slice(x-1,y).map(fullText).join("\n\n---\n\n");
+  modal.querySelector("#ldd-pp-savesel").onclick=()=>{
+    if(!selected.size){lddVtToast("Select prompts first",true);return;}
+    const idx=[...selected].sort((a,b)=>a-b);
+    lddPlSaveSelectedToVault(idx.map(i=>prompts[i]),f.name.replace(/\.pdf$/i,"")+" (selected)");
+  };
+  modal.querySelector("#ldd-pp-copyselected").onclick=()=>{
+    if(!selected.size){lddVtToast("Select prompts first",true);return;}
+    const idx=[...selected].sort((a,b)=>a-b);
+    lddPvCopyText(idx.map(i=>fullText(prompts[i])).join("\n\n---\n\n"),`${idx.length} prompts copied`);
+  };
+  const doQueueSelected=async()=>{
+    const idx=[...selected].sort((a,b)=>a-b);
+    const sel=idx.map(i=>fullText(prompts[i])).join("\n\n---\n\n");
     lddPvCopyText(sel);
     const n=await lddPlSendToQueue(sel);
-    lddVtToast(`Prompts ${x}–${y} queued (${n} total)`);
+    lddVtToast(`${n} of ${prompts.length} queued`);
+  };
+  modal.querySelector("#ldd-pp-queueselected").onclick=()=>{
+    if(!selected.size){lddVtToast("Select prompts first",true);return;}
+    if(selected.size>10)lddPlConfirmQueueAll(selected.size,doQueueSelected);
+    else doQueueSelected();
   };
   modal.querySelector("#ldd-pp-save").onclick=async()=>{
     ov.remove();
@@ -576,7 +633,7 @@ function lddPlOpenViewer(f,blobUrl){
   ov.innerHTML=`
     <div style="display:flex;gap:8px;align-items:center;padding:10px 14px;background:var(--ldd-panel);border-bottom:1px solid var(--ldd-border);flex-shrink:0">
       <strong style="flex:1;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📄 ${lddVtEsc(f.name)}</strong>
-      <button class="ldd-vt-btn ghost sm" id="ldd-plv-prompts">⧉ Prompts</button>
+      <button class="ldd-vt-btn ghost sm" id="ldd-plv-prompts">⧉ Get Prompts</button>
       <button class="ldd-vt-btn ghost sm" id="ldd-plv-dl">⬇ Download</button>
       <button class="ldd-vt-btn sm" id="ldd-plv-close">✕ Close</button>
     </div>
