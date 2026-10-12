@@ -948,7 +948,6 @@ function lddMountSidebarEntry(){
       catch(err){
         console.error("LDD Tools open failed",err);
         if(/extension context invalidated/i.test(String((err&&err.message)||err))){
-          alert("LDD Tools was just updated — please refresh this page (F5), then open LDD Tools again.");
           return;
         }
         lddOpenAppPage();
@@ -976,6 +975,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.261",items:["REMOVED: \u2018LDD Tools was just updated\u2019 refresh popup"]},
  {v:"1.8.260",items:["IMPROVED: update download button now says NO ZIP ON RELEASE when the GitHub release is missing its ZIP"]},
  {v:"1.8.259",items:["FIXED: PDF Library prompt-count sort now handles all filename formats (was misreading 9 files)"]},
  {v:"1.8.258",items:["REMOVED: Profit Calculator, Listing SEO Grader, Niche Research"]},
