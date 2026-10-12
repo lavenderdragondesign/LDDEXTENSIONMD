@@ -976,6 +976,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.260",items:["IMPROVED: update download button now says NO ZIP ON RELEASE when the GitHub release is missing its ZIP"]},
  {v:"1.8.259",items:["FIXED: PDF Library prompt-count sort now handles all filename formats (was misreading 9 files)"]},
  {v:"1.8.258",items:["REMOVED: Profit Calculator, Listing SEO Grader, Niche Research"]},
  {v:"1.8.257",items:["NEW: Live Niche Research — real-time Etsy competition, pricing & keyword data"]},
@@ -2619,8 +2620,9 @@ function lddShowUpdateGate(release){
     downloadBtn.onclick=()=>{
       const url=release?.assetUrl;
       if(!url){
-        downloadBtn.textContent="DOWNLOAD UNAVAILABLE";
+        downloadBtn.textContent="NO ZIP ON RELEASE";
         downloadBtn.disabled=true;
+        downloadBtn.title="The GitHub release has no ZIP file attached. Attach the build ZIP to the release on github.com.";
         return;
       }
       downloadBtn.disabled=true;
