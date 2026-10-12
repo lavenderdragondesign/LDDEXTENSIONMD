@@ -976,6 +976,17 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.259",items:["FIXED: PDF Library prompt-count sort now handles all filename formats (was misreading 9 files)"]},
+ {v:"1.8.258",items:["REMOVED: Profit Calculator, Listing SEO Grader, Niche Research"]},
+ {v:"1.8.257",items:["NEW: Live Niche Research — real-time Etsy competition, pricing & keyword data"]},
+ {v:"1.8.256",items:["NEW: Listing SEO Grader — eRank-style title/tag/description audit with A–F score"]},
+ {v:"1.8.255",items:["NEW: Profit Calculator — true profit after Etsy fees, COGS, shipping & ad spend"]},
+ {v:"1.8.254",items:["REMOVED: PDF Generator tool"]},
+ {v:"1.8.253",items:["FIXED: PDF Generator styling — Tailwind now bundled locally (CDN was blocked)"]},
+ {v:"1.8.252",items:["CHANGED: PDF Generator now opens inside LDD Tools (no new tab)"]},
+ {v:"1.8.251",items:["NEW: PDF Generator tool — create PDFs for products and prompts"]},
+ {v:"1.8.250",items:["FIXED: MyDesigns scrollbars now theme whenever any accent color is active, broader selector coverage"]},
+ {v:"1.8.249",items:["FIXED: LDD panel scrollbars now always follow the theme accent color"]},
  {v:"1.8.248",items:["FIXED: header mode display now defaults to Safe (was showing Power User)"]},
  {v:"1.8.247",items:["REMOVED: StickyDragon (floating sticky notes)"]},
  {v:"1.8.246",items:["FIXED: StickyDragon notes now wait for the MyDesigns page to load before appearing"]},
@@ -1147,7 +1158,7 @@ function lddRenderDashboard(o){
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
     <div class="ldd-control-card"><h2>Welcome to LDD Tools</h2><span>LDD Tools adds optional creator-focused utilities on top of MyDesigns. Use the pages in the left menu to customize the interface, speed up repetitive work, and turn individual tools on or off whenever you want.</span></div>
     <div class="ldd-control-card"><h2>What's New • v${chrome.runtime.getManifest().version}</h2>${lddChangelogHtml(3)}</div>
-    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Prompt Vault, Image Vault, Favorites, Prompt Pack PDF Library, Scout AI Style Creator & Autofiller, and ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
+    <div class="ldd-control-card"><h2>Included Tools</h2><span><b>Tools:</b> Drag & Drop Upload, LDD Renamer, DPI Changer, Image Resizer, Prompt Vault, Image Vault, Favorites, Prompt Pack PDF Library, Scout AI Style Creator & Autofiller, ChatGPT Prompt Queue.</span><span><b>Customization:</b> LDD themes, app fonts, hotkeys, UI tweaks, show/hide controls, and listing-title sizing.</span><span><b>Performance:</b> selectable performance modes plus TinyMD for aggressive speed-focused UI reduction.</span></div>
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
@@ -1530,6 +1541,10 @@ function lddPageBody(tab,o){
  if(tab==="imgresize")return lddRenderImgResizePage(o);
  if(tab==="renamer")return lddRenderRenamerPage(o);  if(tab==="promptvault")return lddRenderPromptVaultPage(o);  if(tab==="imagevault")return lddRenderImageVaultPage(o);  if(tab==="favorites")return lddRenderFavoritesPage(o);
  if(tab==="pdflibrary")return lddRenderPdfLibraryPage(o);
+
+
+
+
  if(tab==="scout")return lddRenderScoutPage(o);
  if(tab==="extras")return lddRenderExtraFeaturesPage(o);
  if(tab==="performance")return lddRenderPerformancePage(o);
@@ -1742,6 +1757,11 @@ function lddBindAppPage(tab,o){
    const fvOpen=lddAppRoot.querySelector("#ldd-open-favorites");
    if(fvOpen)fvOpen.onclick=()=>lddShowTab("favorites");
    const plOpen=lddAppRoot.querySelector("#ldd-open-pdflibrary");
+   const pcOpen=lddAppRoot.querySelector("#ldd-open-profitcalc");
+   const sgOpen=lddAppRoot.querySelector("#ldd-open-seograder");
+   if(sgOpen)sgOpen.onclick=()=>lddShowTab("seograder");
+   if(pcOpen)pcOpen.onclick=()=>lddShowTab("profitcalc");
+
    if(plOpen)plOpen.onclick=()=>lddShowTab("pdflibrary");
    try{if(typeof lddPlUpdateToolsBadge==="function")lddPlUpdateToolsBadge();}catch(_){}
  }
@@ -3151,9 +3171,22 @@ function lddApplyScrollbarStyle(o){
  if(!st){st=document.createElement("style");st.id="ldd-scrollbar-dynamic-style";document.head.appendChild(st)}
  // Never paint MyDesigns scrollbars when LDD theming is off/native.
  // This prevents the old neon-green scrollbar from leaking into the stock UI.
- const themed=o?.themeTweaker===true && o?.themeEnabled===true && String(o?.themePreset||"native").toLowerCase()!=="native";
+ let themed=o?.themeTweaker===true && o?.themeEnabled===true && String(o?.themePreset||"native").toLowerCase()!=="native";
+ // fallback: if a theme accent color is live in the DOM, treat as themed
+ if(!themed){
+   try{
+     const a=getComputedStyle(document.documentElement).getPropertyValue("--ldd-accent").trim();
+     if(a && a.toLowerCase()!=="#39ff14") themed=true;
+     else if(a) themed=true; // any accent set means a theme is active
+   }catch(_){}
+ }
+ // LDD's own panel scrollbars always follow the theme accent
+ const panelCss=`#ldd-app-page *::-webkit-scrollbar{width:10px!important;height:10px!important}
+#ldd-app-page *::-webkit-scrollbar-track{background:transparent!important}
+#ldd-app-page *::-webkit-scrollbar-thumb{background:${c}!important;border-radius:999px!important}
+#ldd-app-page *{scrollbar-width:thin!important;scrollbar-color:${c} transparent!important}`;
  if(!themed || o.wideScrollbars===false){
-   st.textContent="";
+   st.textContent=panelCss;
    const root=document.documentElement;
    root.classList.remove('ldd-wide-scrollbars','ldd-scrollbar-contrast');
    root.style.removeProperty('--ldd-scrollbar-color');
@@ -3161,21 +3194,25 @@ function lddApplyScrollbarStyle(o){
    return;
  }
  const w=14;
- const c=getComputedStyle(document.documentElement).getPropertyValue("--ldd-accent-4").trim() || getComputedStyle(document.documentElement).getPropertyValue("--ldd-neon").trim() || "#8b8b93";
+ const cs=getComputedStyle(document.documentElement);
+ const c=cs.getPropertyValue("--ldd-accent").trim() || cs.getPropertyValue("--ldd-accent-4").trim() || cs.getPropertyValue("--ldd-neon").trim() || "#8b8b93";
  const track=o.highContrastScrollbars===true?"#050607":"#15171c";
- st.textContent=`
+ st.textContent=panelCss+`
 html,body{scrollbar-width:auto!important;scrollbar-color:${c} ${track}!important}
 html::-webkit-scrollbar,body::-webkit-scrollbar,
 .overflow-auto::-webkit-scrollbar,.overflow-y-auto::-webkit-scrollbar,.overflow-x-auto::-webkit-scrollbar,
 [class*="overflow-auto"]::-webkit-scrollbar,[class*="overflow-y-auto"]::-webkit-scrollbar,[class*="overflow-x-auto"]::-webkit-scrollbar,
+div::-webkit-scrollbar,aside::-webkit-scrollbar,main::-webkit-scrollbar,section::-webkit-scrollbar,ul::-webkit-scrollbar,
 #ldd-app-page *::-webkit-scrollbar{width:${w}px!important;height:${w}px!important}
 html::-webkit-scrollbar-track,body::-webkit-scrollbar-track,
 .overflow-auto::-webkit-scrollbar-track,.overflow-y-auto::-webkit-scrollbar-track,.overflow-x-auto::-webkit-scrollbar-track,
 [class*="overflow-auto"]::-webkit-scrollbar-track,[class*="overflow-y-auto"]::-webkit-scrollbar-track,[class*="overflow-x-auto"]::-webkit-scrollbar-track,
+div::-webkit-scrollbar-track,aside::-webkit-scrollbar-track,main::-webkit-scrollbar-track,section::-webkit-scrollbar-track,ul::-webkit-scrollbar-track,
 #ldd-app-page *::-webkit-scrollbar-track{background:${track}!important}
 html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,
 .overflow-auto::-webkit-scrollbar-thumb,.overflow-y-auto::-webkit-scrollbar-thumb,.overflow-x-auto::-webkit-scrollbar-thumb,
 [class*="overflow-auto"]::-webkit-scrollbar-thumb,[class*="overflow-y-auto"]::-webkit-scrollbar-thumb,[class*="overflow-x-auto"]::-webkit-scrollbar-thumb,
+div::-webkit-scrollbar-thumb,aside::-webkit-scrollbar-thumb,main::-webkit-scrollbar-thumb,section::-webkit-scrollbar-thumb,ul::-webkit-scrollbar-thumb,
 #ldd-app-page *::-webkit-scrollbar-thumb{background:${c}!important;border:0!important;border-radius:999px!important}
 html::-webkit-scrollbar-corner,body::-webkit-scrollbar-corner,#ldd-app-page *::-webkit-scrollbar-corner{background:${track}!important}`;
 }

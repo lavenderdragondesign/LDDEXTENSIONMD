@@ -82,11 +82,21 @@ function lddPlSaveViews(){return chrome.storage.local.set({[LDD_PL_VIEWS_KEY]:ld
 function lddPlSaveSort(){return chrome.storage.local.set({[LDD_PL_SORT_KEY]:lddPlUI.sort}).catch(()=>{});}
 function lddPlBumpView(sha){lddPlViews[sha]=(lddPlViews[sha]||0)+1;lddPlSaveViews();}
 function lddPlPromptCount(f){
-  const n=f.file||"";
-  let m=n.match(/^(\d+)[_\s-]/);
-  if(m)return parseInt(m[1],10);
-  m=n.match(/(\d+)[_\s-]*prompts?/i);
-  if(m)return parseInt(m[1],10);
+  return lddPlCountFromName(f.file||"");
+}
+function lddPlCountFromName(n){
+  n=String(n||"");
+  if(n.toLowerCase().indexOf("prompts")<0)return 0;
+  // First 2-4 digit number, skipping decade-style ("1950s", "70s")
+  // "100_YDH_Bella_Canvas_3001..." -> 100 (not the 3001 shirt model)
+  // "1950s_Christmas_50_Prompts" -> 50 (not 1950)
+  // "Retro_70s_..._50_..._Prompts" -> 50 (not 70)
+  const re=/(\d{2,4})(s)?/g;
+  let m;
+  while((m=re.exec(n))!==null){
+    if(m[2])continue;
+    return parseInt(m[1],10);
+  }
   return 0;
 }
 const LDD_PL_FAV_KEY="lddPdfLibFavs";
@@ -437,10 +447,9 @@ async function lddPlPdfPrompts(f){
   let prompts=(typeof lddPvParsePdfPrompts==="function")?lddPvParsePdfPrompts(pages):[];
   // filename carries the prompt count (e.g. "250_Custom_Pet_Portrait_Prompts");
   // if we found more, keep the N longest — real prompts have the longest bodies
-  const m=String(f&&f.name||"").match(/(\d{2,4})/);
-  if(m){
-    const expected=parseInt(m[1],10);
-    if(prompts.length>expected&&expected>0){
+  const expected=lddPlCountFromName(f&&f.name||"");
+  if(expected>0){
+    if(prompts.length>expected){
       prompts=prompts.slice().sort((a,b)=>b.body.length-a.body.length).slice(0,expected)
         .sort((a,b)=>prompts.indexOf(a)-prompts.indexOf(b));
     }
