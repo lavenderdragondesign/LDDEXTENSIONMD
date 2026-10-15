@@ -2,7 +2,7 @@
    Runs in an offscreen document (extension origin, extension CSP),
    so pdf.js can use its real worker. */
 try {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = './pdf.worker.min.js';
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '../core/pdf-lib/pdf.worker.min.js';
 } catch (e) {}
 chrome.runtime.onMessage.addListener((msg, sender, respond) => {
   if (!msg || msg.type !== 'LDD_PDF_PARSE_INNER') return;

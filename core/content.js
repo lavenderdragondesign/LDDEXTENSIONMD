@@ -14,7 +14,7 @@ globalThis.lddToast110 = function(msg,force=false,type="info"){
    const dragon=document.createElement("img");
    dragon.className="ldd-toast-dragon"; dragon.alt="LDD";
    dragon.onerror=()=>{dragon.hidden=true};
-   try{dragon.src=chrome.runtime.getURL("assets/toast-dragon.png")}catch(_){dragon.hidden=true}
+   try{dragon.src="https://raw.githubusercontent.com/lavenderdragondesign/LDDEXTENSIONMD/main/extension-assets/toast-dragon.png"}catch(_){dragon.hidden=true}
    const body=document.createElement("span");body.className="ldd-toast-body";
    const badge=document.createElement("span");badge.className="ldd-toast-icon";badge.textContent=icon;
    const copy=document.createElement("span");copy.className="ldd-toast-copy";copy.textContent=String(msg||"");
@@ -347,10 +347,7 @@ if (location.origin !== "https://mydesigns.io" || !(location.pathname === "/app"
  let o=document.getElementById("ldd-drop-overlay");
  if(o)return o;
  o=document.createElement("div");o.id="ldd-drop-overlay";
- let dragon="";
- try{
-   if(typeof chrome!=="undefined"&&chrome.runtime&&chrome.runtime.id)dragon=chrome.runtime.getURL("assets/dragon-drop.png");
- }catch(_){}
+ let dragon="https://raw.githubusercontent.com/lavenderdragondesign/LDDEXTENSIONMD/main/extension-assets/dragon-drop.png";
  o.innerHTML=`<div class="ldd-drop-card"><div class="ldd-drop-dragon-slot"></div><div class="ldd-drop-title">Drop files to upload</div><div class="ldd-drop-sub">Release to send them to MyDesigns</div><div class="ldd-drop-tip"><b>TIP:</b> Drag &amp; Drop uploads always go to your <b>default first slot</b>.</div><div class="ldd-drop-warning"><b>IMPORTANT:</b> If you are adding multiple designs to a <b>single listing</b>, use the <b>default MyDesigns Upload system</b> — do not use LDD Drag &amp; Drop.</div></div>`;
  document.body.appendChild(o);
  // Mount the DnD dragon as a real extension image after the overlay is in the DOM.
@@ -362,7 +359,7 @@ if (location.origin !== "https://mydesigns.io" || !(location.pathname === "/app"
    img.alt="LDD Drag and Drop";
    img.draggable=false;
    img.src=dragon;
-   img.onerror=()=>{ try{ img.src=chrome.runtime.getURL("assets/dragon-drop.png")+"?v="+(chrome.runtime.getManifest?.().version||"1"); }catch(_){} };
+   img.onerror=()=>{img.hidden=true};
    slot?.appendChild(img);
  }
  return o;
@@ -975,6 +972,22 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.295",items:["NEW: Wall Art Exporter Fit/Crop option — Fit (default) keeps the whole image with white fill, Crop fills each frame edge-to-edge with no white (trims edges)"]},
+ {v:"1.8.294",items:["IMPROVED: Wall Art Exporter only creates the orientation folders that get images — all-vertical exports no longer include empty HORIZONTAL folders (and vice versa)"]},
+ {v:"1.8.293",items:["IMPROVED: Wall Art Exporter — CLEAR button moved below CREATE WALL ART ZIP, toast notifications on image add and download complete, expanded \"what this does\" info"]},
+ {v:"1.8.292",items:["NEW: Wall Art Exporter shows an upscale reminder on load (\"Please upscale image first for best results\") with a Don't show again option"]},
+ {v:"1.8.291",items:["NEW: Wall Art Exporter runs in a web worker — exports process off the main thread with 2-at-a-time encoding, page stays responsive","NEW: Wall Art Exporter 1:1 square ratio (3600x3600)","IMPROVED: Wall Art Exporter scrollbars are green to match the tool theme"]},
+ {v:"1.8.290",items:["FIXED: Wall Art Exporter now fits the whole image with white fill instead of center-cropping (matches the desktop DPI app)"]},
+ {v:"1.8.289",items:["SLIM: extension is ~7MB unpacked (was 35MB) — deleted 20MB of dead files (old vault web build, Vintage Lab samples, Image Compressor WASM, unused styles.json), dragon images + wall-art size guide now load from GitHub, pdf.js no longer ships twice"]},
+ {v:"1.8.283",items:["REMOVED: hover-edge auto-scroll from the folders coverflow (mouse wheel still flips covers)"]},
+ {v:"1.8.282",items:["IMPROVED: folders coverflow — search bar in the titlebar, mouse-wheel + hover-edge navigation, fully theme-aware (no more hardcoded dark)"]},
+ {v:"1.8.281",items:["NEW: folders coverflow popout — ItemzFlow-style 3D coverflow window for browsing folders (🖼 Flow button by New Folder); sidebar carousel removed"]},
+ {v:"1.8.280",items:["FIXED: folders carousel is actually horizontal now — the flex row goes on the rows' direct parent, since MyDesigns wraps the list"]},
+ {v:"1.8.279",items:["FIXED: folders carousel now applies as a layout (no longer gated on theme state) and matches folder rows even when nested"]},
+ {v:"1.8.278",items:["NEW: folders pane carousel layout — folders show as sideways snap cards when theme is on"]},
+ {v:"1.8.277",items:["FIXED: MyDesigns folder pane scrollbar now follows the live theme accent (was stuck gray)"]},
+ {v:"1.8.276",items:["REMOVED: Mockup Profiles tool"]},
+ {v:"1.8.270",items:["FIXED: scrollbar crash (\u2018Cannot access c before initialization\u2019) when theme tweaker is off"]},
  {v:"1.8.261",items:["REMOVED: \u2018LDD Tools was just updated\u2019 refresh popup"]},
  {v:"1.8.260",items:["IMPROVED: update download button now says NO ZIP ON RELEASE when the GitHub release is missing its ZIP"]},
  {v:"1.8.259",items:["FIXED: PDF Library prompt-count sort now handles all filename formats (was misreading 9 files)"]},
@@ -1268,6 +1281,7 @@ function lddRenderWorkflowPage(o){
   ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
   ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
   ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
+  ${card('&#128444;&#65039; Wall Art Exporter','One-click print-ready wall art ZIPs with 6 ratios, size guide, and progress.',openBtn('ldd-open-wallart',false))}
   ${card('&#11088; Favorites Manager','Starred presets & products — view, open, remove, all in one place.',enDis('favEnabled',o.favEnabled!==false)+openBtn('ldd-open-favorites',false))}
   ${card('&#128218; Prompt Pack PDF Library <span id="ldd-pl-newbadge" class="ldd-newbadge" style="display:none">NEW PDF AVAILABLE</span>','Read live or download.',openBtn('ldd-open-pdflibrary',false))}
   ${card('&#128193; Prompt Vault','Prompt library — folders, favorites, JSON import/export.',openBtn('ldd-open-promptvault',false))}
@@ -1740,6 +1754,8 @@ function lddBindAppPage(tab,o){
    if(dpiOpen)dpiOpen.onclick=()=>lddShowTab("imageprep");
    const irOpen=lddAppRoot.querySelector("#ldd-open-imgresize");
    if(irOpen)irOpen.onclick=()=>{try{lddShowTab("imgresize");}catch(err){globalThis.lddToast110("Resizer failed to open: "+String((err&&err.message)||err),true);}};
+   const wallArtOpen=lddAppRoot.querySelector("#ldd-open-wallart");
+   if(wallArtOpen)wallArtOpen.onclick=()=>window.dispatchEvent(new Event("ldd-open-wallart-tool"));
    const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
    if(scoutOpen)scoutOpen.onclick=()=>{
      const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
@@ -1758,10 +1774,6 @@ function lddBindAppPage(tab,o){
    const fvOpen=lddAppRoot.querySelector("#ldd-open-favorites");
    if(fvOpen)fvOpen.onclick=()=>lddShowTab("favorites");
    const plOpen=lddAppRoot.querySelector("#ldd-open-pdflibrary");
-   const pcOpen=lddAppRoot.querySelector("#ldd-open-profitcalc");
-   const sgOpen=lddAppRoot.querySelector("#ldd-open-seograder");
-   if(sgOpen)sgOpen.onclick=()=>lddShowTab("seograder");
-   if(pcOpen)pcOpen.onclick=()=>lddShowTab("profitcalc");
 
    if(plOpen)plOpen.onclick=()=>lddShowTab("pdflibrary");
    try{if(typeof lddPlUpdateToolsBadge==="function")lddPlUpdateToolsBadge();}catch(_){}
@@ -3182,11 +3194,11 @@ function lddApplyScrollbarStyle(o){
      else if(a) themed=true; // any accent set means a theme is active
    }catch(_){}
  }
- // LDD's own panel scrollbars always follow the theme accent
+ // LDD's own panel scrollbars always follow the live theme accent
  const panelCss=`#ldd-app-page *::-webkit-scrollbar{width:10px!important;height:10px!important}
 #ldd-app-page *::-webkit-scrollbar-track{background:transparent!important}
-#ldd-app-page *::-webkit-scrollbar-thumb{background:${c}!important;border-radius:999px!important}
-#ldd-app-page *{scrollbar-width:thin!important;scrollbar-color:${c} transparent!important}`;
+#ldd-app-page *::-webkit-scrollbar-thumb{background:var(--ldd-accent,#8b8b93)!important;border-radius:999px!important}
+#ldd-app-page *{scrollbar-width:thin!important;scrollbar-color:var(--ldd-accent,#8b8b93) transparent!important}`;
  if(!themed || o.wideScrollbars===false){
    st.textContent=panelCss;
    const root=document.documentElement;
@@ -3196,11 +3208,9 @@ function lddApplyScrollbarStyle(o){
    return;
  }
  const w=14;
- const cs=getComputedStyle(document.documentElement);
- const c=cs.getPropertyValue("--ldd-accent").trim() || cs.getPropertyValue("--ldd-accent-4").trim() || cs.getPropertyValue("--ldd-neon").trim() || "#8b8b93";
  const track=o.highContrastScrollbars===true?"#050607":"#15171c";
  st.textContent=panelCss+`
-html,body{scrollbar-width:auto!important;scrollbar-color:${c} ${track}!important}
+html,body{scrollbar-width:auto!important;scrollbar-color:var(--ldd-accent,#8b8b93) ${track}!important}
 html::-webkit-scrollbar,body::-webkit-scrollbar,
 .overflow-auto::-webkit-scrollbar,.overflow-y-auto::-webkit-scrollbar,.overflow-x-auto::-webkit-scrollbar,
 [class*="overflow-auto"]::-webkit-scrollbar,[class*="overflow-y-auto"]::-webkit-scrollbar,[class*="overflow-x-auto"]::-webkit-scrollbar,
@@ -3215,11 +3225,123 @@ html::-webkit-scrollbar-thumb,body::-webkit-scrollbar-thumb,
 .overflow-auto::-webkit-scrollbar-thumb,.overflow-y-auto::-webkit-scrollbar-thumb,.overflow-x-auto::-webkit-scrollbar-thumb,
 [class*="overflow-auto"]::-webkit-scrollbar-thumb,[class*="overflow-y-auto"]::-webkit-scrollbar-thumb,[class*="overflow-x-auto"]::-webkit-scrollbar-thumb,
 div::-webkit-scrollbar-thumb,aside::-webkit-scrollbar-thumb,main::-webkit-scrollbar-thumb,section::-webkit-scrollbar-thumb,ul::-webkit-scrollbar-thumb,
-#ldd-app-page *::-webkit-scrollbar-thumb{background:${c}!important;border:0!important;border-radius:999px!important}
+#ldd-app-page *::-webkit-scrollbar-thumb{background:var(--ldd-accent,#8b8b93)!important;border:0!important;border-radius:999px!important}
 html::-webkit-scrollbar-corner,body::-webkit-scrollbar-corner,#ldd-app-page *::-webkit-scrollbar-corner{background:${track}!important}`;
 }
+/* ===== v1.8.281+ folders coverflow popout (ItemzFlow-style) ===== */
+let lddFlowIdx=0,lddFlowData=[],lddFlowAll=[],lddFlowQuery='';
+function lddFlowCollect(){
+ const rows=[...document.querySelectorAll('[data-tree-folder]')];
+ return rows.map(r=>{
+  const nameEl=r.querySelector('.truncate');
+  const name=nameEl?nameEl.textContent.trim():'Folder';
+  let count='';
+  for(const s of r.querySelectorAll('span')){const t=(s.textContent||'').trim();if(/^\d[\d,]*$/.test(t)&&s!==nameEl){count=t;break}}
+  return {row:r,name,count};
+ });
+}
+function lddFlowSelectCurrent(){
+ const f=lddFlowData[lddFlowIdx];if(!f)return;
+ try{f.row.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
+ lddFlowClose();
+}
+function lddFlowEnsureBtn(){
+ try{
+  document.querySelectorAll('.ldd-folders-track,.ldd-folders-carousel').forEach(e=>e.classList.remove('ldd-folders-track','ldd-folders-carousel'));
+  if(document.getElementById('ldd-flow-open-btn'))return;
+  const btn=document.createElement('button');
+  btn.id='ldd-flow-open-btn';btn.textContent='🖼 Flow';btn.title='Open folders coverflow';
+  btn.addEventListener('click',()=>lddFlowOpen());
+  const nb=[...document.querySelectorAll('button')].find(b=>/new folder/i.test(b.textContent||''));
+  if(nb&&nb.parentElement){nb.after(btn)}
+  else{btn.style.cssText='position:fixed;right:14px;bottom:14px;z-index:2147483645';document.body.appendChild(btn)}
+ }catch(_){}
+}
+function lddFlowBuild(){
+ let pop=document.getElementById('ldd-flow-pop');
+ if(pop)return pop;
+ pop=document.createElement('div');pop.id='ldd-flow-pop';
+ pop.innerHTML='<div class="ldd-flow-backdrop"></div><div class="ldd-flow-win" role="dialog" aria-label="Folders coverflow"><div class="ldd-flow-titlebar"><b>\uD83D\uDCC1 Folders</b><input class="ldd-flow-search" placeholder="Search folders\u2026" aria-label="Search folders"><button data-x aria-label="Close">\u2715</button></div><div class="ldd-flow-stage"><div class="ldd-flow-track"></div></div><div class="ldd-flow-nav"><button data-prev aria-label="Previous">\u2039</button><div class="ldd-flow-cur"></div><button data-next aria-label="Next">\u203A</button></div></div>';
+ document.body.appendChild(pop);
+ pop.querySelector('.ldd-flow-backdrop').addEventListener('click',lddFlowClose);
+ pop.querySelector('[data-x]').addEventListener('click',lddFlowClose);
+ pop.querySelector('[data-prev]').addEventListener('click',()=>lddFlowGo(lddFlowIdx-1));
+ pop.querySelector('[data-next]').addEventListener('click',()=>lddFlowGo(lddFlowIdx+1));
+ const search=pop.querySelector('.ldd-flow-search');
+ search.addEventListener('input',()=>{lddFlowQuery=search.value;lddFlowRender()});
+ search.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){e.stopPropagation();search.value='';lddFlowQuery='';lddFlowRender()}
+  else if(e.key==='Enter'){lddFlowSelectCurrent()}
+ });
+ const stage=pop.querySelector('.ldd-flow-stage');
+ let wheelT=0;
+ stage.addEventListener('wheel',e=>{e.preventDefault();const now=Date.now();if(now-wheelT<140)return;wheelT=now;const d=((e.deltaY||0)+(e.deltaX||0))>0?1:-1;lddFlowGo(lddFlowIdx+d)},{passive:false});
+ const win=pop.querySelector('.ldd-flow-win'),bar=pop.querySelector('.ldd-flow-titlebar');
+ let sx=0,sy=0,ox=0,oy=0,drag=false;
+ bar.addEventListener('mousedown',e=>{if(e.target.closest('button')||e.target.classList.contains('ldd-flow-search'))return;drag=true;sx=e.clientX;sy=e.clientY;const r=win.getBoundingClientRect();ox=r.left;oy=r.top;win.style.left=ox+'px';win.style.top=oy+'px';win.style.transform='none';bar.style.cursor='grabbing';e.preventDefault()});
+ window.addEventListener('mousemove',e=>{if(!drag)return;win.style.left=(ox+e.clientX-sx)+'px';win.style.top=(oy+e.clientY-sy)+'px'});
+ window.addEventListener('mouseup',()=>{drag=false;bar.style.cursor='grab'});
+ return pop;
+}
+function lddFlowLayout(){
+ const pop=document.getElementById('ldd-flow-pop');if(!pop)return;
+ const track=pop.querySelector('.ldd-flow-track');if(!track)return;
+ const n=lddFlowData.length;
+ [...track.children].forEach((c,j)=>{
+  const off=j-lddFlowIdx,a=Math.abs(off);
+  c.style.transform='translateX('+(off*170)+'px) translateZ('+(-a*130)+'px) rotateY('+(off===0?0:(off<0?58:-58))+'deg)'+(off===0?' scale(1.06)':'');
+  c.style.zIndex=String(1000-a);
+  c.style.opacity=a>5?'0':String(Math.max(0,1-a*0.12));
+  c.style.pointerEvents=a>5?'none':'auto';
+  c.classList.toggle('ldd-center',off===0);
+ });
+ const cur=pop.querySelector('.ldd-flow-cur');
+ if(cur)cur.textContent=n?((lddFlowIdx+1)+' / '+n+' \u2014 '+lddFlowData[lddFlowIdx].name):'No folders';
+}
+function lddFlowGo(i){
+ const n=lddFlowData.length;if(!n)return;
+ lddFlowIdx=((i%n)+n)%n;lddFlowLayout();
+}
+function lddFlowRender(){
+ const q=lddFlowQuery.trim().toLowerCase();
+ lddFlowData=q?lddFlowAll.filter(f=>f.name.toLowerCase().includes(q)):lddFlowAll.slice();
+ lddFlowIdx=0;
+ const pop=document.getElementById('ldd-flow-pop');if(!pop)return;
+ const track=pop.querySelector('.ldd-flow-track');if(!track)return;
+ track.innerHTML='';
+ lddFlowData.forEach((f,j)=>{
+  const d=document.createElement('div');d.className='ldd-flow-cover';
+  const fi=document.createElement('div');fi.className='fi';fi.textContent='\uD83D\uDCC1';
+  const fn=document.createElement('div');fn.className='fn';fn.textContent=f.name;
+  d.appendChild(fi);d.appendChild(fn);
+  if(f.count){const fc=document.createElement('div');fc.className='fc';fc.textContent=f.count+' designs';d.appendChild(fc)}
+  d.addEventListener('click',()=>{if(j===lddFlowIdx)lddFlowSelectCurrent();else lddFlowGo(j)});
+  track.appendChild(d);
+ });
+ lddFlowLayout();
+}
+function lddFlowOpen(){
+ lddFlowAll=lddFlowCollect();
+ if(!lddFlowAll.length){try{globalThis.lddToast110('No folders found')}catch(_){}return}
+ const pop=lddFlowBuild();
+ const search=pop.querySelector('.ldd-flow-search');
+ if(search)search.value='';
+ lddFlowQuery='';
+ pop.classList.add('ldd-open');
+ lddFlowRender();
+}
+function lddFlowClose(){const p=document.getElementById('ldd-flow-pop');if(p)p.classList.remove('ldd-open')}
+document.addEventListener('keydown',e=>{
+ const pop=document.getElementById('ldd-flow-pop');
+ if(!pop||!pop.classList.contains('ldd-open'))return;
+ if(e.target&&e.target.classList&&e.target.classList.contains('ldd-flow-search'))return;
+ if(e.key==='Escape')lddFlowClose();
+ else if(e.key==='ArrowLeft')lddFlowGo(lddFlowIdx-1);
+ else if(e.key==='ArrowRight')lddFlowGo(lddFlowIdx+1);
+});
 function lddApplyUIEnhancements(o){
  lddApplyScrollbarStyle(o);
+ try{lddFlowEnsureBtn()}catch(_){}
  const r=document.documentElement;
  const themed=o?.themeTweaker===true && o?.themeEnabled===true && String(o?.themePreset||"native").toLowerCase()!=="native";
  r.classList.toggle('ldd-wide-scrollbars',themed && o.wideScrollbars!==false);
