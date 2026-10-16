@@ -1,0 +1,1 @@
+Download the LDD Tools ZIP, extract it to a folder on your computer, then open chrome://extensions in Chrome, turn on Developer mode (top right), and click "Load unpacked" — select the extracted folder and you're ready to go.
