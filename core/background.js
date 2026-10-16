@@ -32,13 +32,18 @@ chrome.runtime.onMessage.addListener((msg,sender,respond)=>{
     }
     if(msg?.type==='LDD_AI_CANCEL'){
       const job=(await chrome.storage.local.get('lddAiJob')).lddAiJob;
-      if(!job||job.id!==id||tabId!==job.scoutTabId&&tabId!==(await restore(id))?.scoutTabId)return {ok:false,error:'Not the Scout job'};
+      if(!job||job.id!==id)return {ok:false,error:'Not the Scout job'};
       const owner=await restore(id);
       let worker=null;try{if(job.tabId)worker=await chrome.tabs.get(job.tabId)}catch{}
       const expected=providerUrls[job.provider]?.split('/').slice(0,3).join('/');
+      const sameProvider=!!(worker&&expected&&worker.url&&worker.url.startsWith(expected));
+      const ours=!owner||!worker||owner.tabId===worker.id;
       jobs.delete(id);await persist();
       await chrome.storage.local.set({lddAiJob:{...job,status:'failed',error:'Cancelled from Scout'}});
-      if(worker&&expected&&worker.url?.startsWith(expected)&&(!owner||owner.tabId===worker.id))try{await chrome.tabs.remove(worker.id)}catch{}
+      // Cancel means the user is done with the AI window: close the recorded tab,
+      // then make sure the worker window the extension opened is gone too.
+      if(sameProvider&&ours)try{await chrome.tabs.remove(worker.id)}catch{}
+      if(owner&&owner.workerWindowId)try{await chrome.windows.remove(owner.workerWindowId)}catch{}
       return {ok:true};
     }
     if(msg?.type==='LDD_AI_OPEN'){

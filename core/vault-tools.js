@@ -752,6 +752,31 @@ function lddPvParsePdfPrompts(pages){
     prompts.push({title:h.title,body,tags:["pdf-import",secTag].filter(Boolean),category:"Other",section});
   }
   if(prompts.length)return prompts;
+  /* Format D: "001 | Philippians 4:13" — 3-digit number, pipe, verse/title reference
+     (e.g. the Gen Z Bible PDF). Title prefers the quoted headline when the body
+     names one via must read "...". */
+  const fmtDRe=/^[ \t]*(\d{3})[ \t]*\|[ \t]*([^\n]{2,120}?)[ \t]*$/gm;
+  const dHits=[...fullText.matchAll(fmtDRe)];
+  if(dHits.length>=5){
+    const secDRe=/^[ \t]*([A-Z][A-Z &']{2,40})[ \t]*\/[ \t]*\d{3}[ \t]*-[ \t]*\d{3}[ \t]*$/gm;
+    const dSecs=[];let dsm;while((dsm=secDRe.exec(fullText)))dSecs.push({idx:dsm.index,name:dsm[1].trim()});
+    dHits.forEach((h,hi)=>{
+      const num=h[1],ref=h[2].trim();
+      const start=h.index,end=hi+1<dHits.length?dHits[hi+1].index:fullText.length;
+      let body=fullText.slice(start,end).replace(/\n{3,}/g,"\n\n").trim();
+      body=body.replace(/^[ \t]*\d{3}[ \t]*\|[ \t]*[^\n]*\n/,"").trim();
+      if(body.length<150)return;
+      let title="";
+      const hq=body.match(/must read\s+"([^"]{3,120})"/i);
+      if(hq)title=hq[1].replace(/\s+/g," ").trim();
+      if(!title)title=(num+" | "+ref).slice(0,140);
+      let section="";
+      for(let si=dSecs.length-1;si>=0;si--){if(dSecs[si].idx<start){section=dSecs[si].name;break;}}
+      const secTag=section?section.toLowerCase().split(/\s+/)[0].replace(/[^a-z]/g,""):"";
+      prompts.push({title:title.slice(0,140),body:body.slice(0,12000),tags:["pdf-import",secTag].filter(Boolean),category:"Other",section});
+    });
+    return prompts;
+  }
   /* Format C (fallback): unnumbered — one prompt per paragraph block.
      Only used when no numbered entries were found at all. */
   if(!prompts.length){

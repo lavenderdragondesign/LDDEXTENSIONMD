@@ -974,7 +974,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
- {v:"1.8.323",items:["FIXED: Tools page tooltips now disappear when the mouse moves away"]},{v:"1.8.322",items:["FIXED: PDF Library sorting — one unified sort (favorites first, then the selected mode) instead of two conflicting sorts","REMOVED: GitHub repo text from the PDF Library (count line, reload button, setup message)"]},{v:"1.8.321",items:["NEW: Tooltips on Tools page cards + Flow launcher — hover for a quick tip, Performance-style","NEW: Tooltips on/off toggle at the bottom of the Tools page (Performance not included)"]},{v:"1.8.320",items:["Clicking a side design in Flow now slides to it — only the centered design opens on click","FIXED: Flow drill-in — listings inside groups now load (more reliable row click + card detection)","FIXED: Designs tab drill-in when opened from Products — folders now open their designs","NEW: Lucide icons throughout Flow — back, close, prev/next, select, download, folder, and group icons"]},{v:"1.8.319",items:["Flow rebuilt as navigator + preview only — edit listings, bulk edit, inline rename, and the edit window are removed","NEW: Experimental toggle on the Folders Flow card (header button appears when it\u2019s on)"]},
+ {v:"1.8.336",items:["FIXED: PDF Library newest-sort went stale — newly uploaded PDFs sank to the bottom until the 24h date cache expired; the cache now refreshes when it sees files it doesn’t know"]},{v:"1.8.335",items:["REMOVED: PDF Library sort options — the library now always sorts newest to oldest, no dropdown"]},{v:"1.8.334",items:["NEW: prompt parser handles the ‘NNN | Verse’ format (Gen Z Bible PDF) — finds all 100 prompts with section tags instead of missing them"]},{v:"1.8.333",items:["FIXED: Cancel in Create Style With AI now reliably closes the ChatGPT/Claude window (closes the recorded tab plus the worker window it opened)"]},{v:"1.8.332",items:["CHANGED: Create Style With AI reference image limit is now 30 MB (was 50 MB)"]},{v:"1.8.331",items:["CHANGED: Create Style With AI now lists Claude first and RECOMMENDED \u2014 ChatGPT was having download/import trouble"]},{v:"1.8.330",items:["FIXED: update screen Download button no longer throws a raw stack trace when the extension was reloaded with the page open — it now says to reload the page and try again"]},{v:"1.8.329",items:["NEW: Flow opens the MyDesigns folders pane itself when it can't find it, instead of showing \u2018No folders found\u2019"]},{v:"1.8.328",items:["FIXED: Flow button no longer lands in the Scout AI style library toolbar — it only goes in MyDesigns' native top header"]},{v:"1.8.327",items:["FIXED: PDF Library Newest sort — date fetch now covers all files, not just recent ones"]},{v:"1.8.326",items:["FIXED: PDF Library Newest sort — now uses real GitHub upload dates instead of when the extension first saw the files"]},{v:"1.8.325",items:["FIXED: PDF Library sort rewritten — sorts a copy (no more cache mutation), favorites always pin to top, deterministic name tiebreak"]},{v:"1.8.324",items:["FIXED: PDF Library explicit sorts (Most viewed / Most-Fewest prompts) are now pure — favorites only pin to top on Newest"]},{v:"1.8.323",items:["FIXED: Tools page tooltips now disappear when the mouse moves away"]},{v:"1.8.322",items:["FIXED: PDF Library sorting — one unified sort (favorites first, then the selected mode) instead of two conflicting sorts","REMOVED: GitHub repo text from the PDF Library (count line, reload button, setup message)"]},{v:"1.8.321",items:["NEW: Tooltips on Tools page cards + Flow launcher — hover for a quick tip, Performance-style","NEW: Tooltips on/off toggle at the bottom of the Tools page (Performance not included)"]},{v:"1.8.320",items:["Clicking a side design in Flow now slides to it — only the centered design opens on click","FIXED: Flow drill-in — listings inside groups now load (more reliable row click + card detection)","FIXED: Designs tab drill-in when opened from Products — folders now open their designs","NEW: Lucide icons throughout Flow — back, close, prev/next, select, download, folder, and group icons"]},{v:"1.8.319",items:["Flow rebuilt as navigator + preview only — edit listings, bulk edit, inline rename, and the edit window are removed","NEW: Experimental toggle on the Folders Flow card (header button appears when it\u2019s on)"]},
  {v:"1.8.318",items:["Flow launcher removed from the header entirely for now (was greyed out)"]},
  {v:"1.8.317",items:["Flow temporarily disabled — launcher greyed out and Tools card marked COMING SOON while it\u2019s being finished"]},
  {v:"1.8.316",items:["Design covers now show the actual design name (was falling back to \u2018Design\u2019)","Click a design\u2019s name to rename it inline — runs MyDesigns\u2019 native rename behind the scenes","New \u2b73 download button on design covers — grabs the design via its native \u22ee menu"]},
@@ -2756,6 +2756,7 @@ function lddShowUpdateGate(release){
       }
       downloadBtn.disabled=true;
       downloadBtn.textContent="DOWNLOADING…";
+      try{
       chrome.runtime.sendMessage({type:"LDD_DOWNLOAD_GITHUB_UPDATE",url,version:latest},r=>{
         if(r?.ok){
           downloadBtn.textContent="✓ DOWNLOADED";
@@ -2769,6 +2770,12 @@ function lddShowUpdateGate(release){
           if(warning) warning.insertAdjacentHTML("beforebegin",`<div class="ldd-update-gate-error">Download failed: ${String(r?.error||"Unknown error").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}</div>`);
         }
       });
+      }catch(err){
+        downloadBtn.disabled=false;
+        downloadBtn.textContent="↻ TRY DOWNLOAD AGAIN";
+        const warning=ov.querySelector(".ldd-update-gate-warning");
+        if(warning) warning.insertAdjacentHTML("beforebegin",`<div class="ldd-update-gate-error">The extension was reloaded while this page was open — reload the page, then click Download again.</div>`);
+      }
     };
   });
 }
@@ -3505,12 +3512,15 @@ function lddFlowSelectCurrent(){
 }
 function lddFlowTopbar(){
  try{
-  const headers=[...document.querySelectorAll('header')].filter(h=>h.offsetParent!==null);
+  // Never treat LDD Tools' own UI (Scout AI overlay, etc.) as the MyDesigns header —
+  // the Flow button belongs in MyDesigns' native top bar only.
+  const ownHud=h=>{try{return !!(h.closest&&h.closest('[id^="ldd-"]'))}catch(_){return false}};
+  const headers=[...document.querySelectorAll('header')].filter(h=>h.offsetParent!==null&&!ownHud(h));
   if(headers.length){
    const withSupport=headers.find(h=>/support/i.test(h.textContent||''));
    return withSupport||headers[0];
   }
-  const sup=[...document.querySelectorAll('span,div,button,a')].find(e=>e.children.length===0&&(e.textContent||'').trim()==='Support');
+  const sup=[...document.querySelectorAll('span,div,button,a')].find(e=>e.children.length===0&&(e.textContent||'').trim()==='Support'&&!ownHud(e));
   if(sup){
    let p=sup.parentElement,d=0;
    while(p&&d<5){
@@ -3794,26 +3804,53 @@ function lddFlowRender(){
  if(lvl.kind==='groups')lddFlowStartGroupPreviews();
  lddFlowSyncBulkBar();
 }
+function lddFlowEnsureFoldersPane(){
+ // Flow reads the folder tree from the MyDesigns folders pane — if it isn't
+ // rendered, open/unhide it first. Returns true when it took action (caller
+ // should wait a beat, then re-collect).
+ try{
+  const aside=lddFindFoldersAside();
+  if(aside){
+   const hidden=aside.style.display==='none'||aside.offsetParent===null;
+   aside.style.removeProperty('display');
+   if(hidden)return true;
+   return !!document.querySelector('[data-tree-folder]');
+  }
+  const cand=[...document.querySelectorAll('button')].find(b=>{
+   if(b.id==='ldd-flow-open-btn')return false;
+   const t=(b.textContent||'').trim().toLowerCase();
+   const al=(b.getAttribute('aria-label')||'').toLowerCase();
+   if(t==='folders')return true;
+   return al.includes('folder')&&/show|open|expand|toggle/.test(al);
+  });
+  if(cand){cand.click();return true}
+ }catch(_){}
+ return false;
+}
 function lddFlowOpen(){
  if(!lddFlowExperimental){try{globalThis.lddToast110('Flow is experimental \u2014 turn it on in the Folders Flow card on the Tools page')}catch(_){}return}
  lddFlowTab=lddFlowOnProducts()?'products':'designs';
- lddFlowAll=lddFlowCollect();
- if(!lddFlowAll.length){
-  lddFlowTab=lddFlowTab==='products'?'designs':'products';
+ const then=()=>{
   lddFlowAll=lddFlowCollect();
- }
- if(!lddFlowAll.length){try{globalThis.lddToast110('No folders found')}catch(_){}return}
- const pop=lddFlowBuild();
- pop.querySelectorAll('[data-ftab]').forEach(b=>b.classList.toggle('on',b.dataset.ftab===lddFlowTab));
- const search=pop.querySelector('.ldd-flow-search');
- if(search)search.value='';
- lddFlowQuery='';
- lddFlowToken++;
- lddFlowIdx=0;
- lddFlowPath=[{title:lddFlowTab==='products'?'Product folders':'Folders',items:lddFlowAll,kind:'root'}];
- pop.classList.add('ldd-open');
- try{lddApplyNavAndFolders()}catch(_){}
- lddFlowRender();
+  if(!lddFlowAll.length){
+   lddFlowTab=lddFlowTab==='products'?'designs':'products';
+   lddFlowAll=lddFlowCollect();
+  }
+  if(!lddFlowAll.length){try{globalThis.lddToast110('No folders found')}catch(_){}return}
+  const pop=lddFlowBuild();
+  pop.querySelectorAll('[data-ftab]').forEach(b=>b.classList.toggle('on',b.dataset.ftab===lddFlowTab));
+  const search=pop.querySelector('.ldd-flow-search');
+  if(search)search.value='';
+  lddFlowQuery='';
+  lddFlowToken++;
+  lddFlowIdx=0;
+  lddFlowPath=[{title:lddFlowTab==='products'?'Product folders':'Folders',items:lddFlowAll,kind:'root'}];
+  pop.classList.add('ldd-open');
+  try{lddApplyNavAndFolders()}catch(_){}
+  lddFlowRender();
+ };
+ if(!document.querySelector('[data-tree-folder]')&&lddFlowEnsureFoldersPane()){setTimeout(then,700);return}
+ then();
 }
 function lddFlowClose(){const p=document.getElementById('ldd-flow-pop');if(p)p.classList.remove('ldd-open');try{lddApplyNavAndFolders()}catch(_){}}
 document.addEventListener('keydown',e=>{

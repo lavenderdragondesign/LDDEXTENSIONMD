@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LDD Tools",
-  "version": "1.8.323",
+  "version": "1.8.336",
   "description": "LDD Tools for MyDesigns with Wall Art Exporter integrated into the native Tools page.",
   "permissions": [
     "downloads",

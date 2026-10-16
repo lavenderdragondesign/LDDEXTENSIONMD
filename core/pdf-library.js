@@ -52,12 +52,6 @@ function lddRenderPdfLibraryPage(o){
   <div class="ldd-vt-wrap">
     <div class="ldd-vt-toolbar" style="gap:8px">
       <input class="ldd-vt-input ldd-vt-search" id="ldd-pl-q" placeholder="Search PDFs…" style="max-width:220px">
-      <select class="ldd-vt-input" id="ldd-pl-sort" style="max-width:150px;font-size:.82rem" title="Sort by">
-        <option value="newest">Newest</option>
-        <option value="viewed">Most viewed</option>
-        <option value="prompts-desc">Most prompts</option>
-        <option value="prompts-asc">Fewest prompts</option>
-      </select>
       <button class="ldd-vt-btn ghost sm" id="ldd-pl-refresh" title="Reload the list">↻</button>
       <span style="flex:1"></span>
       <button class="ldd-vt-btn ghost sm" id="ldd-pl-view" title="Toggle list/grid view">☰ List</button>
@@ -75,7 +69,7 @@ async function lddPlLoadViews(){
   try{
     const d=await chrome.storage.local.get([LDD_PL_VIEWS_KEY,LDD_PL_SORT_KEY]);
     lddPlViews=d[LDD_PL_VIEWS_KEY]||{};
-    if(d[LDD_PL_SORT_KEY])lddPlUI.sort=d[LDD_PL_SORT_KEY];
+    lddPlUI.sort="newest";
   }catch(_){}
 }
 function lddPlSaveViews(){return chrome.storage.local.set({[LDD_PL_VIEWS_KEY]:lddPlViews}).catch(()=>{});}
@@ -166,7 +160,54 @@ function lddPlFolderSelect(sha){
   </select>`;
 }
 const LDD_PL_SEEN_KEY="lddPdfLibSeen";
+const LDD_PL_DATES_KEY="lddPdfLibFileDatesV2";
 let lddPlSeen=null; // null = first run (baseline silently); else {sha: firstSeenTs}
+let lddPlFileDates={}; // filename -> last-commit timestamp (from GitHub)
+async function lddPlLoadFileDates(files){
+  try{
+    const d=await chrome.storage.local.get(LDD_PL_DATES_KEY);
+    const c=d[LDD_PL_DATES_KEY];
+    if(c&&c.at&&Date.now()-c.at<24*3600*1000&&c.dates){
+      const cd=c.dates||{};
+      // New uploads since the cache was built have no date -> they'd sink to the bottom; refresh instead
+      const missing=(files||[]).some(f=>!(f.file in cd));
+      if(!missing){lddPlFileDates=cd;return;}
+    }
+  }catch(_){}
+  // Fetch commit history for the folder to get real file dates
+  try{
+    const s=lddPlSettings;
+    const need=new Set((files||[]).map(f=>f.file));
+    if(!need.size)return;
+    const url=`https://api.github.com/repos/${encodeURIComponent(s.owner)}/${encodeURIComponent(s.repo)}/commits?path=${encodeURIComponent(s.path||"")}&per_page=100&sha=${encodeURIComponent(s.branch||"main")}`;
+    const r=await fetch(url,{headers:{"Accept":"application/vnd.github+json"},cache:"no-store"});
+    if(!r.ok)throw new Error("commits "+r.status);
+    const commits=await r.json();
+    const dates={};
+    let checked=0;
+    for(const cm of (Array.isArray(commits)?commits:[])){
+      if(checked>=25)break;
+      let allHave=true;
+      for(const fn of need){if(!(fn in dates)){allHave=false;break}}
+      if(allHave)break;
+      const sha=cm.sha;
+      const date=cm.commit&&cm.commit.author&&cm.commit.author.date?Date.parse(cm.commit.author.date):0;
+      if(!sha||!date)continue;
+      checked++;
+      try{
+        const dr=await fetch(`https://api.github.com/repos/${encodeURIComponent(s.owner)}/${encodeURIComponent(s.repo)}/commits/${sha}`,{headers:{"Accept":"application/vnd.github+json"},cache:"no-store"});
+        if(!dr.ok)continue;
+        const detail=await dr.json();
+        for(const fl of (detail.files||[])){
+          const fn=(fl.filename||"").split("/").pop();
+          if(need.has(fn)&&!(fn in dates))dates[fn]=date;
+        }
+      }catch(_){}
+    }
+    lddPlFileDates=dates;
+    try{chrome.storage.local.set({[LDD_PL_DATES_KEY]:{at:Date.now(),dates}}).catch(()=>{});}catch(_){}
+  }catch(_){}
+}
 async function lddPlLoadSeen(){
   try{
     const d=await chrome.storage.local.get(LDD_PL_SEEN_KEY);
@@ -313,27 +354,22 @@ async function lddPlRenderGrid(force){
   try{
     let files=await lddPlFetchList(force);
     await lddPlLoadSeen();
+    try{await lddPlLoadFileDates(files);}catch(_){}
     try{lddPlWhatsNew(files);}catch(_){}
     // extension-level folder filter
     const af=lddPlActiveFolder;
-    let folderFiles=files;
-    if(af==="unfiled")folderFiles=files.filter(f=>!lddPlFileFolder[f.sha]);
-    else if(af!=="all")folderFiles=files.filter(f=>lddPlFileFolder[f.sha]===af);
-    const sortMode=lddPlUI.sort||"newest";
+    let folderFiles=files.slice();
+    if(af==="unfiled")folderFiles=folderFiles.filter(f=>!lddPlFileFolder[f.sha]);
+    else if(af!=="all")folderFiles=folderFiles.filter(f=>lddPlFileFolder[f.sha]===af);
     folderFiles.sort((a,b)=>{
       const fa=lddPlFavs.includes(a.sha)?1:0,fb=lddPlFavs.includes(b.sha)?1:0;
       if(fb!==fa)return fb-fa;
-      if(sortMode==="viewed"){
-        const va=lddPlViews[a.sha]||0,vb=lddPlViews[b.sha]||0;
-        if(vb!==va)return vb-va;
-      }else if(sortMode==="prompts-desc"){
-        const r=lddPlPromptCount(b)-lddPlPromptCount(a);
-        if(r!==0)return r;
-      }else if(sortMode==="prompts-asc"){
-        const r=lddPlPromptCount(a)-lddPlPromptCount(b);
-        if(r!==0)return r;
-      }
-      return ((lddPlSeen&&lddPlSeen[b.sha])||0)-((lddPlSeen&&lddPlSeen[a.sha])||0);
+      const da=lddPlFileDates[a.file]||lddPlFileDates[(a.file||"").replace(/\.pdf$/i,"")]||0;
+      const db=lddPlFileDates[b.file]||lddPlFileDates[(b.file||"").replace(/\.pdf$/i,"")]||0;
+      let r=db-da;
+      if(r===0)r=((lddPlSeen&&lddPlSeen[b.sha])||0)-((lddPlSeen&&lddPlSeen[a.sha])||0);
+      if(r!==0)return r;
+      return String(a.name||"").localeCompare(String(b.name||""));
     });
     const q=((lddPlUI.query)||"").trim().toLowerCase();
     if(q)folderFiles=folderFiles.filter(f=>(f.name+" "+f.file).toLowerCase().includes(q));
@@ -702,8 +738,6 @@ function lddBindPdfLibraryPage(o){
     if(viewBtn)viewBtn.onclick=()=>{lddPlUI.view=lddPlUI.view==="list"?"grid":"list";lddPlSaveView();syncViewBtn();lddPlRenderGrid(false);};
     const pq=root.querySelector("#ldd-pl-q");
     if(pq)pq.addEventListener("input",()=>{lddPlUI.query=pq.value;lddPlRenderGrid(false);});
-    const sortSel=root.querySelector("#ldd-pl-sort");
-    if(sortSel){sortSel.value=lddPlUI.sort||"newest";sortSel.onchange=()=>{lddPlUI.sort=sortSel.value;lddPlSaveSort();lddPlRenderGrid(false);};}
     lddPlRenderGrid(true);
   });
 }
