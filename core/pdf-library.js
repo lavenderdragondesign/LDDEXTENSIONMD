@@ -58,7 +58,7 @@ function lddRenderPdfLibraryPage(o){
         <option value="prompts-desc">Most prompts</option>
         <option value="prompts-asc">Fewest prompts</option>
       </select>
-      <button class="ldd-vt-btn ghost sm" id="ldd-pl-refresh" title="Reload the list from GitHub">↻</button>
+      <button class="ldd-vt-btn ghost sm" id="ldd-pl-refresh" title="Reload the list">↻</button>
       <span style="flex:1"></span>
       <button class="ldd-vt-btn ghost sm" id="ldd-pl-view" title="Toggle list/grid view">☰ List</button>
     </div>
@@ -305,7 +305,7 @@ async function lddPlRenderGrid(force){
   if(!grid)return;
   if(!lddPlConfigured()){
     cnt.textContent="";
-    grid.innerHTML=`<div class="ldd-vt-empty"><h3>Not set up yet</h3><p>Enter the GitHub repo above and hit Save — drop your PDFs in that repo and they'll show up here.</p></div>`;
+    grid.innerHTML=`<div class="ldd-vt-empty"><h3>Not set up yet</h3><p>Drop your PDFs in the prompt-packs folder and hit reload.</p></div>`;
     return;
   }
   cnt.textContent="Loading…";
@@ -314,29 +314,32 @@ async function lddPlRenderGrid(force){
     let files=await lddPlFetchList(force);
     await lddPlLoadSeen();
     try{lddPlWhatsNew(files);}catch(_){}
-    files.sort((a,b)=>{
-      const fa=lddPlFavs.includes(a.sha)?1:0,fb=lddPlFavs.includes(b.sha)?1:0;
-      if(fb!==fa)return fb-fa;
-      return ((lddPlSeen&&lddPlSeen[b.sha])||0)-((lddPlSeen&&lddPlSeen[a.sha])||0);
-    });
     // extension-level folder filter
     const af=lddPlActiveFolder;
     let folderFiles=files;
     if(af==="unfiled")folderFiles=files.filter(f=>!lddPlFileFolder[f.sha]);
     else if(af!=="all")folderFiles=files.filter(f=>lddPlFileFolder[f.sha]===af);
     const sortMode=lddPlUI.sort||"newest";
-    if(sortMode==="viewed")folderFiles.sort((a,b)=>{
-      const va=lddPlViews[a.sha]||0,vb=lddPlViews[b.sha]||0;
-      if(vb!==va)return vb-va;
+    folderFiles.sort((a,b)=>{
+      const fa=lddPlFavs.includes(a.sha)?1:0,fb=lddPlFavs.includes(b.sha)?1:0;
+      if(fb!==fa)return fb-fa;
+      if(sortMode==="viewed"){
+        const va=lddPlViews[a.sha]||0,vb=lddPlViews[b.sha]||0;
+        if(vb!==va)return vb-va;
+      }else if(sortMode==="prompts-desc"){
+        const r=lddPlPromptCount(b)-lddPlPromptCount(a);
+        if(r!==0)return r;
+      }else if(sortMode==="prompts-asc"){
+        const r=lddPlPromptCount(a)-lddPlPromptCount(b);
+        if(r!==0)return r;
+      }
       return ((lddPlSeen&&lddPlSeen[b.sha])||0)-((lddPlSeen&&lddPlSeen[a.sha])||0);
     });
-    else if(sortMode==="prompts-desc")folderFiles.sort((a,b)=>lddPlPromptCount(b)-lddPlPromptCount(a));
-    else if(sortMode==="prompts-asc")folderFiles.sort((a,b)=>lddPlPromptCount(a)-lddPlPromptCount(b));
     const q=((lddPlUI.query)||"").trim().toLowerCase();
     if(q)folderFiles=folderFiles.filter(f=>(f.name+" "+f.file).toLowerCase().includes(q));
     lddPlUI.list=folderFiles;
     lddPlUI.allFiles=files;
-    cnt.textContent=`${folderFiles.length} PDF${folderFiles.length===1?"":"s"} · ${lddVtEsc(lddPlSettings.owner+"/"+lddPlSettings.repo)}`;
+    cnt.textContent=`${folderFiles.length} PDF${folderFiles.length===1?"":"s"}`;
     lddPlRenderFolderPills(root,files);
     if(lddPlThumbObs){try{lddPlThumbObs.disconnect();}catch(_){}}
     lddPlThumbObs=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){lddPlThumbObs.unobserve(e.target);lddPlRenderThumb(e.target);}});},{rootMargin:"300px"});

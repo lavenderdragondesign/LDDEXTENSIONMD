@@ -133,6 +133,8 @@ const LDD_DEFAULTS = {
   headerIssues:true,
   headerSupport:true,
   headerAccount:true,
+  headerFlow:true,
+  flowExperimental:false, flowHoverEdge:true, toolTips:true,
   homeGreeting:true, homeRevenue:true, homeTopProducts:true, homeTutorials:true,
   analyticsDescription:true, analyticsDateControls:true, analyticsTabs:true, analyticsMetrics:true, analyticsCharts:true, analyticsTables:true,
   navHome:true,
@@ -972,6 +974,30 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
+ {v:"1.8.323",items:["FIXED: Tools page tooltips now disappear when the mouse moves away"]},{v:"1.8.322",items:["FIXED: PDF Library sorting — one unified sort (favorites first, then the selected mode) instead of two conflicting sorts","REMOVED: GitHub repo text from the PDF Library (count line, reload button, setup message)"]},{v:"1.8.321",items:["NEW: Tooltips on Tools page cards + Flow launcher — hover for a quick tip, Performance-style","NEW: Tooltips on/off toggle at the bottom of the Tools page (Performance not included)"]},{v:"1.8.320",items:["Clicking a side design in Flow now slides to it — only the centered design opens on click","FIXED: Flow drill-in — listings inside groups now load (more reliable row click + card detection)","FIXED: Designs tab drill-in when opened from Products — folders now open their designs","NEW: Lucide icons throughout Flow — back, close, prev/next, select, download, folder, and group icons"]},{v:"1.8.319",items:["Flow rebuilt as navigator + preview only — edit listings, bulk edit, inline rename, and the edit window are removed","NEW: Experimental toggle on the Folders Flow card (header button appears when it\u2019s on)"]},
+ {v:"1.8.318",items:["Flow launcher removed from the header entirely for now (was greyed out)"]},
+ {v:"1.8.317",items:["Flow temporarily disabled — launcher greyed out and Tools card marked COMING SOON while it\u2019s being finished"]},
+ {v:"1.8.316",items:["Design covers now show the actual design name (was falling back to \u2018Design\u2019)","Click a design\u2019s name to rename it inline — runs MyDesigns\u2019 native rename behind the scenes","New \u2b73 download button on design covers — grabs the design via its native \u22ee menu"]},
+ {v:"1.8.315",items:["FIXED: edit window could show the wrong design\u2019s data — the panel wait stabilized on the old value when the panel was slow to update; now it waits for the value to actually change to the selected design, and Save re-verifies the panel before writing","Edit window is bigger (440px, taller fields)"]},
+ {v:"1.8.314",items:["NEW: \uD83C\uDFAC How To sidebar on Home — upload MP4s to the how-to-videos folder in LDDEXTENSIONMD and they show as a vertical video list on the right side of Home; click any video to play it right inside LDD Tools. Number the filenames (01-..., 02-...) to set the order"]},
+ {v:"1.8.313",items:["NEW: Designs / Products tabs in Flow — switch between the two without closing Flow; the Products tab always goes folder \u2192 group \u2192 designs","FIXED: the bulk bar buttons (Select range, \u270e Edit, Clear) were silently never wired — dead code at top level; now wired when Flow builds"]},
+ {v:"1.8.312",items:["FIXED: Flow listing editor — the editor is an always-open panel that follows selection, not a dialog. The pencil now selects the design so the panel shows it (no more \u2018Could not open the listing editor\u2019); bulk edit loops through the same panel and restores your checkbox selection when done"]},
+ {v:"1.8.311",items:["NEW: Bulk select in Flow — checkboxes on design covers check the real MyDesigns boxes, plus From/To range select, count, and Clear","NEW: Bulk edit — select designs, hit \u270e Edit in the bulk bar, type once, and title/description/tags apply to every selected listing (blank fields are skipped)","TIP: close Flow, then Alt+6 runs Vision AI on your Flow selection; Flow shows the new titles next time it opens"]},
+ {v:"1.8.310",items:["NEW: \u270e Edit listing window in Flow — pencil button on design covers opens a title/description/tags editor in a window docked beside Flow (draggable, follows Flow)","NEW: Flow settings on the Tools page — Edit listings on/off, mouse edge-scroll on/off, edit window side Left/Right"]},
+ {v:"1.8.309",items:["FIXED: clicking a design thumbnail in Flow now jumps to the listing — Flow clicks the card\u2019s real inner link/thumbnail, and navigates straight to the listing URL if nothing opened"]},
+ {v:"1.8.308",items:["NEW: Flow drill-down on the Designs tab too — open a folder in Flow to see its designs as thumbnail covers"]},
+ {v:"1.8.307",items:["NEW: Flow drill-down on the Products tab — open a folder in Flow to see its Groups, open a Group to see its designs as thumbnail covers","NEW: small design previews on Group covers (loaded in the background)","NEW: \u2190 Back button + breadcrumb in the Flow titlebar, \u2713 Select button for the current cover, Enter drills in / Esc goes back"]},
+ {v:"1.8.306",items:["FIXED: Flow launcher no longer flashes in the bottom-right before moving to the top header — it now stays hidden until the header renders (floating fallback only if the header never shows up)"]},
+ {v:"1.8.305",items:["FIXED: Flow no longer mixes tabs — open it on Products and you get only Groups, open it on Designs and you get only Folders","RESTORED: hover-edge auto-scroll in the Flow coverflow (hover near the left/right edge to scroll through covers)"]},
+ {v:"1.8.304",items:["IMPROVED: Flow now includes product Groups on the Products tab (titlebar reads Folders & Groups when present)"]},
+ {v:"1.8.303",items:["NEW: Folders Flow card on the Tools page","NEW: Flow Launcher show/hide toggle in Settings → Top Header"]},
+ {v:"1.8.302",items:["IMPROVED: Flow launcher now lives in the MyDesigns top header bar (always visible, survives header re-renders)"]},
+ {v:"1.8.301",items:["FIXED: Flow button follows the folders pane — sits by New Folder when the pane is open, floats bottom-right when the pane is closed, so Flow can always be opened"]},
+ {v:"1.8.300",items:["IMPROVED: Flow opens with the MyDesigns folders pane closed (restored when Flow closes)"]},
+ {v:"1.8.299",items:["REMOVED: PNG option from Wall Art Exporter — JPG only again"]},
+ {v:"1.8.298",items:["IMPROVED: Wall Art Exporter clears the image queue after a finished export (fresh slate for the next batch)"]},
+ {v:"1.8.297",items:["IMPROVED: Wall Art Exporter options are simple dropdowns now — Format offers JPG only, PNG only, or Both JPG + PNG"]},
+ {v:"1.8.296",items:["NEW: Wall Art Exporter JPG/PNG choice — PNG exports are lossless with 300 DPI stamped via pHYs (much larger files, JPG stays default)"]},
  {v:"1.8.295",items:["NEW: Wall Art Exporter Fit/Crop option — Fit (default) keeps the whole image with white fill, Crop fills each frame edge-to-edge with no white (trims edges)"]},
  {v:"1.8.294",items:["IMPROVED: Wall Art Exporter only creates the orientation folders that get images — all-vertical exports no longer include empty HORIZONTAL folders (and vice versa)"]},
  {v:"1.8.293",items:["IMPROVED: Wall Art Exporter — CLEAR button moved below CREATE WALL ART ZIP, toast notifications on image add and download complete, expanded \"what this does\" info"]},
@@ -1167,6 +1193,7 @@ function lddRenderDashboard(o){
     <p>Extra workflow tools, customization, and speed controls built for MyDesigns creators.</p></div>
     <div class="ldd-version">v${chrome.runtime.getManifest().version}</div>
   </div>
+  <div class="ldd-dash-cols">
   <div class="ldd-section ldd-dashboard-info">
     <div class="ldd-sidebar-expanded-banner"><div class="ldd-sidebar-expanded-banner-title">⚠ LDD TOOLS WORKS BEST WITH THE MYDESIGNS SIDEBAR EXPANDED</div><div class="ldd-sidebar-expanded-banner-body">For the cleanest layout, native sidebar spacing, and easiest access to LDD Tools, keep the MyDesigns sidebar expanded while using LDD Tools.</div></div>
     <div class="ldd-beta-banner"><div class="ldd-beta-banner-title">🧪 LDD TOOLS IS CURRENTLY IN BETA</div><div class="ldd-beta-banner-body">LDD Tools is actively developed alongside MyDesigns. Bugs can happen, features may occasionally display or behave incorrectly, and a MyDesigns interface update can temporarily break an LDD feature until it is updated. If something acts weird, disable that feature and report it. LDD Tools is designed to improve your workflow and does not intentionally delete or modify your MyDesigns account data.</div></div>
@@ -1176,7 +1203,83 @@ function lddRenderDashboard(o){
     <div class="ldd-control-card"><h2>Current Setup</h2><span><b>Mode:</b> ${mode} &nbsp; • &nbsp; <b>Theme:</b> ${theme} &nbsp; • &nbsp; <b>Enabled settings:</b> ${enabled}</span><span>This page is informational only. Change features from Tools, Performance, Theme, Fonts, Hotkeys, or Settings.</span></div>
     <div class="ldd-control-card"><h2>Quick Guide</h2><span><b>Tools</b> handles workflow helpers. <b>Theme & Fonts</b> change the look of MyDesigns locally. <b>Hotkeys</b> speeds up common actions. <b>Performance</b> controls speed tweaks. <b>Settings</b> contains visibility, interface, and extension options.</span></div>
     <div class="ldd-dashboard-corner" aria-label="Lavender Dragon Design links"><span>Made with ❤️ by Andrea</span><a href="https://buymeacoffee.com/lavenderdragondesign" target="_blank" rel="noopener noreferrer">☕ Buy Me a Coffee</a><a href="https://www.etsy.com/shop/LavenderDragonDesign" target="_blank" rel="noopener noreferrer">🛍 Etsy</a><button type="button" id="ldd-suggest-feature">💡 Suggest a Feature</button></div>
+  </div>
+  <aside class="ldd-howto" id="ldd-howto">
+   <div class="ldd-howto-head"><h2>🎬 How To</h2><button id="ldd-howto-refresh" title="Reload videos from GitHub">↻</button></div>
+   <div class="ldd-howto-list" id="ldd-howto-list"></div>
+  </aside>
   </div>`;
+}
+/* ===== How To videos (GitHub-hosted, Pete populates) ===== */
+const LDD_HOWTO_REPO='lavenderdragondesign/LDDEXTENSIONMD';
+const LDD_HOWTO_PATH='how-to-videos';
+let lddHowToCache={files:[],at:0};
+function lddHowToPretty(name){
+ let t=String(name||'').replace(/\.(mp4|webm|mov)$/i,'');
+ t=t.replace(/^(\d+)[\s._-]+/,'');
+ t=t.replace(/[_-]+/g,' ').trim();
+ return t||name;
+}
+function lddHowToOrder(name){
+ const m=String(name||'').match(/^(\d+)/);
+ return m?parseInt(m[1],10):1e9;
+}
+async function lddHowToFetch(force){
+ if(!force&&lddHowToCache.files.length)return lddHowToCache.files;
+ const r=await fetch(`https://api.github.com/repos/${LDD_HOWTO_REPO}/contents/${LDD_HOWTO_PATH}?ref=main`,{headers:{'Accept':'application/vnd.github+json'},cache:'no-store'});
+ if(!r.ok)throw new Error(r.status===404?'not-found':'gh'+r.status);
+ const items=await r.json();
+ if(!Array.isArray(items))throw new Error('not-folder');
+ const files=items.filter(x=>x.type==='file'&&/\.(mp4|webm|mov)$/i.test(x.name||''))
+  .map(x=>({file:x.name,title:lddHowToPretty(x.name),url:x.download_url||'',ord:lddHowToOrder(x.name)}))
+  .sort((a,b2)=>(a.ord-b2.ord)||a.title.localeCompare(b.title));
+ lddHowToCache={files,at:Date.now()};
+ return files;
+}
+async function lddHowToBind(){
+ const aside=document.getElementById('ldd-howto');
+ const list=document.getElementById('ldd-howto-list');
+ if(!aside||!list)return;
+ const render=files=>{
+  if(!files.length){
+   list.innerHTML='<div class="ldd-howto-empty">No videos yet.<br>Upload MP4s to the <b>how-to-videos</b> folder in LDDEXTENSIONMD, then hit ↻.</div>';
+   return;
+  }
+  list.innerHTML='';
+  files.forEach(f=>{
+   const btn=document.createElement('button');
+   btn.className='ldd-howto-item';btn.type='button';btn.title=f.title;
+   btn.innerHTML='<span class="ldd-howto-play">\u25b6</span><span class="ldd-howto-name"></span>';
+   btn.querySelector('.ldd-howto-name').textContent=f.title;
+   btn.addEventListener('click',()=>lddHowToPlay(f));
+   list.appendChild(btn);
+  });
+ };
+ const load=async(force)=>{
+  list.innerHTML='<div class="ldd-howto-loading">Loading videos…</div>';
+  try{render(await lddHowToFetch(force))}
+  catch(e){
+   if(String(e&&e.message)==='not-found'){aside.style.display='none';return}
+   list.innerHTML='<div class="ldd-howto-empty">Couldn\u2019t load videos.<br>Hit ↻ to retry.</div>';
+  }
+ };
+ const rf=document.getElementById('ldd-howto-refresh');
+ if(rf)rf.onclick=()=>load(true);
+ await load(false);
+}
+function lddHowToPlay(f){
+ document.getElementById('ldd-howto-player')?.remove();
+ const ov=document.createElement('div');
+ ov.id='ldd-howto-player';
+ ov.innerHTML='<div class="ldd-howto-player-box"><button type="button" class="ldd-howto-x" aria-label="Close">\u00d7</button><h3></h3><video controls preload="metadata" playsinline></video></div>';
+ ov.querySelector('h3').textContent=f.title;
+ ov.querySelector('video').src=f.url;
+ const onKey=e=>{if(e.key==='Escape'){e.stopPropagation();close()}};
+ const close=()=>{try{ov.querySelector('video').pause()}catch(_){}ov.remove();document.removeEventListener('keydown',onKey,true)};
+ ov.addEventListener('click',e=>{if(e.target===ov)close()});
+ ov.querySelector('.ldd-howto-x').onclick=close;
+ document.addEventListener('keydown',onKey,true);
+ document.body.appendChild(ov);
 }
 function lddOpenSuggestionCard(){
   if(document.getElementById("ldd-suggestion-card")) return;
@@ -1271,22 +1374,28 @@ function lddRenderDesignPage(o){
 function lddRenderWorkflowPage(o){
  const enDis=(key,on)=>`<div class="ldd-enable-disable" data-two-button-setting="${key}"><button type="button" data-setting-value="true" class="${on?'active':''}">ENABLE</button><button type="button" data-setting-value="false" class="${!on?'active':''}">DISABLE</button></div>`;
  const openBtn=(id,disabled)=>`<button type="button" id="${id}" class="ldd-page-secondary ldd-tool-open"${disabled?' disabled':''}>OPEN</button>`;
- const card=(title,desc,body)=>`<div class="ldd-tool-card"><h3>${title}</h3><p>${desc}</p><div class="ldd-tool-btns">${body}</div></div>`;
+ const card=(title,desc,body,cls,tip)=>`<div class="ldd-tool-card${cls?' '+cls:''}"${tip?` data-ldd-tip="${tip.replace(/"/g,'&quot;')}"`:''}><h3>${title}</h3><p>${desc}</p><div class="ldd-tool-btns">${body}</div></div>`;
  return `<div class="ldd-page-title"><h2>Tools</h2><p>Workflow tools and utilities for MyDesigns.</p></div>
  <div class="ldd-tools-grid">
-  ${card('&#128269; Preview Pro','Fast enlarged preview when you hover design cards.',enDis('hoverPreview',o.hoverPreview!==false))}
-  ${card('&#128229; Drag &amp; Drop','Drop images from Explorer straight onto Designs.',enDis('dragUpload',o.dragUpload!==false))}
-  ${card('&#9998;&#65039; Renamer','Bulk rename design titles with rules & live preview.',openBtn('ldd-open-renamer',false))}
-  ${card('&#129302; Scout AI','Style library, Auto Fill, Create Style With AI.',enDis('scoutAIEnabled',o.scoutAIEnabled!==false)+openBtn('ldd-page-open-scout',o.scoutAIEnabled===false))}
-  ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true))}
-  ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false))}
-  ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false))}
-  ${card('&#128444;&#65039; Wall Art Exporter','One-click print-ready wall art ZIPs with 6 ratios, size guide, and progress.',openBtn('ldd-open-wallart',false))}
-  ${card('&#11088; Favorites Manager','Starred presets & products — view, open, remove, all in one place.',enDis('favEnabled',o.favEnabled!==false)+openBtn('ldd-open-favorites',false))}
-  ${card('&#128218; Prompt Pack PDF Library <span id="ldd-pl-newbadge" class="ldd-newbadge" style="display:none">NEW PDF AVAILABLE</span>','Read live or download.',openBtn('ldd-open-pdflibrary',false))}
-  ${card('&#128193; Prompt Vault','Prompt library — folders, favorites, JSON import/export.',openBtn('ldd-open-promptvault',false))}
-  ${card('&#128247; Image Vault','Local image library — folders, tags, ZIP download.',openBtn('ldd-open-imagevault',false))}
- </div>`;
+  ${card('&#128269; Preview Pro','Fast enlarged preview when you hover design cards.',enDis('hoverPreview',o.hoverPreview!==false),undefined,'Hover any design card to see a large instant preview.')}
+  ${card('&#128229; Drag &amp; Drop','Drop images from Explorer straight onto Designs.',enDis('dragUpload',o.dragUpload!==false),undefined,'Drag image files from Explorer straight onto the Designs page to upload.')}
+  ${card('&#9998;&#65039; Renamer','Bulk rename design titles with rules & live preview.',openBtn('ldd-open-renamer',false),undefined,'Bulk rename design titles with rules — preview changes before applying.')}
+  ${card('&#129302; Scout AI','Style library, Auto Fill, Create Style With AI.',enDis('scoutAIEnabled',o.scoutAIEnabled!==false)+openBtn('ldd-page-open-scout',o.scoutAIEnabled===false),undefined,'Browse the style library, auto-fill prompts, or create new styles with AI.')}
+  ${card('&#128172; Prompt Queue','Queue ChatGPT prompts, run one at a time.',enDis('autoPromptQueueEnabled',o.autoPromptQueueEnabled===true)+openBtn('ldd-open-prompt-queue',o.autoPromptQueueEnabled!==true),undefined,'Queue up ChatGPT prompts and run them one at a time.')}
+  ${card('&#128444;&#65039; DPI Changer','Force 300 DPI on PNG &amp; JPG, pad to print size.',openBtn('ldd-open-dpi-changer',false),undefined,'Force 300 DPI on PNG and JPG files, pad to exact print size.')}
+  ${card('&#128479;&#65039; Image Resizer','Resize PNG &amp; JPG to exact print dimensions.',openBtn('ldd-open-imgresize',false),undefined,'Resize PNG and JPG images to exact print dimensions.')}
+  ${card('&#128444;&#65039; Wall Art Exporter','One-click print-ready wall art ZIPs with 6 ratios, size guide, and progress.',openBtn('ldd-open-wallart',false),undefined,'One-click print-ready wall art ZIPs — 6 ratios with size guide.')}
+  ${card('&#128436;&#65039; Folders Flow <span class="ldd-experimental">EXPERIMENTAL</span>','Navigate folders & groups, preview designs.',
+   `<div class="ldd-flow-card-opts">`+
+   `<div class="ldd-flow-opt"><span>Experimental</span>${enDis('flowExperimental',o.flowExperimental===true)}</div>`+
+   `<div class="ldd-flow-opt"><span>Mouse edge-scroll</span>${enDis('flowHoverEdge',o.flowHoverEdge!==false)}</div>`+
+   `</div>`+openBtn('ldd-open-flow',false),undefined,'Browse folders and groups in a 3D coverflow. Click a side cover to slide, the center cover to open.')}
+  ${card('&#11088; Favorites Manager','Starred presets & products — view, open, remove, all in one place.',enDis('favEnabled',o.favEnabled!==false)+openBtn('ldd-open-favorites',false),undefined,'View, open, and remove your starred presets and products in one place.')}
+  ${card('&#128218; Prompt Pack PDF Library <span id="ldd-pl-newbadge" class="ldd-newbadge" style="display:none">NEW PDF AVAILABLE</span>','Read live or download.',openBtn('ldd-open-pdflibrary',false),undefined,'Read your prompt PDFs live or download them.')}
+  ${card('&#128193; Prompt Vault','Prompt library — folders, favorites, JSON import/export.',openBtn('ldd-open-promptvault',false),undefined,'Your prompt library — folders, favorites, JSON import and export.')}
+  ${card('&#128247; Image Vault','Local image library — folders, tags, ZIP download.',openBtn('ldd-open-imagevault',false),undefined,'Your local image library — folders, tags, and ZIP download.')}
+ </div>
+ <div class="ldd-tools-footer"><label class="ldd-tools-tooltips"><span>Tooltips</span>${enDis('toolTips',o.toolTips!==false)}</label></div>`;
 }
 
 const LDD_PERF_TIPS={
@@ -1465,6 +1574,7 @@ function lddRenderSettingsPage(o){
     ${lddToggleCard("headerIssues","Issue Tracker","Show Issue Tracker.",o.headerIssues)}
     ${lddToggleCard("headerSupport","Support","Show Support.",o.headerSupport)}
     ${lddToggleCard("headerAccount","Account","Show Account menu.",o.headerAccount)}
+    ${lddToggleCard("headerFlow","Flow Launcher","Show the 🖼 Flow button in the top header.",o.headerFlow)}
    </div>
  </div>
  <div class="ldd-section ldd-settings-pane-152" data-settings-pane-body="home">
@@ -1676,6 +1786,7 @@ function lddBindAppPage(tab,o){
 
  if(!lddAppRoot)return;
  if(tab==="dashboard"){
+   try{lddHowToBind().catch(e=>console.warn("[LDD] HowTo",e))}catch(e){console.warn("[LDD] HowTo",e)}
    const suggestBtn=lddAppRoot.querySelector("#ldd-suggest-feature");
    if(suggestBtn){
      suggestBtn.onclick=(e)=>{
@@ -1756,6 +1867,8 @@ function lddBindAppPage(tab,o){
    if(irOpen)irOpen.onclick=()=>{try{lddShowTab("imgresize");}catch(err){globalThis.lddToast110("Resizer failed to open: "+String((err&&err.message)||err),true);}};
    const wallArtOpen=lddAppRoot.querySelector("#ldd-open-wallart");
    if(wallArtOpen)wallArtOpen.onclick=()=>window.dispatchEvent(new Event("ldd-open-wallart-tool"));
+   const flowOpen=lddAppRoot.querySelector("#ldd-open-flow");
+   if(flowOpen)flowOpen.onclick=()=>{try{lddFlowOpen()}catch(err){globalThis.lddToast110("Flow failed to open: "+String((err&&err.message)||err),true)}};
    const scoutOpen=lddAppRoot.querySelector("#ldd-page-open-scout");
    if(scoutOpen)scoutOpen.onclick=()=>{
      const target=[...document.querySelectorAll("a,button")].find(el=>String(el.textContent||"").trim()==="Scout AI");
@@ -1888,6 +2001,10 @@ function lddBindAppPage(tab,o){
      const key=group.dataset.twoButtonSetting;
      const value=btn.dataset.settingValue==="true";
      lddStorageSet(key,value);
+     group.querySelectorAll("button").forEach(b=>b.classList.toggle("active",b===btn));
+     if(key==="flowExperimental"){lddFlowExperimental=value===true;try{lddFlowEnsureBtn()}catch(_){}}
+     if(key==="flowHoverEdge")lddFlowHoverEdgeOn=value;
+     if(key==="toolTips"){lddToolTipsOn=value;lddToolTipHide()}
      const label=group.closest(".ldd-tool-card")?.querySelector("h3")?.textContent?.trim()||key;
      if(key!=="toastNotifications" || value) globalThis.lddToast110(`${label} ${value?"Enabled":"Disabled"}`);
      if(key==="scoutAIEnabled"||key==="autoPromptQueueEnabled"||key==="dragUpload")setTimeout(()=>lddShowTab("workflow"),40);
@@ -2897,6 +3014,7 @@ function lddSyncHeaderPrefs(o){
   lddHeaderVisible(document.querySelector('a[href="/app/issues"]'),o.headerIssues!==false);
   lddHeaderVisible([...document.querySelectorAll("button")].find(b=>b.textContent.trim()==="Support"),o.headerSupport!==false);
   lddHeaderVisible(document.querySelector('button[aria-label="Account menu"]'),o.headerAccount!==false);
+  lddHeaderVisible(document.getElementById('ldd-flow-open-btn'),o.headerFlow!==false);
 
   let themeBtn=document.querySelector('button[aria-label="Switch theme"]');
   if(o.themeEnabled===false){
@@ -2919,7 +3037,7 @@ let lddHeaderTimer;
 new MutationObserver(()=>{clearTimeout(lddHeaderTimer);lddHeaderTimer=setTimeout(lddApplyHeaderNow,100)})
 .observe(document.documentElement,{childList:true,subtree:true});
 lddSafeOnChanged((c,a)=>{
- if(a==="local"&&["headerStore","headerSearch","headerNotifications","headerJobs","headerIssues","headerSupport","headerAccount","themeEnabled"].some(k=>c[k]))lddApplyHeaderNow();
+ if(a==="local"&&["headerStore","headerSearch","headerNotifications","headerJobs","headerIssues","headerSupport","headerAccount","headerFlow","themeEnabled"].some(k=>c[k]))lddApplyHeaderNow();
 });
 
 /* ===== v0.8.6 native MD sidebar + folder panel visibility ===== */
@@ -2952,6 +3070,7 @@ function lddFindFoldersAside(){
 function lddApplyFolderPrefs(o){
   const aside=lddFindFoldersAside();
   if(!aside)return;
+  try{const fp=document.getElementById('ldd-flow-pop');if(fp&&fp.classList.contains('ldd-open')){aside.style.setProperty("display","none","important");return}}catch(_){}
   const p=location.pathname.toLowerCase();
   let show=true;
   if(p.includes("/design")) show=o.designFolders!==false;
@@ -2959,10 +3078,12 @@ function lddApplyFolderPrefs(o){
   aside.style.setProperty("display",show?"":"none","important");
   if(show)aside.style.removeProperty("display");
 }
+let lddFlowExperimental=false;
 function lddApplyNavAndFolders(){
   lddSafeGet(LDD_DEFAULTS,o=>{
     lddApplyNativeSidebarPrefs(o);
     lddApplyFolderPrefs(o);
+    try{lddFlowEnsureBtn()}catch(_){}
   });
 }
 lddApplyNavAndFolders();
@@ -3229,53 +3350,281 @@ div::-webkit-scrollbar-thumb,aside::-webkit-scrollbar-thumb,main::-webkit-scroll
 html::-webkit-scrollbar-corner,body::-webkit-scrollbar-corner,#ldd-app-page *::-webkit-scrollbar-corner{background:${track}!important}`;
 }
 /* ===== v1.8.281+ folders coverflow popout (ItemzFlow-style) ===== */
-let lddFlowIdx=0,lddFlowData=[],lddFlowAll=[],lddFlowQuery='';
-function lddFlowCollect(){
- const rows=[...document.querySelectorAll('[data-tree-folder]')];
- return rows.map(r=>{
-  const nameEl=r.querySelector('.truncate');
-  const name=nameEl?nameEl.textContent.trim():'Folder';
-  let count='';
-  for(const s of r.querySelectorAll('span')){const t=(s.textContent||'').trim();if(/^\d[\d,]*$/.test(t)&&s!==nameEl){count=t;break}}
-  return {row:r,name,count};
+/* v1.8.319: navigator + preview only (edit listings removed); gated by the Experimental toggle. */
+let lddFlowIdx=0,lddFlowData=[],lddFlowAll=[],lddFlowQuery='',lddFlowPath=[],lddFlowToken=0;
+let lddFlowHoverEdgeOn=true;
+function lddFlowOnProducts(){try{return location.pathname.toLowerCase().includes('/product')}catch(_){return false}}
+function lddFlowOnDesigns(){try{return location.pathname.toLowerCase().includes('/design')}catch(_){return false}}
+function lddFlowRowInfo(r){
+ const nameEl=r.querySelector('.truncate');
+ const name=nameEl?nameEl.textContent.trim():'Folder';
+ let count='';
+ for(const s of r.querySelectorAll('span')){const t=(s.textContent||'').trim();if(/^\d[\d,]*$/.test(t)&&s!==nameEl){count=t;break}}
+ return {row:r,name,count,isGroup:r.hasAttribute('data-tree-group')};
+}
+function lddFlowChildGroups(folderRow){
+ const seen=new Set(),out=[];
+ const add=g=>{if(g&&!seen.has(g)){seen.add(g);out.push(g)}};
+ [...folderRow.querySelectorAll('[data-tree-group]')].forEach(g=>{
+  const f=g.closest?g.closest('[data-tree-folder]'):null;
+  if(f===folderRow||!f)add(g);
  });
+ if(!out.length){
+  let n=folderRow.nextElementSibling;
+  while(n&&!(n.hasAttribute&&n.hasAttribute('data-tree-folder'))){
+   if(n.hasAttribute&&n.hasAttribute('data-tree-group'))add(n);
+   if(n.querySelectorAll)n.querySelectorAll('[data-tree-group]').forEach(add);
+   n=n.nextElementSibling;
+  }
+ }
+ return out;
 }
-function lddFlowSelectCurrent(){
- const f=lddFlowData[lddFlowIdx];if(!f)return;
- try{f.row.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
- lddFlowClose();
+let lddFlowTab='designs';
+function lddFlowCollect(){
+ return lddFlowTab==='products'?lddFlowCollectProducts():lddFlowCollectDesigns();
 }
-function lddFlowEnsureBtn(){
+function lddFlowCollectDesigns(){
+ return [...document.querySelectorAll('[data-tree-folder]')]
+  .filter(r=>lddFlowChildGroups(r).length===0)
+  .map(r=>{const info=lddFlowRowInfo(r);info.isFolder=true;info.drillDesigns=true;return info});
+}
+function lddFlowCollectProducts(){
+ const folders=[...document.querySelectorAll('[data-tree-folder]')]
+  .filter(r=>lddFlowChildGroups(r).length>0)
+  .map(r=>{
+   const info=lddFlowRowInfo(r);
+   const kids=lddFlowChildGroups(r).map(lddFlowRowInfo);
+   const total=kids.reduce((a,k)=>a+(parseInt(String(k.count).replace(/,/g,''),10)||0),0);
+   return Object.assign(info,{count:kids.length?String(total):info.count,children:kids,isFolder:true});
+  });
+ const grouped=new Set();
+ folders.forEach(f=>f.children.forEach(k=>grouped.add(k.row)));
+ const orphans=[...document.querySelectorAll('[data-tree-group]')].filter(g=>!grouped.has(g)).map(lddFlowRowInfo);
+ if(orphans.length)folders.push({row:orphans[0].row,name:'Groups',count:String(orphans.length),isGroup:true,isFolder:true,children:orphans});
+ return folders;
+}
+function lddFlowSetTab(tab){
+ if(!tab||(tab===lddFlowTab&&lddFlowPath.length))return;
+ lddFlowTab=tab;
+ lddFlowToken++;
+ lddFlowPath=[];
+ lddFlowQuery='';
+ const s=document.querySelector('#ldd-flow-pop .ldd-flow-search');if(s)s.value='';
+ document.querySelectorAll('#ldd-flow-pop [data-ftab]').forEach(b=>b.classList.toggle('on',b.dataset.ftab===tab));
+ lddFlowAll=lddFlowCollect();
+ lddFlowIdx=0;
+ lddFlowPath=[{title:tab==='products'?'Product folders':'Folders',items:lddFlowAll,kind:'root'}];
+ lddFlowRender();
+}
+function lddFlowCurrent(){return lddFlowPath[lddFlowPath.length-1]}
+function lddFlowDrillItem(f){
+ if(!f)return;
+ if(f.isDesign){lddFlowSelectItem(f);return}
+ if((f.children&&f.children.length)||f.isGroup){
+  lddFlowToken++;
+  lddFlowQuery='';const s=document.querySelector('#ldd-flow-pop .ldd-flow-search');if(s)s.value='';
+  if(f.isFolder)lddFlowPath.push({title:f.name,items:f.children,kind:'groups',folderRow:f.row,previewsStarted:false});
+  else{lddFlowPath.push({title:f.name,items:[],kind:'designs',loading:true});lddFlowLoadDesigns(f.row,'[data-testid="product-card"]')}
+  lddFlowRender();
+ }else if(f.drillDesigns){
+  lddFlowToken++;
+  lddFlowQuery='';const s2=document.querySelector('#ldd-flow-pop .ldd-flow-search');if(s2)s2.value='';
+  lddFlowPath.push({title:f.name,items:[],kind:'designs',loading:true});
+  lddFlowLoadDesigns(f.row,'[data-testid="design-card"]');
+  lddFlowRender();
+ }else lddFlowSelectItem(f);
+}
+function lddFlowBack(){
+ if(lddFlowPath.length>1){lddFlowToken++;lddFlowQuery='';const s=document.querySelector('#ldd-flow-pop .ldd-flow-search');if(s)s.value='';lddFlowPath.pop();lddFlowRender()}
+}
+function lddFlowLoadDesigns(rowEl,cardSel){
+ const token=++lddFlowToken;
+ try{if(rowEl&&rowEl.scrollIntoView)rowEl.scrollIntoView({block:'nearest'})}catch(_){}
+ try{if(rowEl&&rowEl.click)rowEl.click()}catch(_){}
+ try{rowEl.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
+ const t0=Date.now();
+ const sels=[];
+ [cardSel,'[data-testid="product-card"]','[data-testid="design-card"]'].forEach(x=>{if(x&&sels.indexOf(x)<0)sels.push(x)});
+ const poll=()=>{
+  if(token!==lddFlowToken)return;
+  let cards=[];
+  for(const s2 of sels){try{cards=[...document.querySelectorAll(s2)]}catch(_){cards=[]}if(cards.length)break}
+  if(cards.length||Date.now()-t0>4000){
+   const lvl=lddFlowCurrent();
+   if(lvl&&lvl.kind==='designs'){
+    lvl.items=cards.slice(0,60).map(c=>{
+     const img=c.querySelector('img');
+     let name='';
+     try{name=lddRnCardTitle(c)||''}catch(_){}
+     if(!name&&img&&img.alt)name=img.alt.trim();
+     if(!name){const h=c.querySelector('h3,h4,[data-testid$="title"]');name=h?h.textContent.trim():''}
+     if(!name)name=(c.getAttribute('aria-label')||'Design').trim();
+     return {row:c,name:name||'Design',isDesign:true,img:img?(img.currentSrc||img.src||''):''};
+    });
+    lvl.loading=false;
+    lddFlowRender();
+   }
+  }else setTimeout(poll,300);
+ };
+ setTimeout(poll,500);
+}
+function lddFlowPaintPreviews(pv,imgs){
  try{
-  document.querySelectorAll('.ldd-folders-track,.ldd-folders-carousel').forEach(e=>e.classList.remove('ldd-folders-track','ldd-folders-carousel'));
-  if(document.getElementById('ldd-flow-open-btn'))return;
-  const btn=document.createElement('button');
-  btn.id='ldd-flow-open-btn';btn.textContent='🖼 Flow';btn.title='Open folders coverflow';
-  btn.addEventListener('click',()=>lddFlowOpen());
-  const nb=[...document.querySelectorAll('button')].find(b=>/new folder/i.test(b.textContent||''));
-  if(nb&&nb.parentElement){nb.after(btn)}
-  else{btn.style.cssText='position:fixed;right:14px;bottom:14px;z-index:2147483645';document.body.appendChild(btn)}
+  pv.innerHTML='';
+  imgs.forEach(s=>{const im=document.createElement('img');im.src=s;im.loading='lazy';im.alt='';pv.appendChild(im)});
  }catch(_){}
 }
+function lddFlowStartGroupPreviews(){
+ const lvl=lddFlowCurrent();
+ if(!lvl||lvl.kind!=='groups'||lvl.previewsStarted)return;
+ lvl.previewsStarted=true;
+ const token=++lddFlowToken;
+ const items=lvl.items.filter(g=>g.isGroup).slice(0,6);
+ let i=0;
+ const next=()=>{
+  if(token!==lddFlowToken||lddFlowCurrent()!==lvl)return;
+  if(i>=items.length){
+   try{lvl.folderRow.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
+   return;
+  }
+  const g=items[i++];
+  if(g.previews){setTimeout(next,50);return}
+  try{g.row.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
+  setTimeout(()=>{
+   if(token!==lddFlowToken||lddFlowCurrent()!==lvl)return;
+   g.previews=[...document.querySelectorAll('[data-testid="product-card"] img')].slice(0,3).map(im=>im.currentSrc||im.src||'').filter(Boolean);
+   const pop=document.getElementById('ldd-flow-pop');
+   if(pop){[...pop.querySelectorAll('.ldd-flow-cover')].forEach(c=>{if(c._flowItem===g){const pv=c.querySelector('.ldd-flow-previews');if(pv)lddFlowPaintPreviews(pv,g.previews)}})}
+   setTimeout(next,200);
+  },700);
+ };
+ setTimeout(next,400);
+}
+function lddFlowSelectCurrent(){
+ lddFlowSelectItem(lddFlowData[lddFlowIdx]);
+}
+function lddFlowTopbar(){
+ try{
+  const headers=[...document.querySelectorAll('header')].filter(h=>h.offsetParent!==null);
+  if(headers.length){
+   const withSupport=headers.find(h=>/support/i.test(h.textContent||''));
+   return withSupport||headers[0];
+  }
+  const sup=[...document.querySelectorAll('span,div,button,a')].find(e=>e.children.length===0&&(e.textContent||'').trim()==='Support');
+  if(sup){
+   let p=sup.parentElement,d=0;
+   while(p&&d<5){
+    if(p.querySelectorAll('button').length>=3)return p;
+    p=p.parentElement;d++;
+   }
+   return sup.parentElement;
+  }
+ }catch(_){}
+ return null;
+}
+let lddFlowNoHeaderSince=0,lddFlowWaitT=null;
+function lddFlowEnsureBtn(){
+ try{
+  if(!lddFlowExperimental){
+   const efb=document.getElementById('ldd-flow-open-btn');if(efb)efb.remove();
+   return;
+  }
+  document.querySelectorAll('.ldd-folders-track,.ldd-folders-carousel').forEach(e=>e.classList.remove('ldd-folders-track','ldd-folders-carousel'));
+  let btn=document.getElementById('ldd-flow-open-btn');
+  if(!btn){
+   btn=document.createElement('button');
+   btn.id='ldd-flow-open-btn';btn.innerHTML=lddIcon('image',15)+'<span>Flow</span>';btn.setAttribute('data-ldd-tip','Open the Folders Flow coverflow — browse folders and groups, preview designs.');btn.removeAttribute('title');
+   btn.addEventListener('click',()=>lddFlowOpen());
+  }
+  const bar=lddFlowTopbar();
+  if(bar){
+   lddFlowNoHeaderSince=0;
+   if(lddFlowWaitT){clearTimeout(lddFlowWaitT);lddFlowWaitT=null}
+   if(btn.parentElement!==bar)bar.appendChild(btn);
+   if(btn.style.cssText)btn.style.cssText='';
+  }else if(!lddFlowNoHeaderSince||Date.now()-lddFlowNoHeaderSince<2500){
+   // MyDesigns' header usually renders after the extension's first pass — keep the button
+   // detached (invisible) until the header shows up instead of flashing it bottom-right
+   // for a second and then moving it.
+   if(!lddFlowNoHeaderSince)lddFlowNoHeaderSince=Date.now();
+   if(btn.parentElement)btn.parentElement.removeChild(btn);
+   if(!lddFlowWaitT)lddFlowWaitT=setTimeout(()=>{lddFlowWaitT=null;try{lddFlowEnsureBtn()}catch(_){}},800);
+  }else{
+   // Header genuinely absent after the grace window — use the floating fallback.
+   if(btn.parentElement!==document.body)document.body.appendChild(btn);
+   btn.style.cssText='position:fixed;right:14px;bottom:14px;z-index:2147483645';
+  }
+ }catch(_){}
+}
+const LDD_ICONS={
+ 'arrow-left':'<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+ 'x':'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+ 'chevron-left':'<path d="m15 18-6-6 6-6"/>',
+ 'chevron-right':'<path d="m9 18 6-6-6-6"/>',
+ 'check':'<path d="M20 6 9 17l-5-5"/>',
+ 'download':'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+ 'folder':'<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+ 'image':'<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+ 'layers':'<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>'
+};
+function lddIcon(n,sz){sz=sz||16;return '<svg class="ldd-ic" width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(LDD_ICONS[n]||'')+'</svg>'}
+/* Tool tips (Tools page cards + Flow launcher) — Performance-style, toggleable. */
+let lddToolTipsOn=true;
+function lddToolTipHide(){const t=document.getElementById('ldd-tool-tip');if(t){t.style.display='none';t.dataset.host=''}}
+function lddToolTipShow(host){
+ if(!lddToolTipsOn||!host||!host.getAttribute)return;
+ const text=host.getAttribute('data-ldd-tip');if(!text)return;
+ let tip=document.getElementById('ldd-tool-tip');
+ if(!tip){tip=document.createElement('div');tip.id='ldd-tool-tip';document.body.appendChild(tip)}
+ if(!host.dataset.lddTipId)host.dataset.lddTipId='t'+Math.random().toString(36).slice(2);
+ if(tip.dataset.host===host.dataset.lddTipId&&tip.style.display==='block')return;
+ tip.dataset.host=host.dataset.lddTipId;tip.textContent=text;
+ tip.style.display='block';tip.style.visibility='hidden';tip.style.left='0px';tip.style.top='0px';
+ const r=host.getBoundingClientRect(),w=tip.offsetWidth,h=tip.offsetHeight;
+ let left=r.left+(r.width-w)/2,top=r.top-h-10;
+ if(top<10)top=r.bottom+10;
+ if(left+w>innerWidth-10)left=innerWidth-w-10;
+ if(left<10)left=10;
+ if(top+h>innerHeight-10)top=Math.max(10,innerHeight-h-10);
+ tip.style.left=Math.round(left)+'px';tip.style.top=Math.round(top)+'px';tip.style.visibility='visible';
+}
+document.addEventListener('mouseover',e=>{const h=e.target&&e.target.closest?e.target.closest('[data-ldd-tip]'):null;if(h)lddToolTipShow(h);else lddToolTipHide()},true);
 function lddFlowBuild(){
  let pop=document.getElementById('ldd-flow-pop');
  if(pop)return pop;
  pop=document.createElement('div');pop.id='ldd-flow-pop';
- pop.innerHTML='<div class="ldd-flow-backdrop"></div><div class="ldd-flow-win" role="dialog" aria-label="Folders coverflow"><div class="ldd-flow-titlebar"><b>\uD83D\uDCC1 Folders</b><input class="ldd-flow-search" placeholder="Search folders\u2026" aria-label="Search folders"><button data-x aria-label="Close">\u2715</button></div><div class="ldd-flow-stage"><div class="ldd-flow-track"></div></div><div class="ldd-flow-nav"><button data-prev aria-label="Previous">\u2039</button><div class="ldd-flow-cur"></div><button data-next aria-label="Next">\u203A</button></div></div>';
+ pop.innerHTML='<div class="ldd-flow-backdrop"></div><div class="ldd-flow-win" role="dialog" aria-label="Folders coverflow"><div class="ldd-flow-titlebar"><button data-back aria-label="Back" title="Back" style="display:none">'+lddIcon('arrow-left',18)+'</button><b class="ldd-flow-title">'+lddIcon('folder',16)+'<span>Folders</span></b><input class="ldd-flow-search" placeholder="Search folders\u2026" aria-label="Search folders"><button data-x aria-label="Close">'+lddIcon('x',18)+'</button></div><div class="ldd-flow-tabs"><button data-ftab="designs" class="on">Designs</button><button data-ftab="products">Products</button></div><div class="ldd-flow-bulk" style="display:none"><span>Bulk</span><label>From <input data-from type="number" min="1"></label><label>To <input data-to type="number" min="1"></label><button data-range>Select range</button><span data-count></span><button data-clear>Clear</button><span class="ldd-flow-bulk-hint">Close Flow, then Alt+6 for Vision AI</span></div><div class="ldd-flow-stage"><div class="ldd-flow-track"></div></div><div class="ldd-flow-nav"><button data-prev aria-label="Previous">'+lddIcon('chevron-left',20)+'</button><div class="ldd-flow-cur"></div><button data-next aria-label="Next">'+lddIcon('chevron-right',20)+'</button><button data-select aria-label="Select current" title="Select current">'+lddIcon('check',18)+'</button></div></div>';
  document.body.appendChild(pop);
  pop.querySelector('.ldd-flow-backdrop').addEventListener('click',lddFlowClose);
  pop.querySelector('[data-x]').addEventListener('click',lddFlowClose);
  pop.querySelector('[data-prev]').addEventListener('click',()=>lddFlowGo(lddFlowIdx-1));
  pop.querySelector('[data-next]').addEventListener('click',()=>lddFlowGo(lddFlowIdx+1));
+ pop.querySelector('[data-back]').addEventListener('click',lddFlowBack);
+ pop.querySelector('[data-select]').addEventListener('click',lddFlowSelectCurrent);
+ pop.querySelectorAll('[data-ftab]').forEach(b=>b.addEventListener('click',()=>lddFlowSetTab(b.dataset.ftab)));
+ try{
+  const br=pop.querySelector('[data-range]'),bc=pop.querySelector('[data-clear]');
+  if(br)br.addEventListener('click',lddFlowBulkRange);
+  if(bc)bc.addEventListener('click',lddFlowBulkClear);
+ }catch(_){}
  const search=pop.querySelector('.ldd-flow-search');
  search.addEventListener('input',()=>{lddFlowQuery=search.value;lddFlowRender()});
  search.addEventListener('keydown',e=>{
   if(e.key==='Escape'){e.stopPropagation();search.value='';lddFlowQuery='';lddFlowRender()}
-  else if(e.key==='Enter'){lddFlowSelectCurrent()}
+  else if(e.key==='Enter'){const _f=lddFlowData[lddFlowIdx];if(_f){if(_f.isDesign)lddFlowSelectItem(_f);else lddFlowDrillItem(_f)}}
  });
  const stage=pop.querySelector('.ldd-flow-stage');
  let wheelT=0;
  stage.addEventListener('wheel',e=>{e.preventDefault();const now=Date.now();if(now-wheelT<140)return;wheelT=now;const d=((e.deltaY||0)+(e.deltaX||0))>0?1:-1;lddFlowGo(lddFlowIdx+d)},{passive:false});
+ let zoneT=null,zoneDir=0;
+ const zoneStop=()=>{zoneDir=0;if(zoneT){clearInterval(zoneT);zoneT=null}};
+ stage.addEventListener('mousemove',e=>{
+  if(!lddFlowHoverEdgeOn)return;
+  const r=stage.getBoundingClientRect(),x=(e.clientX-r.left)/r.width;
+  const dir=x<0.12?-1:(x>0.88?1:0);
+  if(dir!==zoneDir){zoneStop();zoneDir=dir;if(dir!==0){lddFlowGo(lddFlowIdx+dir);zoneT=setInterval(()=>lddFlowGo(lddFlowIdx+dir),300)}}
+ });
+ stage.addEventListener('mouseleave',zoneStop);
  const win=pop.querySelector('.ldd-flow-win'),bar=pop.querySelector('.ldd-flow-titlebar');
  let sx=0,sy=0,ox=0,oy=0,drag=false;
  bar.addEventListener('mousedown',e=>{if(e.target.closest('button')||e.target.classList.contains('ldd-flow-search'))return;drag=true;sx=e.clientX;sy=e.clientY;const r=win.getBoundingClientRect();ox=r.left;oy=r.top;win.style.left=ox+'px';win.style.top=oy+'px';win.style.transform='none';bar.style.cursor='grabbing';e.preventDefault()});
@@ -3296,52 +3645,192 @@ function lddFlowLayout(){
   c.classList.toggle('ldd-center',off===0);
  });
  const cur=pop.querySelector('.ldd-flow-cur');
- if(cur)cur.textContent=n?((lddFlowIdx+1)+' / '+n+' \u2014 '+lddFlowData[lddFlowIdx].name):'No folders';
+ if(cur)cur.textContent=n?((lddFlowIdx+1)+' / '+n+' \u2014 '+lddFlowData[lddFlowIdx].name):'Nothing here';
 }
 function lddFlowGo(i){
  const n=lddFlowData.length;if(!n)return;
  lddFlowIdx=((i%n)+n)%n;lddFlowLayout();
 }
+async function lddFlowDownloadDesign(f){
+ const card=f&&f.row;if(!card)return;
+ let btn=null;
+ try{btn=lddRnCardMenuBtn(card)}catch(_){}
+ if(!btn){try{globalThis.lddToast110('Download not available',true)}catch(_){}return}
+ try{btn.click()}catch(_){}
+ try{
+  const item=await lddRnWaitFor(()=>{
+   const els=[...document.querySelectorAll('button,[role="menuitem"]')];
+   return els.find(e=>/^\s*download/i.test(e.textContent||'')&&e.offsetParent!==null);
+  },6000);
+  item.click();
+  try{globalThis.lddToast110('Download started')}catch(_){}
+ }catch(_){try{globalThis.lddToast110('Download not found',true)}catch(_){}}
+}
+function lddFlowSelectItem(f){
+ if(!f)return;
+ lddFlowClose();
+ if(f.isDesign){lddFlowOpenDesign(f);return}
+ try{f.row.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
+}
+function lddFlowClickEl(t){
+ try{t.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true}))}catch(_){}
+}
+function lddFlowOpenDesign(f){
+ const card=f.row;
+ if(!card)return;
+ const link=(card.closest&&card.closest('a[href]'))||card.querySelector('a[href*="/product"],a[href*="/listing"],a[href]');
+ const target=link||card.querySelector('img')||card;
+ lddFlowClickEl(target);
+ setTimeout(()=>{
+  try{
+   if(document.querySelector('[role="dialog"]'))return;
+   let href=link?link.getAttribute('href'):'';
+   if(!href){
+    const html=card.outerHTML||'';
+    const m=html.match(/href="(\/products?\/[^"]+)"/)||html.match(/href="(\/listings?\/[^"]+)"/);
+    href=m?m[1]:'';
+   }
+   if(href)location.assign(href.indexOf('http')===0?href:location.origin+href);
+  }catch(_){}
+ },900);
+}
+function lddFlowCardCheckbox(row){
+ return row?row.querySelector('[role="checkbox"]'):null;
+}
+function lddFlowIsChecked(row){
+ const cb=lddFlowCardCheckbox(row);
+ return !!(cb&&cb.getAttribute('aria-checked')==='true');
+}
+function lddFlowCheckedDesigns(){
+ return lddFlowData.filter(f=>f.isDesign&&lddFlowIsChecked(f.row));
+}
+function lddFlowToggleCheck(f,cbEl){
+ const cb=lddFlowCardCheckbox(f.row);
+ if(!cb||!cbEl)return;
+ lddFlowClickEl(cb);
+ setTimeout(()=>{cbEl.classList.toggle('on',lddFlowIsChecked(f.row));lddFlowBulkCount()},200);
+}
+function lddFlowBulkCount(){
+ const el=document.querySelector('#ldd-flow-pop [data-count]');
+ if(!el)return;
+ const n=lddFlowCheckedDesigns().length;
+ el.textContent=n?n+' selected':'';
+ const be=document.querySelector('#ldd-flow-pop [data-bulkedit]');
+ if(be)be.disabled=!n;
+}
+function lddFlowBulkRange(){
+ const pop=document.getElementById('ldd-flow-pop');if(!pop)return;
+ const from=Math.max(1,parseInt((pop.querySelector('[data-from]').value||'1'),10)||1)-1;
+ const to=Math.max(1,parseInt((pop.querySelector('[data-to]').value||'1'),10)||1)-1;
+ const items=lddFlowData.filter(f=>f.isDesign);
+ for(let i=from;i<=Math.min(to,items.length-1);i++){
+  const cb=lddFlowCardCheckbox(items[i].row);
+  if(cb&&cb.getAttribute('aria-checked')!=='true')lddFlowClickEl(cb);
+ }
+ setTimeout(lddFlowRender,450);
+}
+function lddFlowBulkClear(){
+ lddFlowData.forEach(f=>{
+  const cb=lddFlowCardCheckbox(f.row);
+  if(cb&&cb.getAttribute('aria-checked')==='true')lddFlowClickEl(cb);
+ });
+ setTimeout(lddFlowRender,450);
+}
+function lddFlowSyncBulkBar(){
+ const bar=document.querySelector('#ldd-flow-pop .ldd-flow-bulk');if(!bar)return;
+ const lvl=lddFlowCurrent();
+ const canBulk=lvl&&lvl.kind==='designs'&&lddFlowData.some(f=>f.isDesign&&lddFlowCardCheckbox(f.row));
+ bar.style.display=canBulk?'flex':'none';
+ lddFlowBulkCount();
+}
 function lddFlowRender(){
+ const lvl=lddFlowCurrent();if(!lvl)return;
  const q=lddFlowQuery.trim().toLowerCase();
- lddFlowData=q?lddFlowAll.filter(f=>f.name.toLowerCase().includes(q)):lddFlowAll.slice();
+ lddFlowData=q?lvl.items.filter(f=>(f.name||'').toLowerCase().includes(q)):lvl.items.slice();
  lddFlowIdx=0;
  const pop=document.getElementById('ldd-flow-pop');if(!pop)return;
+ const back=pop.querySelector('[data-back]');
+ if(back)back.style.display=lddFlowPath.length>1?'':'none';
+ try{
+  const titleEl=pop.querySelector('.ldd-flow-titlebar b');
+  if(titleEl){const _t=lddFlowPath.map(l=>l.title).join(' \u203a ');const _sp=titleEl.querySelector('span');if(_sp)_sp.textContent=_t;else titleEl.textContent=_t}
+ }catch(_){}
  const track=pop.querySelector('.ldd-flow-track');if(!track)return;
  track.innerHTML='';
- lddFlowData.forEach((f,j)=>{
-  const d=document.createElement('div');d.className='ldd-flow-cover';
-  const fi=document.createElement('div');fi.className='fi';fi.textContent='\uD83D\uDCC1';
+ if(!lddFlowData.length&&!(lvl.kind==='designs'&&lvl.loading)){
+  const em=document.createElement('div');em.className='ldd-flow-empty';
+  em.textContent=lvl.kind==='root'?'No folders here — try the other tab.':'Nothing here yet.';
+  track.appendChild(em);
+ }else if(lvl.kind==='designs'&&lvl.loading){
+  const d=document.createElement('div');d.className='ldd-flow-cover ldd-center';
+  const fn=document.createElement('div');fn.className='fn';fn.textContent='Loading designs\u2026';
+  d.appendChild(fn);track.appendChild(d);
+ }else lddFlowData.forEach((f,j)=>{
+  const d=document.createElement('div');d.className='ldd-flow-cover';d._flowItem=f;
+  if(f.isDesign&&f.img){const im=document.createElement('img');im.className='ldd-design-thumb';im.src=f.img;im.alt=f.name||'';im.loading='lazy';d.appendChild(im)}
+  else{const fi=document.createElement('div');fi.className='fi';fi.innerHTML=lddIcon(f.isGroup?'layers':'folder',44);d.appendChild(fi)}
   const fn=document.createElement('div');fn.className='fn';fn.textContent=f.name;
-  d.appendChild(fi);d.appendChild(fn);
-  if(f.count){const fc=document.createElement('div');fc.className='fc';fc.textContent=f.count+' designs';d.appendChild(fc)}
-  d.addEventListener('click',()=>{if(j===lddFlowIdx)lddFlowSelectCurrent();else lddFlowGo(j)});
+  d.appendChild(fn);
+  if(f.count){const fc=document.createElement('div');fc.className='fc';fc.textContent=f.count+(f.isDesign?'':' designs');d.appendChild(fc)}
+  if(f.isGroup){const pv=document.createElement('div');pv.className='ldd-flow-previews';d.appendChild(pv);if(f.previews)lddFlowPaintPreviews(pv,f.previews)}
+  if(f.isDesign&&lddFlowCardCheckbox(f.row)){
+   const ch=document.createElement('button');
+   ch.className='ldd-flow-check'+(lddFlowIsChecked(f.row)?' on':'');ch.title='Select for bulk actions';
+   ch.addEventListener('click',e=>{e.stopPropagation();lddFlowToggleCheck(f,ch)});
+   d.appendChild(ch);
+  }
+  if(f.isDesign){
+   const dl=document.createElement('button');
+   dl.className='ldd-flow-dlbtn';dl.innerHTML=lddIcon('download',15);dl.title='Download design';
+   dl.addEventListener('click',e=>{e.stopPropagation();lddFlowDownloadDesign(f)});
+   d.appendChild(dl);
+  }
+  const drillable=(f.children&&f.children.length)||f.isGroup;
+  d.title=f.isDesign?'Click to open':(drillable?'Click to open in Flow':'Click to select');
+  d.addEventListener('click',()=>{if(j===lddFlowIdx){if(f.isDesign)lddFlowSelectItem(f);else lddFlowDrillItem(f)}else lddFlowGo(j)});
   track.appendChild(d);
  });
  lddFlowLayout();
+ if(lvl.kind==='groups')lddFlowStartGroupPreviews();
+ lddFlowSyncBulkBar();
 }
 function lddFlowOpen(){
+ if(!lddFlowExperimental){try{globalThis.lddToast110('Flow is experimental \u2014 turn it on in the Folders Flow card on the Tools page')}catch(_){}return}
+ lddFlowTab=lddFlowOnProducts()?'products':'designs';
  lddFlowAll=lddFlowCollect();
+ if(!lddFlowAll.length){
+  lddFlowTab=lddFlowTab==='products'?'designs':'products';
+  lddFlowAll=lddFlowCollect();
+ }
  if(!lddFlowAll.length){try{globalThis.lddToast110('No folders found')}catch(_){}return}
  const pop=lddFlowBuild();
+ pop.querySelectorAll('[data-ftab]').forEach(b=>b.classList.toggle('on',b.dataset.ftab===lddFlowTab));
  const search=pop.querySelector('.ldd-flow-search');
  if(search)search.value='';
  lddFlowQuery='';
+ lddFlowToken++;
+ lddFlowIdx=0;
+ lddFlowPath=[{title:lddFlowTab==='products'?'Product folders':'Folders',items:lddFlowAll,kind:'root'}];
  pop.classList.add('ldd-open');
+ try{lddApplyNavAndFolders()}catch(_){}
  lddFlowRender();
 }
-function lddFlowClose(){const p=document.getElementById('ldd-flow-pop');if(p)p.classList.remove('ldd-open')}
+function lddFlowClose(){const p=document.getElementById('ldd-flow-pop');if(p)p.classList.remove('ldd-open');try{lddApplyNavAndFolders()}catch(_){}}
 document.addEventListener('keydown',e=>{
  const pop=document.getElementById('ldd-flow-pop');
  if(!pop||!pop.classList.contains('ldd-open'))return;
  if(e.target&&e.target.classList&&e.target.classList.contains('ldd-flow-search'))return;
- if(e.key==='Escape')lddFlowClose();
+ if(e.key==='Escape'){if(lddFlowPath.length>1)lddFlowBack();else lddFlowClose()}
  else if(e.key==='ArrowLeft')lddFlowGo(lddFlowIdx-1);
  else if(e.key==='ArrowRight')lddFlowGo(lddFlowIdx+1);
+ else if(e.key==='Enter'){const _f2=lddFlowData[lddFlowIdx];if(_f2){if(_f2.isDesign)lddFlowSelectItem(_f2);else lddFlowDrillItem(_f2)}}
 });
 function lddApplyUIEnhancements(o){
  lddApplyScrollbarStyle(o);
  try{lddFlowEnsureBtn()}catch(_){}
+ lddFlowHoverEdgeOn=o.flowHoverEdge!==false;
+ lddFlowExperimental=o.flowExperimental===true;
+ lddToolTipsOn=o.toolTips!==false;
  const r=document.documentElement;
  const themed=o?.themeTweaker===true && o?.themeEnabled===true && String(o?.themePreset||"native").toLowerCase()!=="native";
  r.classList.toggle('ldd-wide-scrollbars',themed && o.wideScrollbars!==false);

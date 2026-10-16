@@ -24,10 +24,10 @@ let worker;
 try{worker=new Worker('export-worker.js')}catch(err){$('status').textContent='Error: '+err.message;busy=false;$('export').disabled=false;$('clear').disabled=false;return}
 worker.onmessage=e=>{const m=e.data||{};
 if(m.type==='progress'){progress(m.done,m.total,m.phase);return}
-if(m.type==='done'){const url=URL.createObjectURL(m.blob),a=document.createElement('a');a.href=url;a.download='LDD_Wall_Art_Exports.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);progress(m.total,m.total,'ZIP download started!');$('status').textContent=`✓ ${m.count*m.ratios} JPG exports + size guide. Check your Downloads folder.`;toast('Done — ZIP downloaded ✓');worker.terminate();busy=false;$('export').disabled=false;$('clear').disabled=false;return}
+if(m.type==='done'){const url=URL.createObjectURL(m.blob),a=document.createElement('a');a.href=url;a.download='LDD_Wall_Art_Exports.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);progress(m.total,m.total,'ZIP download started!');const n=m.count*m.ratios;$('status').textContent=`✓ ${n} JPG exports + size guide. Check your Downloads folder.`;toast('Done — ZIP downloaded ✓');worker.terminate();selected.clear();$('images').value='';$('folders').value='';$('count').textContent='No images added yet';$('progress').hidden=true;busy=false;$('export').disabled=true;$('clear').disabled=false;return}
 if(m.type==='error'){console.error(m.message);$('status').textContent='Error: '+m.message;worker.terminate();busy=false;$('export').disabled=!selected.size;$('clear').disabled=false}};
 worker.onerror=e=>{$('status').textContent='Error: '+(e.message||'export worker failed');try{worker.terminate()}catch(_){}busy=false;$('export').disabled=!selected.size;$('clear').disabled=false};
-const mode=(document.querySelector('input[name="wa-mode"]:checked')||{}).value||'fit';
+const mode=document.getElementById('wa-mode').value||'fit';
 worker.postMessage({files,formats,mode});
 };
 
