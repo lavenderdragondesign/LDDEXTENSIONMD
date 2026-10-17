@@ -1,0 +1,1 @@
+Flow is your visual folder browser for MyDesigns. Spin through your folders in 3D, click any folder to drill in, and tick the checkboxes to select designs. Your selection syncs with the real MyDesigns checkboxes, ready for the Vision AI workflow.
