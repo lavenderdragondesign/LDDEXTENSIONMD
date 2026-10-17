@@ -1,0 +1,1 @@
+Updating LDD Tools is quick: download the latest ZIP, extract it over your existing folder, then head to chrome://extensions and hit the reload button on LDD Tools. Your settings and data carry right over.
