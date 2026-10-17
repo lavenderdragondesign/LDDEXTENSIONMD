@@ -72,19 +72,54 @@
 .lddPQEmpty{padding:18px;text-align:center;color:#5b6572;font-size:12px;border:1px dashed #2b333d;border-radius:10px}
 /* selection mode */
 .lddPQQueueHead{display:flex;align-items:center;gap:8px}
-#lddPQSelectTgl{margin-left:auto;border:1px solid #303946;background:#11161c;color:#e9edf2;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:750;cursor:pointer;text-transform:none;letter-spacing:0}
-#lddPQSelectTgl:hover{border-color:var(--pq);color:var(--pq)}
-#lddPQSelectTgl.on{border-color:var(--pq);color:var(--pq);background:#39ff1410}
-#lddPQSelBar{display:flex;gap:8px;margin-bottom:10px}
-#lddPQSelBar[hidden]{display:none}
-#lddPQSelBar button{flex:1;border:1px solid #303946;background:#11161c;color:#e9edf2;border-radius:9px;padding:8px 6px;font-size:11px;font-weight:750;cursor:pointer}
-#lddPQSelBar button:hover:not(:disabled){border-color:var(--pq);color:var(--pq)}
-#lddPQSelBar button:disabled{opacity:.4;cursor:default}
-#lddPQSelBar button.danger{border-color:#5a2b34;color:#ff7d8c}
-#lddPQSelBar button.danger:hover:not(:disabled){border-color:#ff7d8c;color:#ff7d8c}
-#lddPQList .lddPQSel{width:15px;height:15px;accent-color:var(--pq);cursor:pointer;flex-shrink:0;margin-top:2px}
+#lddPQList .lddPQSel{appearance:none;-webkit-appearance:none;width:18px;height:18px;flex-shrink:0;margin-top:1px;cursor:pointer;border:2px solid #5b6675;border-radius:5px;background:#0d1116;position:relative;padding:0}
+#lddPQList .lddPQSel:hover{border-color:var(--pq)}
+#lddPQList .lddPQSel:checked{background:var(--pq);border-color:var(--pq)}
+#lddPQList .lddPQSel:checked::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#050705;font-size:12px;font-weight:900;line-height:1}
 .lddPQRange{display:flex;align-items:center;gap:4px;flex:1;color:var(--mut);font-size:11px}
 .lddPQRange input{width:44px;background:#0d1116;color:#fff;border:1px solid #303946;border-radius:7px;padding:7px 4px;font-size:11px;text-align:center;outline:0}
 .lddPQRange input:focus{border-color:var(--pq)}
 .lddPQRange button{flex:1;border:1px solid #303946;background:#11161c;color:#e9edf2;border-radius:9px;padding:8px 6px;font-size:11px;font-weight:750;cursor:pointer}
 .lddPQRange button:hover{border-color:var(--pq);color:var(--pq)}
+/* prompt viewer popout */
+#lddPQList .lddPQItemText{cursor:pointer}
+#lddPQList .lddPQItemText:hover{color:#fff}
+#lddPQViewer{position:absolute;inset:0;background:#000a;border-radius:18px;display:flex;align-items:center;justify-content:center;padding:22px;z-index:5}
+.lddPQViewerBox{width:100%;max-height:100%;display:flex;flex-direction:column;background:#0e1218;border:1px solid #2c3a32;border-radius:14px;box-shadow:0 20px 60px #000d,0 0 24px #39ff1420;overflow:hidden}
+.lddPQViewerHead{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(--line)}
+.lddPQViewerHead strong{font-size:13px}
+.lddPQViewerHead button{border:0;background:transparent;color:#aeb7c3;font-size:22px;cursor:pointer;padding:2px 8px;border-radius:8px;line-height:1}
+.lddPQViewerHead button:hover{background:#161b21;color:var(--pq)}
+.lddPQViewerText{padding:15px;overflow:auto;font-size:12.5px;line-height:1.65;color:#dfe5ec;white-space:pre-wrap;word-break:break-word;max-height:46vh}
+.lddPQViewerFoot{padding:11px 15px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.lddPQViewerFoot button{border:1px solid #303946;background:#11161c;color:#e9edf2;border-radius:9px;padding:8px 14px;font-size:12px;font-weight:750;cursor:pointer}
+.lddPQViewerFoot button:hover{border-color:var(--pq);color:var(--pq)}
+.lddPQViewerFoot button.danger{border-color:#5a2b34;color:#ff7d8c}
+.lddPQViewerFoot button.danger:hover{border-color:#ff7d8c;color:#ff7d8c}
+#lddPQSelCount{font-size:11px;color:var(--pq);font-weight:750;white-space:nowrap;align-self:center}
+
+/* selection popup */
+#lddPQSelOpen{margin-left:auto;border:1px solid #303946;background:#11161c;color:#e9edf2;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:750;cursor:pointer;text-transform:none;letter-spacing:0}
+#lddPQSelOpen:hover{border-color:var(--pq);color:var(--pq)}
+#lddPQSelPopup{position:absolute;inset:0;background:#000a;border-radius:18px;display:flex;align-items:center;justify-content:center;padding:20px;z-index:6}
+#lddPQSelPopup[hidden]{display:none}
+.lddPQSelPopBox{width:100%;background:#0e1218;border:1px solid #2c3a32;border-radius:14px;box-shadow:0 20px 60px #000d,0 0 24px #39ff1420;overflow:hidden}
+.lddPQSelPopHead{display:flex;align-items:center;justify-content:space-between;padding:12px 15px;border-bottom:1px solid var(--line)}
+.lddPQSelPopHead strong{font-size:13px}
+.lddPQSelPopHead button{border:0;background:transparent;color:#aeb7c3;font-size:22px;cursor:pointer;padding:2px 8px;border-radius:8px;line-height:1}
+.lddPQSelPopHead button:hover{background:#161b21;color:var(--pq)}
+.lddPQSelPopRow{display:flex;align-items:center;gap:8px;padding:12px 15px 0}
+.lddPQSelPopRow:last-child{padding-bottom:14px}
+.lddPQSelPopRow span{font-size:12px;color:var(--mut)}
+.lddPQSelPopRow em{color:var(--mut);font-style:normal}
+.lddPQSelPopRow input{width:56px;background:#0d1116;color:#fff;border:1px solid #303946;border-radius:8px;padding:8px 4px;font-size:12px;text-align:center;outline:0}
+.lddPQSelPopRow input:focus{border-color:var(--pq)}
+.lddPQSelPopRow button{flex:1;border:1px solid #303946;background:#11161c;color:#e9edf2;border-radius:9px;padding:9px 8px;font-size:12px;font-weight:750;cursor:pointer}
+.lddPQSelPopRow button:hover:not(:disabled){border-color:var(--pq);color:var(--pq)}
+.lddPQSelPopRow button:disabled{opacity:.4;cursor:default}
+.lddPQSelPopRow button.danger{border-color:#5a2b34;color:#ff7d8c}
+.lddPQSelPopRow button.danger:hover:not(:disabled){border-color:#ff7d8c;color:#ff7d8c}
+.lddPQSelCount{padding:10px 15px 0;font-size:12px;color:var(--pq);font-weight:750}
+.lddPQSelCount:empty{padding:0}
+.lddPQSelPopRow button.primary{background:var(--pq);border-color:var(--pq);color:#050705}
+.lddPQSelPopRow button.primary:hover:not(:disabled){color:#050705;box-shadow:0 0 12px #39ff1455}
