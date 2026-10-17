@@ -21,7 +21,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_ID: ${{ github.event.release.id }}
           REPO: ${{ github.repository }}
-        run: python3 - <<'EOF'
+        run: |
+          python3 - <<'EOF'
           import json, os, re, tempfile, urllib.request, zipfile
 
           repo = os.environ['REPO']
