@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LDD Tools",
-  "version": "1.8.339",
+  "version": "1.8.346",
   "description": "LDD Tools for MyDesigns with Wall Art Exporter integrated into the native Tools page.",
   "permissions": [
     "downloads",
@@ -64,6 +64,8 @@
       "js": [
         "scout/style-json-reader.js",
         "scout/chatgpt-bridge.js",
+        "core/pdf-lib/pdf.min.js",
+        "promptqueue/pdf-parse.js",
         "promptqueue/content.js"
       ],
       "run_at": "document_idle",
