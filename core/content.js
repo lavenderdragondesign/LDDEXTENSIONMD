@@ -974,7 +974,7 @@ function lddToggleCard(key,title,desc,on){
   </div>`;
 }
 const LDD_CHANGELOG=[
- {v:"1.8.336",items:["FIXED: PDF Library newest-sort went stale — newly uploaded PDFs sank to the bottom until the 24h date cache expired; the cache now refreshes when it sees files it doesn’t know"]},{v:"1.8.335",items:["REMOVED: PDF Library sort options — the library now always sorts newest to oldest, no dropdown"]},{v:"1.8.334",items:["NEW: prompt parser handles the ‘NNN | Verse’ format (Gen Z Bible PDF) — finds all 100 prompts with section tags instead of missing them"]},{v:"1.8.333",items:["FIXED: Cancel in Create Style With AI now reliably closes the ChatGPT/Claude window (closes the recorded tab plus the worker window it opened)"]},{v:"1.8.332",items:["CHANGED: Create Style With AI reference image limit is now 30 MB (was 50 MB)"]},{v:"1.8.331",items:["CHANGED: Create Style With AI now lists Claude first and RECOMMENDED \u2014 ChatGPT was having download/import trouble"]},{v:"1.8.330",items:["FIXED: update screen Download button no longer throws a raw stack trace when the extension was reloaded with the page open — it now says to reload the page and try again"]},{v:"1.8.329",items:["NEW: Flow opens the MyDesigns folders pane itself when it can't find it, instead of showing \u2018No folders found\u2019"]},{v:"1.8.328",items:["FIXED: Flow button no longer lands in the Scout AI style library toolbar — it only goes in MyDesigns' native top header"]},{v:"1.8.327",items:["FIXED: PDF Library Newest sort — date fetch now covers all files, not just recent ones"]},{v:"1.8.326",items:["FIXED: PDF Library Newest sort — now uses real GitHub upload dates instead of when the extension first saw the files"]},{v:"1.8.325",items:["FIXED: PDF Library sort rewritten — sorts a copy (no more cache mutation), favorites always pin to top, deterministic name tiebreak"]},{v:"1.8.324",items:["FIXED: PDF Library explicit sorts (Most viewed / Most-Fewest prompts) are now pure — favorites only pin to top on Newest"]},{v:"1.8.323",items:["FIXED: Tools page tooltips now disappear when the mouse moves away"]},{v:"1.8.322",items:["FIXED: PDF Library sorting — one unified sort (favorites first, then the selected mode) instead of two conflicting sorts","REMOVED: GitHub repo text from the PDF Library (count line, reload button, setup message)"]},{v:"1.8.321",items:["NEW: Tooltips on Tools page cards + Flow launcher — hover for a quick tip, Performance-style","NEW: Tooltips on/off toggle at the bottom of the Tools page (Performance not included)"]},{v:"1.8.320",items:["Clicking a side design in Flow now slides to it — only the centered design opens on click","FIXED: Flow drill-in — listings inside groups now load (more reliable row click + card detection)","FIXED: Designs tab drill-in when opened from Products — folders now open their designs","NEW: Lucide icons throughout Flow — back, close, prev/next, select, download, folder, and group icons"]},{v:"1.8.319",items:["Flow rebuilt as navigator + preview only — edit listings, bulk edit, inline rename, and the edit window are removed","NEW: Experimental toggle on the Folders Flow card (header button appears when it\u2019s on)"]},
+ {v:"1.8.339",items:["CHANGED: How To video cards now show in 2 columns"]},{v:"1.8.338",items:["IMPROVED: How To videos are now cards — big thumbnail on top (upload a matching .jpg/.png with the same filename for a custom thumbnail, or it auto-pulls a frame from the video), title, subtitle, and a Watch Video button"]},{v:"1.8.337",items:["IMPROVED: How To sidebar now shows a video thumbnail (auto-pulled from the video) plus a subtitle under the title — add a .txt file with the same name as the video for its subtitle"]},{v:"1.8.336",items:["FIXED: PDF Library newest-sort went stale — newly uploaded PDFs sank to the bottom until the 24h date cache expired; the cache now refreshes when it sees files it doesn’t know"]},{v:"1.8.335",items:["REMOVED: PDF Library sort options — the library now always sorts newest to oldest, no dropdown"]},{v:"1.8.334",items:["NEW: prompt parser handles the ‘NNN | Verse’ format (Gen Z Bible PDF) — finds all 100 prompts with section tags instead of missing them"]},{v:"1.8.333",items:["FIXED: Cancel in Create Style With AI now reliably closes the ChatGPT/Claude window (closes the recorded tab plus the worker window it opened)"]},{v:"1.8.332",items:["CHANGED: Create Style With AI reference image limit is now 30 MB (was 50 MB)"]},{v:"1.8.331",items:["CHANGED: Create Style With AI now lists Claude first and RECOMMENDED \u2014 ChatGPT was having download/import trouble"]},{v:"1.8.330",items:["FIXED: update screen Download button no longer throws a raw stack trace when the extension was reloaded with the page open — it now says to reload the page and try again"]},{v:"1.8.329",items:["NEW: Flow opens the MyDesigns folders pane itself when it can't find it, instead of showing \u2018No folders found\u2019"]},{v:"1.8.328",items:["FIXED: Flow button no longer lands in the Scout AI style library toolbar — it only goes in MyDesigns' native top header"]},{v:"1.8.327",items:["FIXED: PDF Library Newest sort — date fetch now covers all files, not just recent ones"]},{v:"1.8.326",items:["FIXED: PDF Library Newest sort — now uses real GitHub upload dates instead of when the extension first saw the files"]},{v:"1.8.325",items:["FIXED: PDF Library sort rewritten — sorts a copy (no more cache mutation), favorites always pin to top, deterministic name tiebreak"]},{v:"1.8.324",items:["FIXED: PDF Library explicit sorts (Most viewed / Most-Fewest prompts) are now pure — favorites only pin to top on Newest"]},{v:"1.8.323",items:["FIXED: Tools page tooltips now disappear when the mouse moves away"]},{v:"1.8.322",items:["FIXED: PDF Library sorting — one unified sort (favorites first, then the selected mode) instead of two conflicting sorts","REMOVED: GitHub repo text from the PDF Library (count line, reload button, setup message)"]},{v:"1.8.321",items:["NEW: Tooltips on Tools page cards + Flow launcher — hover for a quick tip, Performance-style","NEW: Tooltips on/off toggle at the bottom of the Tools page (Performance not included)"]},{v:"1.8.320",items:["Clicking a side design in Flow now slides to it — only the centered design opens on click","FIXED: Flow drill-in — listings inside groups now load (more reliable row click + card detection)","FIXED: Designs tab drill-in when opened from Products — folders now open their designs","NEW: Lucide icons throughout Flow — back, close, prev/next, select, download, folder, and group icons"]},{v:"1.8.319",items:["Flow rebuilt as navigator + preview only — edit listings, bulk edit, inline rename, and the edit window are removed","NEW: Experimental toggle on the Folders Flow card (header button appears when it\u2019s on)"]},
  {v:"1.8.318",items:["Flow launcher removed from the header entirely for now (was greyed out)"]},
  {v:"1.8.317",items:["Flow temporarily disabled — launcher greyed out and Tools card marked COMING SOON while it\u2019s being finished"]},
  {v:"1.8.316",items:["Design covers now show the actual design name (was falling back to \u2018Design\u2019)","Click a design\u2019s name to rename it inline — runs MyDesigns\u2019 native rename behind the scenes","New \u2b73 download button on design covers — grabs the design via its native \u22ee menu"]},
@@ -1230,8 +1230,12 @@ async function lddHowToFetch(force){
  if(!r.ok)throw new Error(r.status===404?'not-found':'gh'+r.status);
  const items=await r.json();
  if(!Array.isArray(items))throw new Error('not-folder');
+ const subs={};
+ const thumbs={};
+ items.forEach(x=>{if(x.type==='file'&&/\.(jpe?g|png|webp|gif)$/i.test(x.name||''))thumbs[x.name.replace(/\.(jpe?g|png|webp|gif)$/i,'').toLowerCase()]=x.download_url||'';});
+ items.forEach(x=>{if(x.type==='file'&&/\.txt$/i.test(x.name||''))subs[x.name.replace(/\.txt$/i,'').toLowerCase()]=x.download_url||'';});
  const files=items.filter(x=>x.type==='file'&&/\.(mp4|webm|mov)$/i.test(x.name||''))
-  .map(x=>({file:x.name,title:lddHowToPretty(x.name),url:x.download_url||'',ord:lddHowToOrder(x.name)}))
+  .map(x=>{const b=x.name.replace(/\.(mp4|webm|mov)$/i,'').toLowerCase();return{file:x.name,title:lddHowToPretty(x.name),url:x.download_url||'',ord:lddHowToOrder(x.name),subUrl:subs[b]||'',thumbUrl:thumbs[b]||''};})
   .sort((a,b2)=>(a.ord-b2.ord)||a.title.localeCompare(b.title));
  lddHowToCache={files,at:Date.now()};
  return files;
@@ -1247,12 +1251,26 @@ async function lddHowToBind(){
   }
   list.innerHTML='';
   files.forEach(f=>{
-   const btn=document.createElement('button');
-   btn.className='ldd-howto-item';btn.type='button';btn.title=f.title;
-   btn.innerHTML='<span class="ldd-howto-play">\u25b6</span><span class="ldd-howto-name"></span>';
-   btn.querySelector('.ldd-howto-name').textContent=f.title;
-   btn.addEventListener('click',()=>lddHowToPlay(f));
-   list.appendChild(btn);
+   const card=document.createElement('div');
+   card.className='ldd-howto-item';
+   const thumbInner=f.thumbUrl
+    ?'<img alt="">'
+    :'<video muted playsinline preload="metadata"></video>';
+   card.innerHTML='<button type="button" class="ldd-howto-thumbbtn"><span class="ldd-howto-thumb">'+thumbInner+'<span class="ldd-howto-play">&#9654;</span></span></button><div class="ldd-howto-text"><div class="ldd-howto-name"></div><div class="ldd-howto-sub" hidden></div><button type="button" class="ldd-howto-watch">Watch Video</button></div>';
+   card.querySelector('.ldd-howto-name').textContent=f.title;
+   const tbtn=card.querySelector('.ldd-howto-thumbbtn');
+   tbtn.setAttribute('aria-label','Play: '+f.title);
+   if(f.thumbUrl){card.querySelector('.ldd-howto-thumb img').src=f.thumbUrl;}
+   else{try{card.querySelector('.ldd-howto-thumb video').src=f.url+'#t=1';}catch(_){}}
+   const play=()=>lddHowToPlay(f);
+   tbtn.addEventListener('click',play);
+   card.querySelector('.ldd-howto-watch').addEventListener('click',play);
+   list.appendChild(card);
+   if(f.subUrl){
+    fetch(f.subUrl,{cache:'no-store'}).then(r=>r.ok?r.text():Promise.reject())
+     .then(t=>{t=String(t||'').trim().slice(0,300);if(t){const el=card.querySelector('.ldd-howto-sub');el.textContent=t;el.hidden=false;f.sub=t;}})
+     .catch(()=>{});
+   }
   });
  };
  const load=async(force)=>{
@@ -1271,8 +1289,9 @@ function lddHowToPlay(f){
  document.getElementById('ldd-howto-player')?.remove();
  const ov=document.createElement('div');
  ov.id='ldd-howto-player';
- ov.innerHTML='<div class="ldd-howto-player-box"><button type="button" class="ldd-howto-x" aria-label="Close">\u00d7</button><h3></h3><video controls preload="metadata" playsinline></video></div>';
+ ov.innerHTML='<div class="ldd-howto-player-box"><button type="button" class="ldd-howto-x" aria-label="Close">\u00d7</button><h3></h3><p class="ldd-howto-player-sub" hidden></p><video controls preload="metadata" playsinline></video></div>';
  ov.querySelector('h3').textContent=f.title;
+ if(f.sub){const ps=ov.querySelector('.ldd-howto-player-sub');ps.textContent=f.sub;ps.hidden=false;}
  ov.querySelector('video').src=f.url;
  const onKey=e=>{if(e.key==='Escape'){e.stopPropagation();close()}};
  const close=()=>{try{ov.querySelector('video').pause()}catch(_){}ov.remove();document.removeEventListener('keydown',onKey,true)};
