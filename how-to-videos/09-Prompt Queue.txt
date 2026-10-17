@@ -1,0 +1,1 @@
+The Prompt Queue lines up your ChatGPT prompts and runs them one at a time automatically. Queue up a batch, hit start, and let it work through them while you do something else.
