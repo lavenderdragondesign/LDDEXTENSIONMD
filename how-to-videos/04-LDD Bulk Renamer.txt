@@ -1,0 +1,1 @@
+The Bulk Renamer renames your MyDesigns designs in batches instead of one by one. Select your designs, set your naming pattern, and apply it across all of them at once.
