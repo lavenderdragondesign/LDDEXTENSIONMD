@@ -62,7 +62,9 @@ jobs:
       - name: Build ZIP
         run: |
           ZIP="LDD-Tools-v${{ steps.ver.outputs.version }}.zip"
-          ( cd "$SRC_DIR" && zip -qr "../$ZIP" . -x "*.DS_Store" -x ".git/*" )
+          ( cd "$SRC_DIR" && zip -qr "../$ZIP" . \
+              -x "*.DS_Store" -x ".git/*" -x ".github/*" \
+              -x "prompt-packs/*" -x "how-to-videos/*" -x "extension-assets/*" )
           ls -lh "$ZIP"
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
         id: build
