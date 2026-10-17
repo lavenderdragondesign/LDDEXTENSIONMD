@@ -1,0 +1,90 @@
+# LDD Tools — auto build, tag, and release
+#
+# WHERE TO PUT THIS: .github/workflows/ldd-release.yml in the repo that
+# holds the extension source.
+#
+# SOURCE LOCATION: set SRC_DIR below to the folder containing manifest.json
+# (use "." if the source is at the repo root).
+#
+# HOW TO USE:
+#   Option A (manual): GitHub repo → Actions → "Build and Release LDD Tools"
+#                      → Run workflow → enter version (e.g. 1.8.358).
+#                      Creates tag v1.8.358, builds the ZIP, publishes the
+#                      release titled v1.8.358 with the ZIP attached.
+#   Option B (tag):    git tag v1.8.358 && git push origin v1.8.358
+#                      The release is created automatically on tag push.
+#
+# NOTE: if you already have a release-notes workflow that fixes tag/title/
+# notes on publish, this plays fine alongside it — it only creates the
+# release and attaches the ZIP.
+
+name: Build and Release LDD Tools
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g. 1.8.358 — the "v" is added automatically)'
+        required: true
+  push:
+    tags:
+      - 'v*'
+
+env:
+  SRC_DIR: '.'   # <-- change if manifest.json lives in a subfolder
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            V="${{ inputs.version }}"
+            V="${V#v}"  # strip a leading v if they typed one
+            echo "version=$V" >> "$GITHUB_OUTPUT"
+            echo "tag=v$V" >> "$GITHUB_OUTPUT"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify source
+        run: |
+          test -f "$SRC_DIR/manifest.json" || (echo "No manifest.json in $SRC_DIR — set SRC_DIR correctly" && exit 1)
+
+      - name: Build ZIP
+        run: |
+          ZIP="LDD-Tools-v${{ steps.ver.outputs.version }}.zip"
+          ( cd "$SRC_DIR" && zip -qr "../$ZIP" . \
+              -x "*.DS_Store" -x ".git/*" -x ".github/*" \
+              -x "prompt-packs/*" -x "how-to-videos/*" -x "extension-assets/*" )
+          ls -lh "$ZIP"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+        id: build
+
+      - name: Create tag (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.ver.outputs.tag }}" || echo "tag already exists"
+          git push origin "${{ steps.ver.outputs.tag }}" || echo "tag push skipped"
+
+      - name: Upload ZIP to release
+        uses: xresloader/upload-to-github-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          file: "${{ steps.build.outputs.zip }}"
+          tag_name: "${{ steps.ver.outputs.tag }}"
+          default_release_name: "${{ steps.ver.outputs.tag }}"
+          draft: false
+          overwrite: true
+          verbose: true
