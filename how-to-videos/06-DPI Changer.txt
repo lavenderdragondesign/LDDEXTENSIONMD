@@ -1,0 +1,1 @@
+The DPI Changer sets the right DPI on your images for print. Load your files, pick 72, 150, or 300 DPI, and batch-export them print-ready in one go.
